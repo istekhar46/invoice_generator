@@ -1,0 +1,163 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// User model for authentication
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  displayName String
+  passwordHash String?
+  photoURL    String?
+  googleId    String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  companyProfile CompanyProfile?
+  customers      Customer[]
+  invoices       Invoice[]
+  refreshTokens  RefreshToken[]
+  
+  @@map("users")
+}
+
+// Refresh token model for secure token management
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Indexes for query optimization
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// Company profile model
+model CompanyProfile {
+  id               String  @id @default(cuid())
+  userId           String  @unique
+  businessName     String
+  address          String
+  city             String
+  state            String
+  zipCode          String
+  phone            String
+  email            String
+  taxNumber        String
+  defaultLaborRate Float
+  defaultTaxRate   Float
+  logoUrl          String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("company_profiles")
+}
+
+// Customer model
+model Customer {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  email     String
+  phone     String
+  address   String
+  city      String
+  state     String
+  zipCode   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+  
+  // Indexes for query optimization
+  @@index([userId])
+  @@index([name])
+  @@index([email])
+  @@index([createdAt])
+  @@map("customers")
+}
+
+// Invoice model
+model Invoice {
+  id            String        @id @default(cuid())
+  userId        String
+  customerId    String
+  invoiceNumber String        @unique
+  serviceDate   DateTime
+  dueDate       DateTime
+  subtotal      Float
+  taxRate       Float
+  taxAmount     Float
+  total         Float
+  notes         String?
+  status        InvoiceStatus @default(DRAFT)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  // Relations
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer  Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  lineItems LineItem[]
+  
+  // Indexes for query optimization
+  @@index([userId])
+  @@index([customerId])
+  @@index([status])
+  @@index([serviceDate])
+  @@index([createdAt])
+  @@index([userId, status])
+  @@index([userId, customerId])
+  @@map("invoices")
+}
+
+// Line item model
+model LineItem {
+  id          String       @id @default(cuid())
+  invoiceId   String
+  type        LineItemType
+  description String
+  quantity    Float
+  rate        Float
+  amount      Float
+  
+  // Relations
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  // Indexes for query optimization
+  @@index([invoiceId])
+  @@index([type])
+  @@map("line_items")
+}
+
+// Enums
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+}
+
+enum LineItemType {
+  MATERIAL
+  LABOR
+}
