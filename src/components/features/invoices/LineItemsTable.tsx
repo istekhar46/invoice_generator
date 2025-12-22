@@ -155,12 +155,12 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
   }
 
   const renderFormRow = (isEditing: boolean = false, key?: string) => (
-    <tr key={key} className="bg-gray-50">
+    <tr key={key} className="bg-gray-50/50">
       <td className="px-4 py-3">
         <select
           value={formData.type}
           onChange={(e) => handleFormChange('type', e.target.value)}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-4 py-3 rounded-xl text-base border-2 border-gray-200 bg-gray-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white hover:border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed min-h-[44px]"
           disabled={disabled}
         >
           <option value="labor">Labor</option>
@@ -175,6 +175,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
           placeholder="Description"
           error={errors.description}
           disabled={disabled}
+          variant="filled"
         />
       </td>
       <td className="px-4 py-3">
@@ -187,6 +188,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
           step="0.01"
           error={errors.quantity}
           disabled={disabled}
+          variant="filled"
         />
       </td>
       <td className="px-4 py-3">
@@ -199,26 +201,29 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
           step="0.01"
           error={errors.rate}
           disabled={disabled}
+          variant="filled"
         />
       </td>
       <td className="px-4 py-3 text-right">
-        <span className="text-sm text-gray-500">
-          {formData.quantity && formData.rate && !errors.quantity && !errors.rate
-            ? formatCurrency(
-                InvoiceCalculationService.calculateLineItemAmount(
-                  parseFloat(formData.quantity) || 0,
-                  parseFloat(formData.rate) || 0
+        <div className="bg-gray-100 rounded-xl px-4 py-3 min-h-[44px] flex items-center justify-end">
+          <span className="text-sm font-medium text-gray-700">
+            {formData.quantity && formData.rate && !errors.quantity && !errors.rate
+              ? formatCurrency(
+                  InvoiceCalculationService.calculateLineItemAmount(
+                    parseFloat(formData.quantity) || 0,
+                    parseFloat(formData.rate) || 0
+                  )
                 )
-              )
-            : '$0.00'
-          }
-        </span>
+              : '$0.00'
+            }
+          </span>
+        </div>
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center space-x-2">
           <Button
             variant="ghost"
-            size="small"
+            size="sm"
             type="button"
             onClick={(e) => {
               e.stopPropagation()
@@ -226,12 +231,13 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
             }}
             disabled={disabled}
             title={isEditing ? 'Save Changes' : 'Add Line Item'}
+            className="text-success-600 hover:text-success-700 hover:bg-success-50"
           >
-            <Check className="h-4 w-4 text-green-600" />
+            <Check className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
-            size="small"
+            size="sm"
             type="button"
             onClick={(e) => {
               e.stopPropagation()
@@ -239,8 +245,9 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
             }}
             disabled={disabled}
             title="Cancel"
+            className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
           >
-            <X className="h-4 w-4 text-red-600" />
+            <X className="h-4 w-4" />
           </Button>
         </div>
       </td>
@@ -255,7 +262,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
           {!showAddForm && !editingId && (
             <Button
               variant="outline"
-              size="small"
+              size="sm"
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
@@ -272,10 +279,16 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
       </CardHeader>
       <CardContent>
         {lineItems.length === 0 && !showAddForm ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500 mb-4">No line items added yet</p>
+          <div className="text-center py-12">
+            <div className="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+              <Plus className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No line items yet</h3>
+            <p className="text-gray-600 mb-6 max-w- sm mx-auto">
+              Add materials and labor charges to build your invoice.
+            </p>
             <Button
-              variant="outline"
+              variant="primary"
               type="button"
               onClick={(e) => {
                 e.stopPropagation()

@@ -10,20 +10,45 @@ describe('Input', () => {
     expect(input).toHaveAttribute('type', 'text')
   })
 
+  it('has modern styling with rounded corners and proper sizing', () => {
+    render(<Input placeholder="Modern input" />)
+    const input = screen.getByPlaceholderText('Modern input')
+    expect(input).toHaveClass('rounded-xl', 'min-h-[44px]', 'px-4', 'py-3')
+  })
+
+  it('has proper focus states and transitions', () => {
+    render(<Input placeholder="Focus me" />)
+    const input = screen.getByPlaceholderText('Focus me')
+    expect(input).toHaveClass(
+      'focus:ring-2', 
+      'focus:ring-primary-500', 
+      'focus:border-transparent',
+      'transition-all',
+      'duration-200'
+    )
+  })
+
+  it('has touch-friendly sizing', () => {
+    render(<Input placeholder="Touch friendly" />)
+    const input = screen.getByPlaceholderText('Touch friendly')
+    expect(input).toHaveClass('touch-target', 'min-h-[44px]')
+  })
+
   it('renders with label', () => {
     render(<Input label="Email Address" />)
     expect(screen.getByLabelText('Email Address')).toBeInTheDocument()
   })
 
-  it('shows error message', () => {
+  it('shows error message with danger styling', () => {
     render(<Input label="Email" error="Invalid email format" />)
     const input = screen.getByLabelText('Email')
     const errorMessage = screen.getByText('Invalid email format')
     
     expect(input).toHaveAttribute('aria-invalid', 'true')
-    expect(input).toHaveClass('border-red-500')
+    expect(input).toHaveClass('border-danger-500', 'focus:ring-danger-500')
     expect(errorMessage).toBeInTheDocument()
     expect(errorMessage).toHaveAttribute('role', 'alert')
+    expect(errorMessage).toHaveClass('text-danger-600')
   })
 
   it('shows help text when no error', () => {
@@ -55,14 +80,20 @@ describe('Input', () => {
     expect(input).toHaveValue('test input')
   })
 
-  it('supports different input types', () => {
+  it('supports different input types with mobile optimization', () => {
     const { rerender } = render(<Input type="email" />)
-    expect(screen.getByRole('textbox')).toHaveAttribute('type', 'email')
-
-    rerender(<Input type="password" />)
-    expect(screen.getByDisplayValue('')).toHaveAttribute('type', 'password')
+    const emailInput = screen.getByRole('textbox')
+    expect(emailInput).toHaveAttribute('type', 'email')
+    expect(emailInput).toHaveAttribute('inputMode', 'email')
 
     rerender(<Input type="tel" />)
-    expect(screen.getByRole('textbox')).toHaveAttribute('type', 'tel')
+    const telInput = screen.getByRole('textbox')
+    expect(telInput).toHaveAttribute('type', 'tel')
+    expect(telInput).toHaveAttribute('inputMode', 'tel')
+
+    rerender(<Input type="number" />)
+    const numberInput = screen.getByRole('spinbutton')
+    expect(numberInput).toHaveAttribute('type', 'number')
+    expect(numberInput).toHaveAttribute('inputMode', 'numeric')
   })
 })

@@ -7,29 +7,45 @@ describe('Button', () => {
     render(<Button>Click me</Button>)
     const button = screen.getByRole('button', { name: /click me/i })
     expect(button).toBeInTheDocument()
-    expect(button).toHaveClass('bg-blue-600') // primary variant
+    expect(button).toHaveClass('bg-gradient-primary') // primary variant with gradient
   })
 
   it('renders different variants', () => {
     const { rerender } = render(<Button variant="secondary">Secondary</Button>)
-    expect(screen.getByRole('button')).toHaveClass('bg-gray-100')
+    expect(screen.getByRole('button')).toHaveClass('bg-white', 'border-2', 'border-gray-200')
 
-    rerender(<Button variant="outline">Outline</Button>)
-    expect(screen.getByRole('button')).toHaveClass('border-gray-300')
+    rerender(<Button variant="success">Success</Button>)
+    expect(screen.getByRole('button')).toHaveClass('bg-gradient-success')
+
+    rerender(<Button variant="danger">Danger</Button>)
+    expect(screen.getByRole('button')).toHaveClass('bg-gradient-danger')
 
     rerender(<Button variant="ghost">Ghost</Button>)
     expect(screen.getByRole('button')).toHaveClass('bg-transparent')
   })
 
-  it('renders different sizes', () => {
-    const { rerender } = render(<Button size="small">Small</Button>)
-    expect(screen.getByRole('button')).toHaveClass('h-8')
+  it('renders different sizes with proper touch targets', () => {
+    const { rerender } = render(<Button size="sm">Small</Button>)
+    const button = screen.getByRole('button')
+    expect(button).toHaveClass('min-h-[36px]')
 
-    rerender(<Button size="medium">Medium</Button>)
-    expect(screen.getByRole('button')).toHaveClass('h-10')
+    rerender(<Button size="md">Medium</Button>)
+    expect(screen.getByRole('button')).toHaveClass('min-h-[44px]') // Touch-friendly
 
-    rerender(<Button size="large">Large</Button>)
-    expect(screen.getByRole('button')).toHaveClass('h-12')
+    rerender(<Button size="lg">Large</Button>)
+    expect(screen.getByRole('button')).toHaveClass('min-h-[52px]')
+  })
+
+  it('has modern styling with rounded corners and shadows', () => {
+    render(<Button>Modern Button</Button>)
+    const button = screen.getByRole('button')
+    expect(button).toHaveClass('rounded-xl', 'shadow-soft')
+  })
+
+  it('has press effect and transitions', () => {
+    render(<Button>Press me</Button>)
+    const button = screen.getByRole('button')
+    expect(button).toHaveClass('active:scale-95', 'transition-all', 'duration-200')
   })
 
   it('shows loading state', () => {
@@ -47,6 +63,19 @@ describe('Button', () => {
     
     await user.click(screen.getByRole('button'))
     expect(handleClick).toHaveBeenCalledTimes(1)
+  })
+
+  it('supports backward compatibility with old size and variant values', () => {
+    const { rerender } = render(<Button size="small" variant="outline">Old Props</Button>)
+    const button = screen.getByRole('button')
+    expect(button).toHaveClass('min-h-[36px]') // small -> sm
+    expect(button).toHaveClass('bg-white', 'border-2', 'border-gray-200') // outline -> secondary styling
+
+    rerender(<Button size="medium">Medium Old</Button>)
+    expect(screen.getByRole('button')).toHaveClass('min-h-[44px]') // medium -> md
+
+    rerender(<Button size="large">Large Old</Button>)
+    expect(screen.getByRole('button')).toHaveClass('min-h-[52px]') // large -> lg
   })
 
   it('is disabled when disabled prop is true', () => {

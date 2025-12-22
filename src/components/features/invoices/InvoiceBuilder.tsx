@@ -18,7 +18,7 @@ import { Input } from '../../ui/Input'
 import { Card, CardHeader, CardTitle, CardContent } from '../../ui/Card'
 import { Modal } from '../../ui/Modal'
 import { ErrorAlert } from '../../ui/ErrorAlert'
-import { FormField, FormSection } from '../../ui/FormField'
+import { FormSection, FormGrid, FormActions } from '../../ui/FormField'
 import { LoadingOverlay } from '../../ui/LoadingSpinner'
 import { CustomerList } from '../customers/CustomerList'
 import { LineItemsTable } from './LineItemsTable'
@@ -311,40 +311,70 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
           <span>Select Customer</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         {selectedCustomer ? (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-blue-900">{selectedCustomer.name}</h3>
-                <p className="text-sm text-blue-700">{selectedCustomer.email}</p>
-                <p className="text-sm text-blue-700">{selectedCustomer.phone}</p>
-                <p className="text-sm text-blue-700">
-                  {selectedCustomer.address}, {selectedCustomer.city}, {selectedCustomer.state} {selectedCustomer.zipCode}
-                </p>
+          <FormSection
+            title="Selected Customer"
+            description="Customer information for this invoice"
+            variant="elevated"
+          >
+            <div className="bg-gradient-to-r from-primary-50 to-primary-100 border border-primary-200 rounded-2xl p-6">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-primary-900">{selectedCustomer.name}</h3>
+                  <div className="space-y-1 text-sm text-primary-700">
+                    <p className="flex items-center space-x-2">
+                      <span className="font-medium">Email:</span>
+                      <span>{selectedCustomer.email}</span>
+                    </p>
+                    <p className="flex items-center space-x-2">
+                      <span className="font-medium">Phone:</span>
+                      <span>{selectedCustomer.phone}</span>
+                    </p>
+                    <p className="flex items-center space-x-2">
+                      <span className="font-medium">Address:</span>
+                      <span>
+                        {selectedCustomer.address}, {selectedCustomer.city}, {selectedCustomer.state} {selectedCustomer.zipCode}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCustomerModal(true)}
+                  className="ml-4 flex-shrink-0"
+                >
+                  Change Customer
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                size="small"
+            </div>
+          </FormSection>
+        ) : (
+          <FormSection
+            title="Choose Customer"
+            description="Select the customer who will receive this invoice"
+            variant="bordered"
+          >
+            <div className="text-center py-12">
+              <div className="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <User className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No Customer Selected
+              </h3>
+              <p className="text-gray-600 mb-6 max -w-sm mx-auto">
+                Choose a customer from your customer list to create an invoice for them.
+              </p>
+              <Button 
                 onClick={() => setShowCustomerModal(true)}
+                className="flex items-center space-x-2"
               >
-                Change Customer
+                <User className="h-4 w-4" />
+                <span>Select Customer</span>
               </Button>
             </div>
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Choose a Customer
-            </h3>
-            <p className="text-gray-500 mb-4">
-              Select the customer who will receive this invoice.
-            </p>
-            <Button onClick={() => setShowCustomerModal(true)}>
-              Select Customer
-            </Button>
-          </div>
+          </FormSection>
         )}
       </CardContent>
     </Card>
@@ -358,33 +388,29 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
           <span>Invoice Details</span>
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-8">
         <FormSection
           title="Date Information"
           description="Set the service date and payment due date for this invoice"
+          variant="bordered"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormGrid columns={2} gap="lg">
             <Controller
               name="serviceDate"
               control={control}
               render={({ field }) => (
-                <FormField
-                  label="Service Date"
+                <Input
+                  label="Service Date *"
+                  type="date"
+                  value={field.value ? field.value.toISOString().split('T')[0] : ''}
+                  onChange={(e) => {
+                    const date = new Date(e.target.value)
+                    field.onChange(date)
+                    // Clear submit error when user makes changes
+                    if (submitError) setSubmitError(null)
+                  }}
                   error={errors.serviceDate?.message}
-                  required
-                >
-                  <Input
-                    type="date"
-                    value={field.value ? field.value.toISOString().split('T')[0] : ''}
-                    onChange={(e) => {
-                      const date = new Date(e.target.value)
-                      field.onChange(date)
-                      // Clear submit error when user makes changes
-                      if (submitError) setSubmitError(null)
-                    }}
-                    className={errors.serviceDate ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
-                  />
-                </FormField>
+                />
               )}
             />
             
@@ -392,44 +418,36 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
               name="dueDate"
               control={control}
               render={({ field }) => (
-                <FormField
-                  label="Due Date"
+                <Input
+                  label="Due Date *"
+                  type="date"
+                  value={field.value ? field.value.toISOString().split('T')[0] : ''}
+                  onChange={(e) => {
+                    const date = new Date(e.target.value)
+                    field.onChange(date)
+                    // Clear submit error when user makes changes
+                    if (submitError) setSubmitError(null)
+                  }}
                   error={errors.dueDate?.message}
                   helpText="Payment due date (typically 30 days after service date)"
-                  required
-                >
-                  <Input
-                    type="date"
-                    value={field.value ? field.value.toISOString().split('T')[0] : ''}
-                    onChange={(e) => {
-                      const date = new Date(e.target.value)
-                      field.onChange(date)
-                      // Clear submit error when user makes changes
-                      if (submitError) setSubmitError(null)
-                    }}
-                    className={errors.dueDate ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
-                  />
-                </FormField>
+                />
               )}
             />
-          </div>
+          </FormGrid>
         </FormSection>
 
         <FormSection
           title="Tax Information"
           description="Set the tax rate for this invoice"
+          variant="bordered"
         >
-          <Controller
-            name="taxRate"
-            control={control}
-            render={({ field }) => (
-              <FormField
-                label="Tax Rate (%)"
-                error={errors.taxRate?.message}
-                helpText="Enter tax rate as a percentage (e.g., 8.5 for 8.5%)"
-                required
-              >
+          <FormGrid columns={1} gap="md">
+            <Controller
+              name="taxRate"
+              control={control}
+              render={({ field }) => (
                 <Input
+                  label="Tax Rate (%) *"
                   type="number"
                   value={field.value ? (field.value * 100).toString() : ''}
                   onChange={(e) => {
@@ -442,29 +460,31 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                   max="100"
                   step="0.1"
                   placeholder="8.5"
-                  className={errors.taxRate ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
+                  error={errors.taxRate?.message}
+                  helpText="Enter tax rate as a percentage (e.g., 8.5 for 8.5%)"
                 />
-              </FormField>
-            )}
-          />
+              )}
+            />
+          </FormGrid>
         </FormSection>
 
         <FormSection
           title="Additional Information"
           description="Add any notes or special terms for this invoice"
+          variant="elevated"
         >
           <Controller
             name="notes"
             control={control}
             render={({ field }) => (
-              <FormField
-                label="Notes (Optional)"
-                helpText="Add any additional notes, terms, or special instructions"
-              >
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Notes (Optional)
+                </label>
                 <textarea
                   {...field}
                   rows={4}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full px-4 py-3 rounded-xl text-base border-2 border-gray-200 bg-gray-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white hover:border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed placeholder:text-gray-400 min-h-[44px] resize-none"
                   placeholder="Add any additional notes or terms for this invoice..."
                   onChange={(e) => {
                     field.onChange(e)
@@ -472,7 +492,10 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                     if (submitError) setSubmitError(null)
                   }}
                 />
-              </FormField>
+                <p className="text-sm text-gray-500">
+                  Add any additional notes, terms, or special instructions
+                </p>
+              </div>
             )}
           />
         </FormSection>
@@ -679,7 +702,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
           </div>
 
           {/* Navigation */}
-          <div className="flex items-center justify-between">
+          <FormActions align="between" responsive={false}>
             <Button
               type="button"
               variant="outline"
@@ -691,30 +714,28 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
               <span>Previous</span>
             </Button>
 
-            <div className="flex space-x-3">
-              {currentStep === 'review' ? (
-                <Button
-                  type="submit"
-                  loading={loading}
-                  disabled={!isValid || lineItems.length === 0 || submitSuccess}
-                  className="flex items-center space-x-2"
-                >
-                  <Save className="h-4 w-4" />
-                  <span>{invoice ? 'Update Invoice' : 'Save Invoice'}</span>
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  onClick={handleNextStep}
-                  disabled={!canProceedToNext() || loading}
-                  className="flex items-center space-x-2"
-                >
-                  <span>Next</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
+            {currentStep === 'review' ? (
+              <Button
+                type="submit"
+                loading={loading}
+                disabled={!isValid || lineItems.length === 0 || submitSuccess}
+                className="flex items-center space-x-2"
+              >
+                <Save className="h-4 w-4" />
+                <span>{invoice ? 'Update Invoice' : 'Save Invoice'}</span>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={handleNextStep}
+                disabled={!canProceedToNext() || loading}
+                className="flex items-center space-x-2"
+              >
+                <span>Next</span>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            )}
+          </FormActions>
         </form>
       </LoadingOverlay>
 

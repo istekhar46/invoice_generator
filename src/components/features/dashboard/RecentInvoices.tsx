@@ -49,19 +49,19 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
 }
 
 /**
- * Loading skeleton for recent invoices
+ * Enhanced loading skeleton with shimmer effects for recent invoices
  */
 const RecentInvoicesLoading: React.FC = () => (
   <div className="space-y-4">
     {[...Array(3)].map((_, index) => (
       <div key={index} className="flex items-center justify-between py-3 border-b border-gray-200 last:border-b-0">
         <div className="flex-1">
-          <div className="h-4 bg-gray-200 rounded animate-pulse mb-2" />
-          <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3" />
+          <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded mb-2" />
+          <div className="h-3 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded w-2/3" />
         </div>
         <div className="ml-4 text-right">
-          <div className="h-4 bg-gray-200 rounded animate-pulse mb-2 w-16" />
-          <div className="h-5 bg-gray-200 rounded-full animate-pulse w-12" />
+          <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded mb-2 w-16" />
+          <div className="h-5 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded-full w-12" />
         </div>
       </div>
     ))}
@@ -120,10 +120,10 @@ export const RecentInvoices: React.FC<RecentInvoicesProps> = ({
         <h3 className="text-lg font-medium text-gray-900">
           Recent Invoices
         </h3>
-        {invoices.length > 0 && (
+        {onViewAll && (
           <button
             type="button"
-            className="text-sm text-blue-600 hover:text-blue-500 font-medium"
+            className="text-sm text-blue-600 hover:text-blue-500 font-medium transition-colors duration-200"
             onClick={onViewAll}
           >
             View all
@@ -140,8 +140,8 @@ export const RecentInvoices: React.FC<RecentInvoicesProps> = ({
           {invoices.map((invoice) => (
             <div
               key={invoice.id}
-              className={`flex items-center justify-between py-3 border-b border-gray-200 last:border-b-0 ${
-                onInvoiceClick ? 'cursor-pointer hover:bg-gray-50 -mx-2 px-2 rounded' : ''
+              className={`flex items-center justify-between py-3 border-b border-gray-200 last:border-b-0 transition-all duration-200 ${
+                onInvoiceClick ? 'cursor-pointer hover:bg-gray-50 hover:shadow-sm -mx-2 px-2 rounded' : ''
               }`}
               onClick={() => onInvoiceClick?.(invoice.id)}
             >

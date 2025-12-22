@@ -12,7 +12,8 @@ import { useCompanyStore } from '../../../store/companyStore'
 import { useAuthStore } from '../../../store/authStore'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../../ui/Card'
+import { Card, CardHeader, CardTitle, CardContent } from '../../ui/Card'
+import { FormSection, FormGrid, FormActions } from '../../ui/FormField'
 import { LogoUploader } from './LogoUploader'
 
 interface CompanyProfileFormProps {
@@ -126,7 +127,7 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
   }
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
+    <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
         <CardTitle>
           {isEditing ? 'Edit Company Profile' : 'Create Company Profile'}
@@ -134,30 +135,38 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
       </CardHeader>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-8">
           {/* Error Display */}
           {error && (
-            <div className="rounded-md bg-red-50 border border-red-200 p-4">
+            <div className="rounded-xl bg-red-50 border border-red-200 p-4 animate-fade-in">
               <p className="text-sm text-red-600" role="alert">
                 {error}
               </p>
             </div>
           )}
 
-          {/* Logo Upload */}
-          <LogoUploader
-            currentLogo={profile?.logoUrl}
-            onLogoUpload={handleLogoUpload}
-            onLogoRemove={handleLogoRemove}
-            loading={loading}
-            error={error}
-          />
+          {/* Logo Upload Section */}
+          <FormSection
+            title="Company Logo"
+            description="Upload your company logo to personalize your invoices"
+            variant="elevated"
+          >
+            <LogoUploader
+              currentLogo={profile?.logoUrl}
+              onLogoUpload={handleLogoUpload}
+              onLogoRemove={handleLogoRemove}
+              loading={loading}
+              error={error}
+            />
+          </FormSection>
 
-          {/* Business Information */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-medium text-gray-900">Business Information</h4>
-            
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Business Information Section */}
+          <FormSection
+            title="Business Information"
+            description="Basic information about your electrical business"
+            variant="bordered"
+          >
+            <FormGrid columns={2} gap="lg">
               <div className="sm:col-span-2">
                 <Input
                   label="Business Name *"
@@ -204,14 +213,16 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
                 error={errors.taxNumber?.message}
                 placeholder="Tax ID or EIN"
               />
-            </div>
-          </div>
+            </FormGrid>
+          </FormSection>
 
-          {/* Contact Information */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-medium text-gray-900">Contact Information</h4>
-            
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Contact Information Section */}
+          <FormSection
+            title="Contact Information"
+            description="How customers can reach your business"
+            variant="bordered"
+          >
+            <FormGrid columns={2} gap="lg">
               <Input
                 label="Phone *"
                 type="tel"
@@ -227,14 +238,16 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
                 error={errors.email?.message}
                 placeholder="business@example.com"
               />
-            </div>
-          </div>
+            </FormGrid>
+          </FormSection>
 
-          {/* Default Rates */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-medium text-gray-900">Default Rates</h4>
-            
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Default Rates Section */}
+          <FormSection
+            title="Default Rates"
+            description="Set your standard labor and tax rates for new invoices"
+            variant="bordered"
+          >
+            <FormGrid columns={2} gap="lg">
               <Input
                 label="Default Labor Rate ($/hour) *"
                 type="number"
@@ -259,28 +272,29 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
                 placeholder="8.25"
                 helpText="Enter as percentage (e.g., 8.25 for 8.25%)"
               />
-            </div>
-          </div>
+            </FormGrid>
+          </FormSection>
+
+          {/* Form Actions */}
+          <FormActions align="between" responsive>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              type="submit"
+              loading={loading}
+              disabled={!isValid || loading || (!isDirty && !isEditing)}
+            >
+              {isEditing ? 'Update Profile' : 'Create Profile'}
+            </Button>
+          </FormActions>
         </CardContent>
-
-        <CardFooter className="flex justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCancel}
-            disabled={loading}
-          >
-            Cancel
-          </Button>
-
-          <Button
-            type="submit"
-            loading={loading}
-            disabled={!isValid || loading || (!isDirty && !isEditing)}
-          >
-            {isEditing ? 'Update Profile' : 'Create Profile'}
-          </Button>
-        </CardFooter>
       </form>
     </Card>
   )

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { Header } from './Header'
-import { Sidebar } from './Sidebar'
 import { Breadcrumbs } from './Breadcrumbs'
+import { ResponsiveContainer } from './ResponsiveLayout'
 import { useAuthStore } from '../../store/authStore'
 import { cn } from '../../utils/classNames'
 
@@ -11,10 +11,12 @@ export interface MainLayoutProps {
 }
 
 /**
- * MainLayout component that provides the application shell with header, sidebar, and content area.
+ * MainLayout component that provides the application shell with header and content area.
  * Automatically detects authentication state and adjusts layout accordingly.
+ * Now uses integrated header navigation instead of separate sidebar.
  * 
- * Requirements: 8.2 - THE System SHALL provide navigation to customers, invoices, and settings pages
+ * Requirements: 5.2, 5.3, 5.4 - Modern responsive navigation with pill-style desktop nav and mobile hamburger menu
+ * Requirements: 3.2, 3.3, 3.5, 9.2 - Responsive layout adaptation and mobile optimization
  */
 const MainLayout: React.FC<MainLayoutProps> = ({ className }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -30,10 +32,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ className }) => {
     setIsMobileMenuOpen(!isMobileMenuOpen)
   }
 
-  const handleMenuClose = () => {
-    setIsMobileMenuOpen(false)
-  }
-
   const handleLogout = async () => {
     try {
       await logout()
@@ -46,42 +44,28 @@ const MainLayout: React.FC<MainLayoutProps> = ({ className }) => {
   }
 
   return (
-    <div className={cn('flex h-screen bg-gray-50', className)}>
-      {/* Sidebar - only render when authenticated */}
-      {isAuthenticated && (
-        <Sidebar
-          isOpen={isMobileMenuOpen}
-          onClose={handleMenuClose}
-          isAuthenticated={isAuthenticated}
-        />
-      )}
+    <div className={cn('min-h-screen bg-gray-50', className)}>
+      {/* Header with integrated navigation */}
+      <Header
+        user={user}
+        onMenuToggle={handleMenuToggle}
+        onLogout={handleLogout}
+        isMobileMenuOpen={isMobileMenuOpen}
+        isLoading={loading}
+      />
 
-      {/* Main content area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Header */}
-        <Header
-          user={user}
-          onMenuToggle={handleMenuToggle}
-          onLogout={handleLogout}
-          isMobileMenuOpen={isMobileMenuOpen}
-          isLoading={loading}
-        />
-
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
-          <div
-            className={cn(
-              'mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8',
-              // Adjust padding when sidebar is not present (unauthenticated)
-              !isAuthenticated && 'max-w-4xl'
-            )}
-          >
-            {/* Breadcrumbs - only show for authenticated users */}
-            {isAuthenticated && <Breadcrumbs className="mb-6" />}
-            <Outlet />
-          </div>
-        </main>
-      </div>
+      {/* Main content area with responsive container */}
+      <main className="flex-1">
+        <ResponsiveContainer
+          maxWidth={isAuthenticated ? 'xl' : 'lg'}
+          padding="md"
+          className="py-6"
+        >
+          {/* Breadcrumbs - only show for authenticated users */}
+          {isAuthenticated && <Breadcrumbs className="mb-6" />}
+          <Outlet />
+        </ResponsiveContainer>
+      </main>
     </div>
   )
 }

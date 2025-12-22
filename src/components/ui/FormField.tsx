@@ -81,6 +81,7 @@ export interface FormSectionProps {
   description?: string
   children: React.ReactNode
   className?: string
+  variant?: 'default' | 'elevated' | 'bordered'
 }
 
 export const FormSection: React.FC<FormSectionProps> = ({
@@ -88,20 +89,144 @@ export const FormSection: React.FC<FormSectionProps> = ({
   description,
   children,
   className,
+  variant = 'default',
 }) => {
+  const variants = {
+    default: 'space-y-6',
+    elevated: cn(
+      'bg-gray-50/50 rounded-2xl p-6 space-y-6',
+      'border border-gray-100',
+      'transition-all duration-300',
+      'hover:bg-gray-50/70 hover:shadow-soft'
+    ),
+    bordered: cn(
+      'border border-gray-200 rounded-2xl p-6 space-y-6',
+      'bg-white',
+      'transition-all duration-300',
+      'hover:border-gray-300 hover:shadow-soft'
+    ),
+  }
+
   return (
-    <div className={cn('space-y-6', className)}>
+    <div className={cn(variants[variant], className)}>
       {(title || description) && (
-        <div className="border-b border-gray-200 pb-4">
+        <div className={cn(
+          'pb-4',
+          variant === 'default' ? 'border-b border-gray-200' : ''
+        )}>
           {title && (
-            <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+              {title}
+            </h3>
           )}
           {description && (
-            <p className="mt-1 text-sm text-gray-500">{description}</p>
+            <p className="text-sm text-gray-600">{description}</p>
           )}
         </div>
       )}
       <div className="space-y-6">{children}</div>
+    </div>
+  )
+}
+
+export interface FormGridProps {
+  children: React.ReactNode
+  className?: string
+  columns?: 1 | 2 | 3 | 4
+  gap?: 'sm' | 'md' | 'lg'
+}
+
+export const FormGrid: React.FC<FormGridProps> = ({
+  children,
+  className,
+  columns = 2,
+  gap = 'md',
+}) => {
+  const columnClasses = {
+    1: 'grid-cols-1',
+    2: 'grid-cols-1 sm:grid-cols-2',
+    3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+    4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+  }
+
+  const gapClasses = {
+    sm: 'gap-4',
+    md: 'gap-6',
+    lg: 'gap-8',
+  }
+
+  return (
+    <div className={cn(
+      'grid',
+      columnClasses[columns],
+      gapClasses[gap],
+      className
+    )}>
+      {children}
+    </div>
+  )
+}
+
+export interface FormActionsProps {
+  children: React.ReactNode
+  className?: string
+  align?: 'left' | 'center' | 'right' | 'between'
+  responsive?: boolean
+}
+
+export const FormActions: React.FC<FormActionsProps> = ({
+  children,
+  className,
+  align = 'between',
+  responsive = true,
+}) => {
+  const alignClasses = {
+    left: 'justify-start',
+    center: 'justify-center',
+    right: 'justify-end',
+    between: 'justify-between',
+  }
+
+  return (
+    <div className={cn(
+      'flex items-center',
+      alignClasses[align],
+      // Enhanced responsive behavior for mobile optimization
+      responsive && 'flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3',
+      !responsive && 'space-x-3',
+      'pt-6 border-t border-gray-200',
+      className
+    )}>
+      {responsive ? (
+        React.Children.map(children, (child, index) => {
+          // Clone button children to add fullWidth on mobile with touch-friendly sizing
+          if (React.isValidElement(child)) {
+            return (
+              <div className={cn(
+                'w-full sm:w-auto',
+                index === 0 && align === 'between' ? 'sm:mr-auto' : '',
+                index === React.Children.count(children) - 1 && align === 'between' ? 'sm:ml-auto' : ''
+              )}>
+                {React.cloneElement(child, {
+                  className: cn(
+                    'w-full sm:w-auto min-h-[44px]', // Ensure touch-friendly height
+                    (child.props as any).className
+                  )
+                } as any)}
+              </div>
+            )
+          }
+          return (
+            <div className={cn(
+              'w-full sm:w-auto',
+              index === 0 && align === 'between' ? 'sm:mr-auto' : '',
+              index === React.Children.count(children) - 1 && align === 'between' ? 'sm:ml-auto' : ''
+            )}>
+              {child}
+            </div>
+          )
+        })
+      ) : children}
     </div>
   )
 }

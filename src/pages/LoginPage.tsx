@@ -2,6 +2,7 @@ import React from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { Zap, ArrowRight } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -53,24 +54,29 @@ export const LoginPage: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8 animate-fade-in">
+        {/* Modern Logo and Branding */}
         <div className="text-center">
-          <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
-            Sign in to your account
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Or{' '}
-            <Link
-              to="/signup"
-              className="font-medium text-blue-600 hover:text-blue-500"
-            >
-              create a new account
-            </Link>
+          <div className="flex justify-center mb-6">
+            <div className="bg-gradient-primary p-4 rounded-2xl shadow-glow animate-bounce-subtle">
+              <Zap className="w-8 h-8 text-white" />
+            </div>
+          </div>
+          <h1 className="heading-2 text-gray-900 mb-2">
+            Welcome back
+          </h1>
+          <p className="text-body text-gray-600">
+            Sign in to your Invoice Pro account
           </p>
         </div>
 
-        <Card className="p-6">
+        {/* Modern Card with Glass Morphism */}
+        <Card 
+          padding="lg" 
+          hover={true}
+          className="backdrop-blur-sm bg-white/90 border-white/20 shadow-medium"
+        >
           <LoadingState loading={loading} type="authenticating" overlay={true}>
             <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
               {error && (
@@ -83,7 +89,7 @@ export const LoginPage: React.FC = () => {
                 />
               )}
 
-              <div>
+              <div className="space-y-5">
                 <Input
                   {...register('email')}
                   id="email"
@@ -92,10 +98,9 @@ export const LoginPage: React.FC = () => {
                   label="Email address"
                   placeholder="Enter your email"
                   error={errors.email?.message}
+                  variant="filled"
                 />
-              </div>
 
-              <div>
                 <Input
                   {...register('password')}
                   id="password"
@@ -104,30 +109,59 @@ export const LoginPage: React.FC = () => {
                   label="Password"
                   placeholder="Enter your password"
                   error={errors.password?.message}
+                  variant="filled"
                 />
               </div>
 
-              <div>
-                <Button 
-                  type="submit" 
-                  className="w-full"
-                  loading={loading}
-                  disabled={loading}
-                >
-                  {loading ? 'Signing in...' : 'Sign in'}
-                </Button>
-              </div>
+              <Button 
+                type="submit" 
+                variant="primary"
+                size="lg"
+                fullWidth={true}
+                loading={loading}
+                disabled={loading}
+                className="group"
+              >
+                {loading ? (
+                  'Signing in...'
+                ) : (
+                  <>
+                    Sign in
+                    <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  </>
+                )}
+              </Button>
             </form>
           </LoadingState>
 
-          {/* Demo credentials helper */}
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-800 font-medium mb-2">Demo Credentials:</p>
-            <p className="text-xs text-blue-700">
-              Create an account first, or use any email/password combination to test the system.
-            </p>
+          {/* Demo credentials helper with modern styling */}
+          <div className="mt-6 p-4 bg-gradient-to-r from-primary-50 to-blue-50 border border-primary-200 rounded-xl">
+            <div className="flex items-start space-x-3">
+              <div className="bg-primary-100 p-2 rounded-lg">
+                <Zap className="w-4 h-4 text-primary-600" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-primary-800 mb-1">Demo Access</p>
+                <p className="text-xs text-primary-700">
+                  Create an account first, or use any email/password combination to test the system.
+                </p>
+              </div>
+            </div>
           </div>
         </Card>
+
+        {/* Modern Sign Up Link */}
+        <div className="text-center">
+          <p className="text-body-sm text-gray-600">
+            Don't have an account?{' '}
+            <Link
+              to="/signup"
+              className="text-link font-semibold hover:text-primary-700 transition-colors duration-200"
+            >
+              Create one now
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   )

@@ -3,15 +3,31 @@ import { cn } from '../../utils/classNames'
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode
+  padding?: 'none' | 'sm' | 'md' | 'lg'
+  hover?: boolean
+  glassMorphism?: boolean
 }
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, children, ...props }, ref) => {
+  ({ className, children, padding = 'md', hover = false, glassMorphism = false, ...props }, ref) => {
+    const paddingClasses = {
+      none: '',
+      sm: 'p-4',
+      md: 'p-6', 
+      lg: 'p-8',
+    }
+
     return (
       <div
         ref={ref}
         className={cn(
-          'rounded-lg border border-gray-200 bg-white shadow-sm',
+          glassMorphism 
+            ? 'glass-morphism'
+            : 'bg-white border border-gray-200',
+          'rounded-2xl shadow-soft',
+          hover && 'transition-all duration-300 hover:shadow-medium hover:-translate-y-1',
+          'animate-fade-in',
+          paddingClasses[padding],
           className
         )}
         {...props}

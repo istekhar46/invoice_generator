@@ -1,11 +1,12 @@
 /**
  * Loading State Components
- * Enhanced loading indicators for different scenarios and async operations
+ * Enhanced loading indicators for different scenarios and async operations with shimmer effects
  */
 
 import React from 'react'
 import { Loader2, Database, FileText, Users, Calculator } from 'lucide-react'
 import { LoadingSpinner } from '../ui/LoadingSpinner'
+import { ShimmerCard, ShimmerTable } from '../ui/ShimmerLoading'
 import { cn } from '../../utils/classNames'
 
 export type LoadingType = 
@@ -70,7 +71,7 @@ const getLoadingConfig = (type: LoadingType) => {
 }
 
 /**
- * LoadingState component that shows loading overlay or inline loading
+ * LoadingState component that shows loading overlay or inline loading with smooth transitions
  */
 export const LoadingState: React.FC<LoadingStateProps> = ({
   loading,
@@ -92,7 +93,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
     return (
       <div className={cn('relative', className)}>
         {children}
-        <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-md">
+        <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-md transition-opacity duration-300 animate-fade-in">
           <div className="text-center">
             <Icon className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-2" />
             <p className="text-sm text-gray-600">{loadingMessage}</p>
@@ -103,7 +104,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   }
 
   return (
-    <div className={cn('flex items-center justify-center py-8', className)}>
+    <div className={cn('flex items-center justify-center py-8 animate-fade-in', className)}>
       <div className="text-center">
         <Icon className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-2" />
         <p className="text-sm text-gray-600">{loadingMessage}</p>
@@ -165,7 +166,7 @@ export const ButtonLoading: React.FC<ButtonLoadingProps> = ({
 }
 
 /**
- * Page loading component for full-page loading states
+ * Page loading component for full-page loading states with smooth transitions
  */
 export interface PageLoadingProps {
   message?: string
@@ -183,7 +184,7 @@ export const PageLoading: React.FC<PageLoadingProps> = ({
   const { icon: Icon } = config
 
   return (
-    <div className={cn('min-h-screen bg-gray-50 flex items-center justify-center', className)}>
+    <div className={cn('min-h-screen bg-gray-50 flex items-center justify-center animate-fade-in', className)}>
       <div className="text-center">
         <Icon className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
         <h2 className="text-lg font-medium text-gray-900 mb-2">
@@ -198,19 +199,25 @@ export const PageLoading: React.FC<PageLoadingProps> = ({
 }
 
 /**
- * Skeleton loading component for content placeholders
+ * Enhanced Skeleton loading component with shimmer effects
  */
 export interface SkeletonProps {
   className?: string
   lines?: number
   avatar?: boolean
+  shimmer?: boolean
 }
 
 export const Skeleton: React.FC<SkeletonProps> = ({
   className,
   lines = 3,
   avatar = false,
+  shimmer = true,
 }) => {
+  if (shimmer) {
+    return <ShimmerCard className={className} showAvatar={avatar} lines={lines} />
+  }
+
   return (
     <div className={cn('animate-pulse', className)}>
       {avatar && (
@@ -239,19 +246,25 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 }
 
 /**
- * Table skeleton for loading table data
+ * Enhanced Table skeleton with shimmer effects
  */
 export interface TableSkeletonProps {
   rows?: number
   columns?: number
   className?: string
+  shimmer?: boolean
 }
 
 export const TableSkeleton: React.FC<TableSkeletonProps> = ({
   rows = 5,
   columns = 4,
   className,
+  shimmer = true,
 }) => {
+  if (shimmer) {
+    return <ShimmerTable rows={rows} columns={columns} className={className} />
+  }
+
   return (
     <div className={cn('animate-pulse', className)}>
       <div className="space-y-3">

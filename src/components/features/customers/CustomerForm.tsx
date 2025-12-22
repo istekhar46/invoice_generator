@@ -12,7 +12,8 @@ import type { Customer } from '../../../types/entities'
 import { useCustomerStore } from '../../../store/customerStore'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../../ui/Card'
+import { Card, CardHeader, CardTitle, CardContent } from '../../ui/Card'
+import { FormSection, FormGrid, FormActions } from '../../ui/FormField'
 
 interface CustomerFormProps {
   customer?: Customer | null
@@ -92,7 +93,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
   }
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
+    <Card className="w-full max-w- 3xl mx-auto">
       <CardHeader>
         <CardTitle>
           {isEditing ? 'Edit Customer' : 'Add New Customer'}
@@ -100,21 +101,23 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
       </CardHeader>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-8">
           {/* Error Display */}
           {error && (
-            <div className="rounded-md bg-red-50 border border-red-200 p-4">
+            <div className="rounded-xl bg-red-50 border border-red-200 p-4 animate-fade-in">
               <p className="text-sm text-red-600" role="alert">
                 {error}
               </p>
             </div>
           )}
 
-          {/* Customer Information */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-medium text-gray-900">Customer Information</h4>
-            
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Customer Information Section */}
+          <FormSection
+            title="Customer Information"
+            description="Basic contact details for your customer"
+            variant="bordered"
+          >
+            <FormGrid columns={2} gap="lg">
               <div className="sm:col-span-2">
                 <Input
                   label="Customer Name *"
@@ -139,14 +142,16 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                 error={errors.phone?.message}
                 placeholder="(555) 123-4567"
               />
-            </div>
-          </div>
+            </FormGrid>
+          </FormSection>
 
-          {/* Address Information */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-medium text-gray-900">Address Information</h4>
-            
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Address Information Section */}
+          <FormSection
+            title="Address Information"
+            description="Service location for this customer"
+            variant="bordered"
+          >
+            <FormGrid columns={2} gap="lg">
               <div className="sm:col-span-2">
                 <Input
                   label="Address *"
@@ -179,28 +184,29 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                   placeholder="12345"
                 />
               </div>
-            </div>
-          </div>
+            </FormGrid>
+          </FormSection>
+
+          {/* Form Actions */}
+          <FormActions align="between" responsive>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              type="submit"
+              loading={loading}
+              disabled={!isValid || loading || (!isDirty && isEditing)}
+            >
+              {isEditing ? 'Update Customer' : 'Add Customer'}
+            </Button>
+          </FormActions>
         </CardContent>
-
-        <CardFooter className="flex justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCancel}
-            disabled={loading}
-          >
-            Cancel
-          </Button>
-
-          <Button
-            type="submit"
-            loading={loading}
-            disabled={!isValid || loading || (!isDirty && isEditing)}
-          >
-            {isEditing ? 'Update Customer' : 'Add Customer'}
-          </Button>
-        </CardFooter>
       </form>
     </Card>
   )

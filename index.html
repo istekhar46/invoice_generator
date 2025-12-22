@@ -4,7 +4,30 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>invoice_generator</title>
+    <!-- Inter Font Loading with Optimizations -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+    
+    <!-- Font Display Optimization -->
+    <style>
+      /* Ensure Inter loads with proper fallbacks */
+      @font-face {
+        font-family: 'Inter Fallback';
+        src: local('Arial'), local('Helvetica'), local('sans-serif');
+        font-display: swap;
+        ascent-override: 90.20%;
+        descent-override: 22.48%;
+        line-gap-override: 0.00%;
+        size-adjust: 107.40%;
+      }
+      
+      /* Critical font loading styles */
+      html {
+        font-family: 'Inter', 'Inter Fallback', ui-sans-serif, system-ui, sans-serif;
+      }
+    </style>
+    <title>Electrician Invoice Pro</title>
   </head>
   <body>
     <div id="root"></div>

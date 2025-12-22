@@ -1,6 +1,6 @@
 /**
  * Invoice List Component
- * Displays list of invoices with status filtering and sorting capabilities
+ * Displays list of invoices with modern card design, status filtering and sorting capabilities
  */
 
 import React, { useState, useEffect } from 'react'
@@ -8,9 +8,11 @@ import type { Invoice, InvoiceStatus } from '../../../types/entities'
 import { useInvoiceStore } from '../../../store/invoiceStore'
 import { useCustomerStore } from '../../../store/customerStore'
 import { Button } from '../../ui/Button'
-import { Card, CardContent } from '../../ui/Card'
+import { Card } from '../../ui/Card'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { Modal } from '../../ui/Modal'
 import { PDFActions } from './PDFActions'
+import { ResponsiveGrid, ResponsiveStack } from '../../layout/ResponsiveLayout'
 import { 
   FileText, 
   Plus, 
@@ -23,9 +25,13 @@ import {
   MoreVertical,
   Check,
   Send,
-  Clock
+  ArrowRight,
+  Calendar,
+  DollarSign,
+  User
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '../../../utils/formatters'
+import { cn } from '../../../utils/classNames'
 
 interface InvoiceListProps {
   onInvoiceSelect?: (invoice: Invoice) => void
@@ -137,20 +143,6 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
     }
   }
 
-  const getStatusBadge = (status: InvoiceStatus) => {
-    const styles = {
-      draft: 'bg-gray-100 text-gray-800',
-      sent: 'bg-yellow-100 text-yellow-800',
-      paid: 'bg-green-100 text-green-800',
-    }
-
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[status]}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    )
-  }
-
   const getSortIcon = (column: 'invoiceNumber' | 'createdAt' | 'serviceDate' | 'total') => {
     if (sortBy !== column) return null
     return sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />
@@ -163,80 +155,116 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
 
   if (loading && invoices.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-500">Loading invoices...</p>
+      <div className="space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-gradient-primary rounded-xl">
+              <FileText className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <div className="h-8 w-32 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded" />
+              <div className="h-4 w-24 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded mt-2" />
+            </div>
           </div>
-        </CardContent>
-      </Card>
+          <div className="h-10 w-32 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded-xl" />
+        </div>
+
+        {/* Loading Cards */}
+        <ResponsiveGrid columns={{ mobile: 1, tablet: 2, desktop: 3 }} gap="lg">
+          {[...Array(6)].map((_, index) => (
+            <Card key={index} padding="lg" className="animate-slide-up" style={{ animationDelay: `${index * 100}ms` } as React.CSSProperties}>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="h-6 w-24 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded" />
+                  <div className="h-6 w-16 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded-full" />
+                </div>
+                <div className="h-4 w-32 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded" />
+                <div className="h-8 w-20 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded" />
+              </div>
+            </Card>
+          ))}
+        </ResponsiveGrid>
+      </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <ResponsiveStack spacing="lg">
+      {/* Modern Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center space-x-2">
-          <FileText className="h-6 w-6 text-gray-600" />
-          <h2 className="text-2xl font-bold text-gray-900">Invoices</h2>
-          <span className="text-sm text-gray-500">
-            ({filteredInvoices.length} {filteredInvoices.length === 1 ? 'invoice' : 'invoices'})
-          </span>
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-gradient-primary rounded-xl shadow-glow">
+            <FileText className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="heading-2 text-gray-900">Invoices</h1>
+            <p className="text-body-sm text-gray-600">
+              {filteredInvoices.length} {filteredInvoices.length === 1 ? 'invoice' : 'invoices'}
+            </p>
+          </div>
         </div>
         
-        <Button onClick={onCreateInvoice} className="flex items-center space-x-2">
-          <Plus className="h-4 w-4" />
-          <span>Create Invoice</span>
+        <Button 
+          onClick={onCreateInvoice} 
+          variant="primary"
+          size="lg"
+          className="group shadow-glow"
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          Create Invoice
+          <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
         </Button>
       </div>
 
-      {/* Filters and Sort Controls */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Status Filter */}
+      {/* Modern Filters and Sort Controls */}
+      <Card padding="lg" className="bg-gradient-to-r from-white to-gray-50/50">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Status Filter */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex items-center space-x-2">
               <Filter className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">Status:</span>
-              <div className="flex space-x-2">
-                <Button
-                  variant={selectedStatus === 'all' ? 'primary' : 'outline'}
-                  size="small"
-                  onClick={() => handleStatusFilter('all')}
-                >
-                  All
-                </Button>
-                <Button
-                  variant={selectedStatus === 'draft' ? 'primary' : 'outline'}
-                  size="small"
-                  onClick={() => handleStatusFilter('draft')}
-                >
-                  Draft
-                </Button>
-                <Button
-                  variant={selectedStatus === 'sent' ? 'primary' : 'outline'}
-                  size="small"
-                  onClick={() => handleStatusFilter('sent')}
-                >
-                  Sent
-                </Button>
-                <Button
-                  variant={selectedStatus === 'paid' ? 'primary' : 'outline'}
-                  size="small"
-                  onClick={() => handleStatusFilter('paid')}
-                >
-                  Paid
-                </Button>
-              </div>
+              <span className="text-sm font-semibold text-gray-700">Filter by Status:</span>
             </div>
-
-            {/* Sort Controls */}
-            <div className="flex space-x-2 ml-auto">
+            <div className="flex flex-wrap gap-2">
               <Button
-                variant="outline"
-                size="small"
+                variant={selectedStatus === 'all' ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => handleStatusFilter('all')}
+              >
+                All
+              </Button>
+              <Button
+                variant={selectedStatus === 'draft' ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => handleStatusFilter('draft')}
+              >
+                Draft
+              </Button>
+              <Button
+                variant={selectedStatus === 'sent' ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => handleStatusFilter('sent')}
+              >
+                Sent
+              </Button>
+              <Button
+                variant={selectedStatus === 'paid' ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => handleStatusFilter('paid')}
+              >
+                Paid
+              </Button>
+            </div>
+          </div>
+
+          {/* Sort Controls */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:ml-auto">
+            <span className="text-sm font-semibold text-gray-700">Sort by:</span>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => handleSort('invoiceNumber')}
                 className="flex items-center space-x-1"
               >
@@ -245,8 +273,8 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
               </Button>
               
               <Button
-                variant="outline"
-                size="small"
+                variant="secondary"
+                size="sm"
                 onClick={() => handleSort('serviceDate')}
                 className="flex items-center space-x-1"
               >
@@ -255,8 +283,8 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
               </Button>
 
               <Button
-                variant="outline"
-                size="small"
+                variant="secondary"
+                size="sm"
                 onClick={() => handleSort('total')}
                 className="flex items-center space-x-1"
               >
@@ -265,256 +293,99 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
               </Button>
             </div>
           </div>
-        </CardContent>
+        </div>
       </Card>
 
       {/* Error Display */}
       {error && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-4">
-          <p className="text-sm text-red-600" role="alert">
-            {error}
-          </p>
-        </div>
+        <Card padding="lg" className="border-danger-200 bg-danger-50">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-danger-100 rounded-xl">
+              <FileText className="h-5 w-5 text-danger-600" />
+            </div>
+            <p className="text-sm text-danger-700 font-medium" role="alert">
+              {error}
+            </p>
+          </div>
+        </Card>
       )}
 
       {/* PDF Error Display */}
       {pdfError && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-4">
+        <Card padding="lg" className="border-danger-200 bg-danger-50">
           <div className="flex justify-between items-start">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
+            <div className="flex items-start space-x-3">
+              <div className="p-2 bg-danger-100 rounded-xl">
+                <FileText className="h-5 w-5 text-danger-600" />
               </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">PDF Generation Failed</h3>
-                <p className="text-sm text-red-600 mt-1" role="alert">
+              <div>
+                <h3 className="text-sm font-semibold text-danger-800">PDF Generation Failed</h3>
+                <p className="text-sm text-danger-700 mt-1" role="alert">
                   {pdfError}
                 </p>
                 {pdfError.includes('Company profile is required') && (
-                  <p className="text-sm text-red-600 mt-2">
+                  <p className="text-sm text-danger-700 mt-2">
                     <strong>Next steps:</strong> Go to Settings → Company Profile to set up your business information.
                   </p>
                 )}
               </div>
             </div>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={clearPdfError}
-              className="text-red-400 hover:text-red-600"
+              className="text-danger-400 hover:text-danger-600"
             >
               <span className="sr-only">Close</span>
               <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       )}
 
-      {/* Invoice Table */}
+      {/* Invoice Cards Grid */}
       {filteredInvoices.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-12">
-            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+        <Card padding="lg" className="text-center bg-gradient-to-br from-white to-gray-50/50">
+          <div className="py-12">
+            <div className="p-4 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl w-fit mx-auto mb-6">
+              <FileText className="h-12 w-12 text-gray-400" />
+            </div>
+            <h3 className="heading-3 text-gray-900 mb-2">
               {selectedStatus !== 'all' ? `No ${selectedStatus} invoices` : 'No invoices yet'}
             </h3>
-            <p className="text-gray-500 mb-4">
+            <p className="text-body text-gray-600 mb-6 max -w- md mx-auto">
               {selectedStatus !== 'all'
                 ? `You don't have any ${selectedStatus} invoices. Try changing the filter.`
-                : 'Get started by creating your first invoice.'
+                : 'Get started by creating your first invoice and managing your business professionally.'
               }
             </p>
             {selectedStatus === 'all' && (
-              <Button onClick={onCreateInvoice}>
+              <Button onClick={onCreateInvoice} variant="primary" size="lg" className="group">
+                <Plus className="w-5 h-5 mr-2" />
                 Create Your First Invoice
+                <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
               </Button>
             )}
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Invoice #
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Customer
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Service Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Due Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredInvoices.map((invoice) => (
-                  <tr 
-                    key={invoice.id} 
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => onInvoiceSelect?.(invoice)}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {invoice.invoiceNumber}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {getCustomerName(invoice.customerId)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(invoice.serviceDate)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(invoice.dueDate)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {formatCurrency(invoice.total)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(invoice.status)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onInvoiceSelect?.(invoice)
-                          }}
-                          title="View Invoice"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        
-                        {/* Actions Menu */}
-                        <div className="relative">
-                          <Button
-                            variant="ghost"
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setShowActionsMenu(showActionsMenu === invoice.id ? null : invoice.id)
-                            }}
-                            title="More Actions"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                          
-                          {showActionsMenu === invoice.id && (
-                            <div className="fixed right-8 mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 z-10">
-                              <div className="py-1">
-                                {/* PDF Actions */}
-                                <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                                  PDF Actions
-                                </div>
-                                <div className="px-3 py-2">
-                                  <PDFActions
-                                    invoice={invoice}
-                                    variant="compact"
-                                    onError={handlePdfError}
-                                    className="justify-start"
-                                  />
-                                </div>
-                                
-                                {/* Invoice Actions */}
-                                <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-100 border-t border-gray-100">
-                                  Invoice Actions
-                                </div>
-                                <button
-                                  className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleEditInvoice(invoice)
-                                    setShowActionsMenu(null)
-                                  }}
-                                >
-                                  <Edit className="h-4 w-4 mr-2 text-gray-400" />
-                                  Edit Invoice
-                                </button>
-                                
-                                {/* Status Change Actions */}
-                                <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-100 border-t border-gray-100">
-                                  Change Status
-                                </div>
-                                {invoice.status !== 'draft' && (
-                                  <button
-                                    className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleStatusChange(invoice, 'draft')
-                                    }}
-                                  >
-                                    <Clock className="h-4 w-4 mr-2 text-gray-400" />
-                                    Mark as Draft
-                                  </button>
-                                )}
-                                {invoice.status !== 'sent' && (
-                                  <button
-                                    className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleStatusChange(invoice, 'sent')
-                                    }}
-                                  >
-                                    <Send className="h-4 w-4 mr-2 text-yellow-500" />
-                                    Mark as Sent
-                                  </button>
-                                )}
-                                {invoice.status !== 'paid' && (
-                                  <button
-                                    className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleStatusChange(invoice, 'paid')
-                                    }}
-                                  >
-                                    <Check className="h-4 w-4 mr-2 text-green-500" />
-                                    Mark as Paid
-                                  </button>
-                                )}
-                                
-                                {/* Danger Zone */}
-                                <div className="px-3 py-2 text-xs font-medium text-red-500 uppercase tracking-wider border-b border-gray-100 border-t border-gray-100">
-                                  Danger Zone
-                                </div>
-                                <button
-                                  className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleDeleteInvoice(invoice)
-                                    setShowActionsMenu(null)
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete Invoice
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </Card>
+      ) : (
+        <ResponsiveGrid columns={{ mobile: 1, tablet: 2, desktop: 3 }} gap="lg">
+          {filteredInvoices.map((invoice, index) => (
+            <InvoiceCard
+              key={invoice.id}
+              invoice={invoice}
+              customerName={getCustomerName(invoice.customerId)}
+              onSelect={() => onInvoiceSelect?.(invoice)}
+              onEdit={() => handleEditInvoice(invoice)}
+              onDelete={() => handleDeleteInvoice(invoice)}
+              onStatusChange={(status) => handleStatusChange(invoice, status)}
+              onPdfError={handlePdfError}
+              index={index}
+            />
+          ))}
+        </ResponsiveGrid>
       )}
 
       {/* Delete Confirmation Modal */}
@@ -532,23 +403,190 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
           
           <div className="flex justify-end space-x-2">
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={() => setShowDeleteConfirm(false)}
               disabled={loading}
             >
               Cancel
             </Button>
             <Button
-              variant="primary"
+              variant="danger"
               onClick={confirmDelete}
               loading={loading}
-              className="bg-red-600 hover:bg-red-700 focus-visible:ring-red-500"
             >
               Delete Invoice
             </Button>
           </div>
         </div>
       </Modal>
-    </div>
+    </ResponsiveStack>
+  )
+}
+
+/**
+ * Modern Invoice Card Component
+ */
+interface InvoiceCardProps {
+  invoice: Invoice
+  customerName: string
+  onSelect: () => void
+  onEdit: () => void
+  onDelete: () => void
+  onStatusChange: (status: InvoiceStatus) => void
+  onPdfError: (error: string) => void
+  index: number
+}
+
+const InvoiceCard: React.FC<InvoiceCardProps> = ({
+  invoice,
+  customerName,
+  onSelect,
+  onEdit,
+  onDelete,
+  onStatusChange,
+  onPdfError,
+  index
+}) => {
+  const [showActionsMenu, setShowActionsMenu] = useState(false)
+
+  return (
+    <Card 
+      padding="lg" 
+      hover={true}
+      className={cn(
+        "cursor-pointer transition-all duration-300 animate-slide-up bg-gradient-to-br from-white to-gray-50/50",
+        "hover:shadow-glow hover:-translate-y-1"
+      )}
+      style={{ animationDelay: `${index * 100}ms` } as React.CSSProperties}
+      onClick={onSelect}
+    >
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold text-gray-900">
+              {invoice.invoiceNumber}
+            </h3>
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <User className="w-4 h-4" />
+              <span>{customerName}</span>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <StatusBadge status={invoice.status} />
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowActionsMenu(!showActionsMenu)
+                }}
+                className="min-h-[44px] min-w-[44px]"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+              
+              {showActionsMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-medium border border-gray-200 z-10 py-2">
+                  <button
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onEdit()
+                      setShowActionsMenu(false)
+                    }}
+                  >
+                    <Edit className="h-4 w-4 mr-3 text-gray-400" />
+                    Edit Invoice
+                  </button>
+                  
+                  {invoice.status !== 'sent' && (
+                    <button
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onStatusChange('sent')
+                        setShowActionsMenu(false)
+                      }}
+                    >
+                      <Send className="h-4 w-4 mr-3 text-secondary-500" />
+                      Mark as Sent
+                    </button>
+                  )}
+                  
+                  {invoice.status !== 'paid' && (
+                    <button
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onStatusChange('paid')
+                        setShowActionsMenu(false)
+                      }}
+                    >
+                      <Check className="h-4 w-4 mr-3 text-success-500" />
+                      Mark as Paid
+                    </button>
+                  )}
+                  
+                  <div className="border-t border-gray-100 my-2" />
+                  
+                  <button
+                    className="flex items-center w-full px-4 py-2 text-sm text-danger-600 hover:bg-danger-50 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDelete()
+                      setShowActionsMenu(false)
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-3" />
+                    Delete Invoice
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Details */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <Calendar className="w-4 h-4" />
+            <span>{formatDate(invoice.serviceDate)}</span>
+          </div>
+          <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <DollarSign className="w-4 h-4" />
+            <span className="font-semibold text-gray-900">{formatCurrency(invoice.total)}</span>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+          <div className="text-xs text-gray-500">
+            Due: {formatDate(invoice.dueDate)}
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                onSelect()
+              }}
+              className="text-primary-600 hover:text-primary-700"
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              View
+            </Button>
+            <PDFActions
+              invoice={invoice}
+              variant="compact"
+              onError={onPdfError}
+              className="opacity-75 hover:opacity-100"
+            />
+          </div>
+        </div>
+      </div>
+    </Card>
   )
 }
