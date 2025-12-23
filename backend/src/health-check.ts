@@ -3,7 +3,7 @@ import * as http from 'http';
 const options: http.RequestOptions = {
   hostname: 'localhost',
   port: process.env.PORT ?? 3001,
-  path: '/health',
+  path: '/health/ready',
   method: 'GET',
   timeout: 2000,
 };
