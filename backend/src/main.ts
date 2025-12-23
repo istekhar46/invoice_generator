@@ -68,8 +68,8 @@ async function bootstrap(): Promise<void> {
     .addTag('Customers', 'Customer management endpoints')
     .addTag('Invoices', 'Invoice and line item management endpoints')
     .addTag('Health', 'System health check endpoints')
-    .addServer(`http://localhost:${port}/api/v1`, 'Development server')
-    .addServer(`https://api.example.com/api/v1`, 'Production server')
+    .addServer(`http://localhost:${port}`, 'Development server')
+    .addServer(`https://api.example.com`, 'Production server')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
