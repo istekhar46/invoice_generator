@@ -223,19 +223,11 @@ export class CustomerService extends BaseUserService {
       }
     }
 
-    // Validate state code (basic validation for US states)
+    // Validate state code - accept 2-6 character strings for now
     if (data.state) {
-      const validStates = [
-        'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
-        'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
-        'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
-        'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
-        'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY',
-        'DC'
-      ];
-      
-      if (!validStates.includes(data.state.toUpperCase())) {
-        throw new BadRequestException('Invalid state code. Must be a valid US state abbreviation.');
+      // Accept any string with 2-6 characters (alphanumeric or digits)
+      if (data.state.length < 2 || data.state.length > 6) {
+        throw new BadRequestException('State code must be between 2 and 6 characters');
       }
     }
   }

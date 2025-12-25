@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, FileText, Users, Building2, TrendingUp, ArrowRight } from 'lucide-react'
 import { DashboardStats, RecentInvoices } from '../components/features/dashboard'
@@ -7,10 +7,12 @@ import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { InvoiceBuilder } from '../components/features/invoices/InvoiceBuilder'
 import { CustomerForm } from '../components/features/customers/CustomerForm'
+import { ErrorDisplay } from '../components/shared/ErrorDisplay'
+import { PageLoading } from '../components/shared/LoadingState'
 import { ResponsiveGrid, ResponsiveStack, MobileOptimizedSection } from '../components/layout/ResponsiveLayout'
-import { useInvoiceStore } from '../store/invoiceStore'
-import { useCustomerStore } from '../store/customerStore'
-import { useAuthStore } from '../store/authStore'
+import { useRecentInvoices } from '../hooks/useInvoices'
+import { useAllCustomers } from '../hooks/useCustomers'
+import { useAuthStatus } from '../hooks/useAuth'
 import { DashboardStatisticsService } from '../services/dashboardStatistics.service'
 import type { Invoice } from '../types/entities'
 
@@ -23,51 +25,51 @@ import type { Invoice } from '../types/entities'
  */
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { user } = useAuthStatus()
+  
+  // Use TanStack Query hooks
   const { 
-    invoices, 
-    loading: invoicesLoading, 
-    loadInvoices 
-  } = useInvoiceStore()
+    data: invoicesResponse, 
+    isLoading: invoicesLoading, 
+    error: invoicesError,
+    refetch: refetchInvoices
+  } = useRecentInvoices(10)
+  
   const { 
-    customers, 
-    loading: customersLoading, 
-    loadCustomers,
-    getCustomer 
-  } = useCustomerStore()
+    data: customersResponse, 
+    isLoading: customersLoading,
+    error: customersError,
+    refetch: refetchCustomers
+  } = useAllCustomers()
 
   // Modal states
   const [showInvoiceBuilder, setShowInvoiceBuilder] = useState(false)
   const [showCustomerForm, setShowCustomerForm] = useState(false)
 
-  // Load data when component mounts or user changes
-  useEffect(() => {
-    if (user?.id) {
-      loadInvoices(user.id)
-      loadCustomers(user.id)
-    }
-  }, [user?.id, loadInvoices, loadCustomers])
+  // Extract data from responses
+  const invoices = invoicesResponse?.data || []
+  const customers = customersResponse?.data || []
+  const dashboardLoading = invoicesLoading || customersLoading
+  const hasError = invoicesError || customersError
 
   // Calculate dashboard statistics
   const statistics = useMemo(() => {
-    return DashboardStatisticsService.calculateStatistics(invoices)
+    return DashboardStatisticsService.calculateStatistics(invoices as any)
   }, [invoices])
 
   // Get recent invoices with customer names
   const recentInvoices = useMemo(() => {
     const customerLookup = (customerId: string) => {
-      const customer = getCustomer(customerId)
+      const customer = customers.find(c => c.id === customerId)
       return customer?.name
     }
 
     return DashboardStatisticsService.getRecentInvoiceSummaries(
-      invoices,
+      invoices as any,
       customerLookup,
       5
     )
-  }, [invoices, getCustomer])
-
-  const isLoading = invoicesLoading || customersLoading
+  }, [invoices, customers])
 
   const handleInvoiceClick = (_invoiceId: string) => {
     // Navigate to invoices page - the InvoicesPage will handle showing the specific invoice
@@ -84,20 +86,35 @@ export const DashboardPage: React.FC = () => {
 
   const handleInvoiceSave = (_invoice: Invoice) => {
     setShowInvoiceBuilder(false)
-    // Optionally navigate to the invoice or show a success message
-  }
-
-  const handleInvoiceBuilderCancel = () => {
-    setShowInvoiceBuilder(false)
+    // Refetch data to get updated statistics
+    refetchInvoices()
   }
 
   const handleCustomerSuccess = () => {
     setShowCustomerForm(false)
-    // Customer will be automatically added to the store
+    // Refetch customers to get updated count
+    refetchCustomers()
   }
 
-  const handleCustomerCancel = () => {
-    setShowCustomerForm(false)
+  // Show loading state
+  if (dashboardLoading && invoices.length === 0) {
+    return <PageLoading message="Loading dashboard..." />
+  }
+
+  // Show error state
+  if (hasError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50/30 p-6">
+        <ErrorDisplay 
+          error={invoicesError || customersError} 
+          onRetry={() => {
+            refetchInvoices()
+            refetchCustomers()
+          }}
+          title="Failed to load dashboard data"
+        />
+      </div>
+    )
   }
 
   return (
@@ -134,7 +151,7 @@ export const DashboardPage: React.FC = () => {
           <DashboardStats
             statistics={statistics}
             totalCustomers={customers.length}
-            loading={isLoading}
+            loading={dashboardLoading}
           />
         </MobileOptimizedSection>
 
@@ -148,7 +165,7 @@ export const DashboardPage: React.FC = () => {
             <div className="lg:col-span-2">
               <RecentInvoices
                 invoices={recentInvoices}
-                loading={isLoading}
+                loading={dashboardLoading}
                 onInvoiceClick={handleInvoiceClick}
                 onViewAll={() => navigate('/invoices')}
               />
@@ -228,26 +245,26 @@ export const DashboardPage: React.FC = () => {
         {/* Invoice Builder Modal */}
         <Modal
           open={showInvoiceBuilder}
-          onClose={handleInvoiceBuilderCancel}
+          onClose={() => setShowInvoiceBuilder(false)}
           title="Create New Invoice"
           size="large"
         >
           <InvoiceBuilder
             onSave={handleInvoiceSave}
-            onCancel={handleInvoiceBuilderCancel}
+            onCancel={() => setShowInvoiceBuilder(false)}
           />
         </Modal>
 
         {/* Customer Form Modal */}
         <Modal
           open={showCustomerForm}
-          onClose={handleCustomerCancel}
+          onClose={() => setShowCustomerForm(false)}
           title="Add New Customer"
           size="medium"
         >
           <CustomerForm
             onSuccess={handleCustomerSuccess}
-            onCancel={handleCustomerCancel}
+            onCancel={() => setShowCustomerForm(false)}
           />
         </Modal>
       </ResponsiveStack>

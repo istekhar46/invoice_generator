@@ -26,3 +26,18 @@ export {
   type ErrorReport,
   type ErrorHandlerConfig,
 } from './errorHandler.service'
+
+// Cache management services
+export {
+  CacheInvalidationService,
+  createCacheInvalidationService,
+  getCacheInvalidationService,
+  initializeCacheService,
+} from './cache'
+
+// Prefetch services
+export {
+  PrefetchService,
+  getPrefetchService,
+  createPrefetchService,
+} from './prefetch'

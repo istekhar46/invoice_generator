@@ -6,9 +6,8 @@ import { Zap, ArrowRight } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
-import { ErrorDisplay, LoadingState } from '../components/shared'
-import { useAuthStore } from '../store/authStore'
-import { useAsyncOperation } from '../hooks'
+import { ErrorDisplay } from '../components/shared'
+import { useLogin } from '../hooks/useAuth'
 import { loginSchema, type LoginFormData } from '../types/forms'
 
 /**
@@ -20,16 +19,7 @@ import { loginSchema, type LoginFormData } from '../types/forms'
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login, clearError } = useAuthStore()
-
-  const { loading, error, execute, clearError: clearAsyncError } = useAsyncOperation({
-    errorType: 'authentication',
-    onSuccess: () => {
-      // Redirect to the originally requested page or dashboard
-      const from = (location.state as any)?.from?.pathname || '/dashboard'
-      navigate(from, { replace: true })
-    },
-  })
+  const login = useLogin()
 
   const {
     register,
@@ -40,22 +30,20 @@ export const LoginPage: React.FC = () => {
   })
 
   const onSubmit = async (data: LoginFormData) => {
-    clearError()
-    clearAsyncError()
-    
-    await execute(async () => {
-      await login(data)
-    })
-  }
-
-  const handleRetry = () => {
-    clearError()
-    clearAsyncError()
+    try {
+      await login.mutateAsync(data)
+      // Redirect to the originally requested page or dashboard
+      const from = (location.state as any)?.from?.pathname || '/dashboard'
+      navigate(from, { replace: true })
+    } catch (error) {
+      // Error is handled by the mutation hook
+      console.error('Login failed:', error)
+    }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8 animate-fade-in">
+    <div className="min-h-screen bg-gradient-to from-primary-50 via-white to-secondary-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w- md space-y-8 animate-fade-in">
         {/* Modern Logo and Branding */}
         <div className="text-center">
           <div className="flex justify-center mb-6">
@@ -77,65 +65,61 @@ export const LoginPage: React.FC = () => {
           hover={true}
           className="backdrop-blur-sm bg-white/90 border-white/20 shadow-medium"
         >
-          <LoadingState loading={loading} type="authenticating" overlay={true}>
-            <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-              {error && (
-                <ErrorDisplay
-                  error={error}
-                  type="authentication"
-                  showRetry={true}
-                  onRetry={handleRetry}
-                  onDismiss={clearAsyncError}
-                />
+          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+            {login.error && (
+              <ErrorDisplay
+                error={login.error instanceof Error ? login.error.message : 'Login failed'}
+                type="authentication"
+                showRetry={true}
+              />
+            )}
+
+            <div className="space-y-5">
+              <Input
+                {...register('email')}
+                id="email"
+                type="email"
+                autoComplete="email"
+                label="Email address"
+                placeholder="Enter your email"
+                error={errors.email?.message}
+                variant="filled"
+              />
+
+              <Input
+                {...register('password')}
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                label="Password"
+                placeholder="Enter your password"
+                error={errors.password?.message}
+                variant="filled"
+              />
+            </div>
+
+            <Button 
+              type="submit" 
+              variant="primary"
+              size="lg"
+              fullWidth={true}
+              loading={login.isPending}
+              disabled={login.isPending}
+              className="group"
+            >
+              {login.isPending ? (
+                'Signing in...'
+              ) : (
+                <>
+                  Sign in
+                  <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </>
               )}
-
-              <div className="space-y-5">
-                <Input
-                  {...register('email')}
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  label="Email address"
-                  placeholder="Enter your email"
-                  error={errors.email?.message}
-                  variant="filled"
-                />
-
-                <Input
-                  {...register('password')}
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  label="Password"
-                  placeholder="Enter your password"
-                  error={errors.password?.message}
-                  variant="filled"
-                />
-              </div>
-
-              <Button 
-                type="submit" 
-                variant="primary"
-                size="lg"
-                fullWidth={true}
-                loading={loading}
-                disabled={loading}
-                className="group"
-              >
-                {loading ? (
-                  'Signing in...'
-                ) : (
-                  <>
-                    Sign in
-                    <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />
-                  </>
-                )}
-              </Button>
-            </form>
-          </LoadingState>
+            </Button>
+          </form>
 
           {/* Demo credentials helper with modern styling */}
-          <div className="mt-6 p-4 bg-gradient-to-r from-primary-50 to-blue-50 border border-primary-200 rounded-xl">
+          <div className="mt-6 p-4 bg-gradient-to from-primary-50 to-blue-50 border border-primary-200 rounded-xl">
             <div className="flex items-start space-x-3">
               <div className="bg-primary-100 p-2 rounded-lg">
                 <Zap className="w-4 h-4 text-primary-600" />

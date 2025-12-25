@@ -3,14 +3,17 @@
  * Displays list of invoices with modern card design, status filtering and sorting capabilities
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import type { Invoice, InvoiceStatus } from '../../../types/entities'
-import { useInvoiceStore } from '../../../store/invoiceStore'
-import { useCustomerStore } from '../../../store/customerStore'
+import { usePaginatedInvoices, useDeleteInvoice, useUpdateInvoiceStatus } from '../../../hooks/useInvoices'
+import { usePrefetchOnHover, usePrefetchRelated, useAutoPrefetch } from '../../../hooks/usePrefetch'
 import { Button } from '../../ui/Button'
 import { Card } from '../../ui/Card'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { Modal } from '../../ui/Modal'
+import { Pagination } from '../../ui/Pagination'
+import { InvoiceListSkeleton, InvoiceCardSkeleton, SkeletonGrid } from '../../ui/SkeletonLoading'
+import { ErrorDisplay } from '../../shared/ErrorDisplay'
 import { PDFActions } from './PDFActions'
 import { ResponsiveGrid, ResponsiveStack } from '../../layout/ResponsiveLayout'
 import { 
@@ -32,6 +35,7 @@ import {
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '../../../utils/formatters'
 import { cn } from '../../../utils/classNames'
+import type { InvoiceQueryParams } from '../../../services/api'
 
 interface InvoiceListProps {
   onInvoiceSelect?: (invoice: Invoice) => void
@@ -44,40 +48,47 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
   onInvoiceEdit,
   onCreateInvoice,
 }) => {
-  const {
-    invoices,
-    loading,
-    error,
-    sortBy,
-    sortOrder,
-    loadInvoices,
-    deleteInvoice,
-    updateInvoice,
-    setFilters,
-    setSorting,
-    getFilteredInvoices,
-  } = useInvoiceStore()
-
-  const { loadCustomers, getCustomer } = useCustomerStore()
-
+  // State for filtering, sorting, pagination, and modals
+  const [selectedStatus, setSelectedStatus] = useState<InvoiceStatus | 'all'>('all')
+  const [sortBy, setSortBy] = useState<'invoiceNumber' | 'createdAt' | 'serviceDate' | 'total'>('createdAt')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [currentPage, setCurrentPage] = useState(1)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deletingInvoice, setDeletingInvoice] = useState<Invoice | null>(null)
-  const [selectedStatus, setSelectedStatus] = useState<InvoiceStatus | 'all'>('all')
   const [showActionsMenu, setShowActionsMenu] = useState<string | null>(null)
   const [pdfError, setPdfError] = useState<string | null>(null)
 
-  // Load invoices and customers on mount
+  // Build query parameters
+  const queryParams: Omit<InvoiceQueryParams, 'page' | 'limit'> = useMemo(() => ({
+    status: selectedStatus !== 'all' ? selectedStatus.toUpperCase() as 'DRAFT' | 'SENT' | 'PAID' : undefined,
+    sortBy,
+    sortOrder,
+  }), [selectedStatus, sortBy, sortOrder])
+
+  // Use paginated invoices hook
+  const { 
+    data: invoicesResponse, 
+    isLoading: invoicesLoading, 
+    error: invoicesError,
+    refetch: refetchInvoices,
+    pagination
+  } = usePaginatedInvoices(currentPage, 20, queryParams)
+
+  // Extract data from responses
+  const invoices = invoicesResponse?.data || []
+  const isLoading = invoicesLoading
+
+  const deleteInvoiceMutation = useDeleteInvoice()
+  const updateStatusMutation = useUpdateInvoiceStatus()
+  const { smartPrefetch } = useAutoPrefetch()
+
+  // Smart prefetching on component mount
   useEffect(() => {
-    // Get user ID from auth store
-    const authUser = JSON.parse(localStorage.getItem('user') || 'null')
-    if (authUser?.id) {
-      loadInvoices(authUser.id)
-      loadCustomers(authUser.id)
-    }
-  }, [loadInvoices, loadCustomers])
+    smartPrefetch('invoice-list')
+  }, [smartPrefetch])
 
   // Close actions menu when clicking outside
-  useEffect(() => {
+  React.useEffect(() => {
     const handleClickOutside = () => {
       setShowActionsMenu(null)
     }
@@ -88,20 +99,20 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
     }
   }, [showActionsMenu])
 
-  const filteredInvoices = getFilteredInvoices()
-
   const handleStatusFilter = (status: InvoiceStatus | 'all') => {
     setSelectedStatus(status)
-    if (status === 'all') {
-      setFilters({ status: undefined })
-    } else {
-      setFilters({ status })
-    }
+    setCurrentPage(1) // Reset to first page when filtering
   }
 
   const handleSort = (newSortBy: 'invoiceNumber' | 'createdAt' | 'serviceDate' | 'total') => {
     const newSortOrder = sortBy === newSortBy && sortOrder === 'asc' ? 'desc' : 'asc'
-    setSorting(newSortBy, newSortOrder)
+    setSortBy(newSortBy)
+    setSortOrder(newSortOrder)
+    setCurrentPage(1) // Reset to first page when sorting
+  }
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
   }
 
   const handleDeleteInvoice = (invoice: Invoice) => {
@@ -111,7 +122,10 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
 
   const handleStatusChange = async (invoice: Invoice, newStatus: InvoiceStatus) => {
     try {
-      await updateInvoice(invoice.id, { status: newStatus })
+      await updateStatusMutation.mutateAsync({ 
+        id: invoice.id, 
+        status: newStatus.toUpperCase() as 'DRAFT' | 'SENT' | 'PAID'
+      })
       setShowActionsMenu(null)
     } catch (error) {
       console.error('Status update failed:', error)
@@ -134,7 +148,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
   const confirmDelete = async () => {
     if (deletingInvoice) {
       try {
-        await deleteInvoice(deletingInvoice.id)
+        await deleteInvoiceMutation.mutateAsync(deletingInvoice.id)
         setShowDeleteConfirm(false)
         setDeletingInvoice(null)
       } catch (error) {
@@ -148,45 +162,13 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
     return sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />
   }
 
-  const getCustomerName = (customerId: string) => {
-    const customer = getCustomer(customerId)
-    return customer?.name || 'Unknown Customer'
+  const getCustomerName = (invoice: any) => {
+    // API response has customer object, not customerId
+    return invoice.customer?.name || 'Unknown Customer'
   }
 
-  if (loading && invoices.length === 0) {
-    return (
-      <div className="space-y-6">
-        {/* Header Skeleton */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-gradient-primary rounded-xl">
-              <FileText className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <div className="h-8 w-32 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded" />
-              <div className="h-4 w-24 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded mt-2" />
-            </div>
-          </div>
-          <div className="h-10 w-32 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded-xl" />
-        </div>
-
-        {/* Loading Cards */}
-        <ResponsiveGrid columns={{ mobile: 1, tablet: 2, desktop: 3 }} gap="lg">
-          {[...Array(6)].map((_, index) => (
-            <Card key={index} padding="lg" className="animate-slide-up" style={{ animationDelay: `${index * 100}ms` } as React.CSSProperties}>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="h-6 w-24 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded" />
-                  <div className="h-6 w-16 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded-full" />
-                </div>
-                <div className="h-4 w-32 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded" />
-                <div className="h-8 w-20 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded" />
-              </div>
-            </Card>
-          ))}
-        </ResponsiveGrid>
-      </div>
-    )
+  if (isLoading && invoices.length === 0) {
+    return <InvoiceListSkeleton />
   }
 
   return (
@@ -200,7 +182,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
           <div>
             <h1 className="heading-2 text-gray-900">Invoices</h1>
             <p className="text-body-sm text-gray-600">
-              {filteredInvoices.length} {filteredInvoices.length === 1 ? 'invoice' : 'invoices'}
+              {pagination.total} {pagination.total === 1 ? 'invoice' : 'invoices'}
             </p>
           </div>
         </div>
@@ -218,7 +200,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       </div>
 
       {/* Modern Filters and Sort Controls */}
-      <Card padding="lg" className="bg-gradient-to-r from-white to-gray-50/50">
+      <Card padding="lg" className="bg-gradient-to- from-white to-gray-50/50">
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Status Filter */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -297,17 +279,12 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       </Card>
 
       {/* Error Display */}
-      {error && (
-        <Card padding="lg" className="border-danger-200 bg-danger-50">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-danger-100 rounded-xl">
-              <FileText className="h-5 w-5 text-danger-600" />
-            </div>
-            <p className="text-sm text-danger-700 font-medium" role="alert">
-              {error}
-            </p>
-          </div>
-        </Card>
+      {invoicesError && (
+        <ErrorDisplay 
+          error={invoicesError} 
+          onRetry={() => refetchInvoices()}
+          title="Failed to load invoices"
+        />
       )}
 
       {/* PDF Error Display */}
@@ -346,10 +323,10 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       )}
 
       {/* Invoice Cards Grid */}
-      {filteredInvoices.length === 0 ? (
-        <Card padding="lg" className="text-center bg-gradient-to-br from-white to-gray-50/50">
+      {invoices.length === 0 ? (
+        <Card padding="lg" className="text-center bg-gradient-to- from-white to-gray-50/50">
           <div className="py-12">
-            <div className="p-4 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl w-fit mx-auto mb-6">
+            <div className="p-4 bg-gradient-to- from-gray-100 to-gray-200 rounded-2xl w-fit mx-auto mb-6">
               <FileText className="h-12 w-12 text-gray-400" />
             </div>
             <h3 className="heading-3 text-gray-900 mb-2">
@@ -371,21 +348,46 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
           </div>
         </Card>
       ) : (
-        <ResponsiveGrid columns={{ mobile: 1, tablet: 2, desktop: 3 }} gap="lg">
-          {filteredInvoices.map((invoice, index) => (
-            <InvoiceCard
-              key={invoice.id}
-              invoice={invoice}
-              customerName={getCustomerName(invoice.customerId)}
-              onSelect={() => onInvoiceSelect?.(invoice)}
-              onEdit={() => handleEditInvoice(invoice)}
-              onDelete={() => handleDeleteInvoice(invoice)}
-              onStatusChange={(status) => handleStatusChange(invoice, status)}
-              onPdfError={handlePdfError}
-              index={index}
-            />
-          ))}
-        </ResponsiveGrid>
+        <>
+          {/* Show skeleton overlay when refetching */}
+          {isLoading && invoices.length > 0 && (
+            <div className="relative">
+              <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 rounded-lg">
+                <SkeletonGrid CardSkeleton={InvoiceCardSkeleton} count={6} />
+              </div>
+            </div>
+          )}
+          
+          <ResponsiveGrid columns={{ mobile: 1, tablet: 2, desktop: 3 }} gap="lg">
+            {invoices.map((invoice, index) => (
+              <InvoiceCard
+                key={invoice.id}
+                invoice={invoice as any}
+                customerName={getCustomerName(invoice)}
+                onSelect={() => onInvoiceSelect?.(invoice as any)}
+                onEdit={() => handleEditInvoice(invoice as any)}
+                onDelete={() => handleDeleteInvoice(invoice as any)}
+                onStatusChange={(status) => handleStatusChange(invoice as any, status)}
+                onPdfError={handlePdfError}
+                index={index}
+              />
+            ))}
+          </ResponsiveGrid>
+        </>
+      )}
+
+      {/* Pagination */}
+      {invoices.length > 0 && (
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          hasNext={pagination.hasNext}
+          hasPrev={pagination.hasPrev}
+          total={pagination.total}
+          limit={pagination.limit}
+          onPageChange={handlePageChange}
+          className="mt-8"
+        />
       )}
 
       {/* Delete Confirmation Modal */}
@@ -405,14 +407,14 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
             <Button
               variant="secondary"
               onClick={() => setShowDeleteConfirm(false)}
-              disabled={loading}
+              disabled={deleteInvoiceMutation.isPending}
             >
               Cancel
             </Button>
             <Button
               variant="danger"
               onClick={confirmDelete}
-              loading={loading}
+              loading={deleteInvoiceMutation.isPending}
             >
               Delete Invoice
             </Button>
@@ -448,17 +450,36 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
   index
 }) => {
   const [showActionsMenu, setShowActionsMenu] = useState(false)
+  const { prefetchInvoice, cancelPrefetch } = usePrefetchOnHover()
+  const { prefetchCustomerInvoices } = usePrefetchRelated()
+
+  const handleMouseEnter = () => {
+    // Prefetch invoice details and customer's other invoices on hover
+    prefetchInvoice(invoice.id)
+    // Note: Using any type cast since API response structure may vary
+    const customerData = (invoice as any).customer
+    if (customerData?.id) {
+      prefetchCustomerInvoices(customerData.id)
+    }
+  }
+
+  const handleMouseLeave = () => {
+    // Cancel prefetch if user moves away quickly
+    cancelPrefetch()
+  }
 
   return (
     <Card 
       padding="lg" 
       hover={true}
       className={cn(
-        "cursor-pointer transition-all duration-300 animate-slide-up bg-gradient-to-br from-white to-gray-50/50",
+        "cursor-pointer transition-all duration-300 animate-slide-up bg-gradient-to- from-white to-gray-50/50",
         "hover:shadow-glow hover:-translate-y-1"
       )}
       style={{ animationDelay: `${index * 100}ms` } as React.CSSProperties}
       onClick={onSelect}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <div className="space-y-4">
         {/* Header */}
@@ -482,7 +503,7 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
                   e.stopPropagation()
                   setShowActionsMenu(!showActionsMenu)
                 }}
-                className="min-h-[44px] min-w-[44px]"
+                className="min-h-11 min-w-11"
               >
                 <MoreVertical className="h-4 w-4" />
               </Button>

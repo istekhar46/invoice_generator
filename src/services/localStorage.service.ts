@@ -1,6 +1,9 @@
 /**
  * Type-safe local storage service with JSON serialization and date handling
- * Provides generic CRUD operations with error handling for storage unavailability
+ * 
+ * Note: This service is primarily used for authentication token storage.
+ * Business data (customers, invoices, company profiles) is now handled by the backend API
+ * and cached using TanStack Query.
  */
 
 /**
@@ -84,7 +87,8 @@ export class DateSerializer {
 }
 
 /**
- * Type-safe local storage service with generic CRUD operations
+ * Type-safe local storage service
+ * Primarily used for authentication token storage and simple key-value operations
  */
 export class LocalStorageService {
   /**
@@ -263,17 +267,24 @@ export class LocalStorageService {
 }
 
 /**
- * Generic repository class for entity CRUD operations
+ * @deprecated Generic repository class for entity CRUD operations
+ * 
+ * This class is deprecated as business data is now handled by the backend API
+ * and cached using TanStack Query. Use the appropriate API hooks instead:
+ * - useCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer
+ * - useInvoices, useCreateInvoice, useUpdateInvoice, useDeleteInvoice  
+ * - useCompanyProfile, useCreateCompanyProfile, useUpdateCompanyProfile
  */
 export class LocalStorageRepository<T extends { id: string }> {
   private readonly storageKey: string
 
   constructor(storageKey: string) {
     this.storageKey = storageKey
+    console.warn(`LocalStorageRepository is deprecated. Use TanStack Query hooks for ${storageKey} instead.`)
   }
 
   /**
-   * Retrieves all entities
+   * @deprecated Use appropriate TanStack Query hooks instead
    */
   getAll(): T[] {
     try {
@@ -288,7 +299,7 @@ export class LocalStorageRepository<T extends { id: string }> {
   }
 
   /**
-   * Retrieves an entity by ID
+   * @deprecated Use appropriate TanStack Query hooks instead
    */
   getById(id: string): T | null {
     try {
@@ -303,7 +314,7 @@ export class LocalStorageRepository<T extends { id: string }> {
   }
 
   /**
-   * Creates a new entity
+   * @deprecated Use appropriate TanStack Query hooks instead
    */
   create(entity: T): void {
     try {
@@ -319,7 +330,7 @@ export class LocalStorageRepository<T extends { id: string }> {
   }
 
   /**
-   * Updates an existing entity
+   * @deprecated Use appropriate TanStack Query hooks instead
    */
   update(id: string, updates: Partial<T>): T | null {
     try {
@@ -342,7 +353,7 @@ export class LocalStorageRepository<T extends { id: string }> {
   }
 
   /**
-   * Deletes an entity by ID
+   * @deprecated Use appropriate TanStack Query hooks instead
    */
   delete(id: string): boolean {
     try {
@@ -365,7 +376,7 @@ export class LocalStorageRepository<T extends { id: string }> {
   }
 
   /**
-   * Deletes all entities
+   * @deprecated Use appropriate TanStack Query hooks instead
    */
   deleteAll(): void {
     try {
@@ -379,7 +390,7 @@ export class LocalStorageRepository<T extends { id: string }> {
   }
 
   /**
-   * Counts the number of entities
+   * @deprecated Use appropriate TanStack Query hooks instead
    */
   count(): number {
     try {

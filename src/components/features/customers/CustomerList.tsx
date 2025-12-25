@@ -3,17 +3,22 @@
  * Modern list of customers with search, sorting, and filtering capabilities
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import type { Customer } from '../../../types/entities'
-import { useCustomerStore } from '../../../store/customerStore'
+import { usePaginatedCustomers, useDeleteCustomer } from '../../../hooks/useCustomers'
+import { useAutoPrefetch } from '../../../hooks/usePrefetch'
 import { CustomerCard } from './CustomerCard'
 import { CustomerForm } from './CustomerForm'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { Modal } from '../../ui/Modal'
 import { Card } from '../../ui/Card'
+import { Pagination } from '../../ui/Pagination'
+import { CustomerListSkeleton, CustomerCardSkeleton, SkeletonGrid } from '../../ui/SkeletonLoading'
+import { ErrorDisplay } from '../../shared/ErrorDisplay'
 import { ResponsiveGrid, ResponsiveStack } from '../../layout/ResponsiveLayout'
 import { Plus, Search, SortAsc, SortDesc, Users, ArrowRight } from 'lucide-react'
+import type { CustomerQueryParams } from '../../../services/api'
 
 interface CustomerListProps {
   onCustomerSelect?: (customer: Customer) => void
@@ -26,56 +31,67 @@ export const CustomerList: React.FC<CustomerListProps> = ({
   selectable = false,
   selectedCustomerId,
 }) => {
-  const {
-    customers,
-    loading,
-    error,
-    searchQuery,
-    sortBy,
-    sortOrder,
-    loadCustomers,
-    deleteCustomer,
-    searchCustomers,
-    setSorting,
-    getFilteredCustomers,
-    clearError,
-  } = useCustomerStore()
-
+  // State for search, sorting, pagination, and modals
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState<'name' | 'createdAt'>('createdAt')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [currentPage, setCurrentPage] = useState(1)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(null)
 
-  // Load customers on mount
-  useEffect(() => {
-    // Get user ID from auth store
-    const authUser = JSON.parse(localStorage.getItem('user') || 'null')
-    if (authUser?.id) {
-      loadCustomers(authUser.id)
-    }
-  }, [loadCustomers])
+  // Build query parameters
+  const queryParams: Omit<CustomerQueryParams, 'page' | 'limit'> = useMemo(() => ({
+    search: searchQuery || undefined,
+    sortBy,
+    sortOrder,
+  }), [searchQuery, sortBy, sortOrder])
 
-  const filteredCustomers = getFilteredCustomers()
+  // Use paginated customers hook
+  const { 
+    data: customersResponse, 
+    isLoading, 
+    error,
+    refetch,
+    pagination
+  } = usePaginatedCustomers(currentPage, 20, queryParams)
+
+  const deleteCustomerMutation = useDeleteCustomer()
+  const { smartPrefetch } = useAutoPrefetch()
+
+  // Extract customers from response
+  const customers = customersResponse?.data || []
+
+  // Smart prefetching on component mount
+  useEffect(() => {
+    smartPrefetch('customer-list')
+  }, [smartPrefetch])
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    searchCustomers(e.target.value)
+    setSearchQuery(e.target.value)
+    setCurrentPage(1) // Reset to first page when searching
   }
 
   const handleSort = (newSortBy: 'name' | 'createdAt') => {
     const newSortOrder = sortBy === newSortBy && sortOrder === 'asc' ? 'desc' : 'asc'
-    setSorting(newSortBy, newSortOrder)
+    setSortBy(newSortBy)
+    setSortOrder(newSortOrder)
+    setCurrentPage(1) // Reset to first page when sorting
+  }
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
   }
 
   const handleAddCustomer = () => {
     setShowAddModal(true)
-    clearError()
   }
 
   const handleEditCustomer = (customer: Customer) => {
     setEditingCustomer(customer)
     setShowEditModal(true)
-    clearError()
   }
 
   const handleDeleteCustomer = (customer: Customer) => {
@@ -86,11 +102,11 @@ export const CustomerList: React.FC<CustomerListProps> = ({
   const confirmDelete = async () => {
     if (deletingCustomer) {
       try {
-        await deleteCustomer(deletingCustomer.id)
+        await deleteCustomerMutation.mutateAsync(deletingCustomer.id)
         setShowDeleteConfirm(false)
         setDeletingCustomer(null)
       } catch (error) {
-        // Error is handled by the store
+        // Error is handled by the mutation
         console.error('Delete failed:', error)
       }
     }
@@ -100,6 +116,8 @@ export const CustomerList: React.FC<CustomerListProps> = ({
     setShowAddModal(false)
     setShowEditModal(false)
     setEditingCustomer(null)
+    // Refetch customers to get updated data
+    refetch()
   }
 
   const handleFormCancel = () => {
@@ -119,37 +137,8 @@ export const CustomerList: React.FC<CustomerListProps> = ({
     return sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />
   }
 
-  if (loading && customers.length === 0) {
-    return (
-      <ResponsiveStack spacing="lg">
-        {/* Header Skeleton */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-gradient-primary rounded-xl">
-              <Users className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <div className="h-8 w-32 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded" />
-              <div className="h-4 w-24 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded mt-2" />
-            </div>
-          </div>
-          <div className="h-10 w-32 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded-xl" />
-        </div>
-
-        {/* Loading Cards */}
-        <ResponsiveGrid columns={{ mobile: 1, tablet: 2, desktop: 3 }} gap="lg">
-          {[...Array(6)].map((_, index) => (
-            <Card key={index} padding="lg" className="animate-slide-up" style={{ animationDelay: `${index * 100}ms` } as React.CSSProperties}>
-              <div className="space-y-4">
-                <div className="h-6 w-32 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded" />
-                <div className="h-4 w-24 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded" />
-                <div className="h-4 w-28 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded" />
-              </div>
-            </Card>
-          ))}
-        </ResponsiveGrid>
-      </ResponsiveStack>
-    )
+  if (isLoading && customers.length === 0) {
+    return <CustomerListSkeleton />
   }
 
   return (
@@ -165,7 +154,7 @@ export const CustomerList: React.FC<CustomerListProps> = ({
               {selectable ? 'Select Customer' : 'Customers'}
             </h1>
             <p className="text-body-sm text-gray-600">
-              {filteredCustomers.length} {filteredCustomers.length === 1 ? 'customer' : 'customers'}
+              {pagination.total} {pagination.total === 1 ? 'customer' : 'customers'}
             </p>
           </div>
         </div>
@@ -232,20 +221,15 @@ export const CustomerList: React.FC<CustomerListProps> = ({
 
       {/* Error Display */}
       {error && (
-        <Card padding="lg" className="border-danger-200 bg-danger-50">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-danger-100 rounded-xl">
-              <Users className="h-5 w-5 text-danger-600" />
-            </div>
-            <p className="text-sm text-danger-700 font-medium" role="alert">
-              {error}
-            </p>
-          </div>
-        </Card>
+        <ErrorDisplay 
+          error={error} 
+          onRetry={() => refetch()}
+          title="Failed to load customers"
+        />
       )}
 
       {/* Customer Grid */}
-      {filteredCustomers.length === 0 ? (
+      {customers.length === 0 ? (
         <Card padding="lg" className="text-center bg-gradient-to-br from-white to-gray-50/50">
           <div className="py-12">
             <div className="p-4 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl w-fit mx-auto mb-6">
@@ -270,25 +254,50 @@ export const CustomerList: React.FC<CustomerListProps> = ({
           </div>
         </Card>
       ) : (
-        <ResponsiveGrid columns={{ mobile: 1, tablet: 2, desktop: 3 }} gap="lg">
-          {filteredCustomers.map((customer, index) => (
-            <div
-              key={customer.id}
-              className="animate-slide-up"
-              style={{ animationDelay: `${index * 100}ms` } as React.CSSProperties}
-            >
-              <CustomerCard
-                customer={customer}
-                onEdit={handleEditCustomer}
-                onDelete={handleDeleteCustomer}
-                onSelect={handleCustomerSelect}
-                showActions={!selectable}
-                selectable={selectable}
-                selected={selectedCustomerId === customer.id}
-              />
+        <>
+          {/* Show skeleton overlay when refetching */}
+          {isLoading && customers.length > 0 && (
+            <div className="relative">
+              <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 rounded-lg">
+                <SkeletonGrid CardSkeleton={CustomerCardSkeleton} count={6} />
+              </div>
             </div>
-          ))}
-        </ResponsiveGrid>
+          )}
+          
+          <ResponsiveGrid columns={{ mobile: 1, tablet: 2, desktop: 3 }} gap="lg">
+            {customers.map((customer, index) => (
+              <div
+                key={customer.id}
+                className="animate-slide-up"
+                style={{ animationDelay: `${index * 100}ms` } as React.CSSProperties}
+              >
+                <CustomerCard
+                  customer={customer as any}
+                  onEdit={handleEditCustomer}
+                  onDelete={handleDeleteCustomer}
+                  onSelect={handleCustomerSelect}
+                  showActions={!selectable}
+                  selectable={selectable}
+                  selected={selectedCustomerId === customer.id}
+                />
+              </div>
+            ))}
+          </ResponsiveGrid>
+        </>
+      )}
+
+      {/* Pagination */}
+      {customers.length > 0 && (
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          hasNext={pagination.hasNext}
+          hasPrev={pagination.hasPrev}
+          total={pagination.total}
+          limit={pagination.limit}
+          onPageChange={handlePageChange}
+          className="mt-8"
+        />
       )}
 
       {/* Add Customer Modal */}
@@ -335,14 +344,14 @@ export const CustomerList: React.FC<CustomerListProps> = ({
             <Button
               variant="secondary"
               onClick={() => setShowDeleteConfirm(false)}
-              disabled={loading}
+              disabled={deleteCustomerMutation.isPending}
             >
               Cancel
             </Button>
             <Button
               variant="danger"
               onClick={confirmDelete}
-              loading={loading}
+              loading={deleteCustomerMutation.isPending}
             >
               Delete Customer
             </Button>

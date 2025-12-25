@@ -8,8 +8,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { CompanyProfileFormData } from '../../../types/forms'
 import { companyProfileSchema } from '../../../types/forms'
-import { useCompanyStore } from '../../../store/companyStore'
-import { useAuthStore } from '../../../store/authStore'
+import { useCompanyProfile, useCreateCompanyProfile, useUpdateCompanyProfile, useUploadLogo } from '../../../hooks/useCompany'
+import { useAuthStatus } from '../../../hooks/useAuth'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { Card, CardHeader, CardTitle, CardContent } from '../../ui/Card'
@@ -25,8 +25,15 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
   onSuccess,
   onCancel,
 }) => {
-  const { user } = useAuthStore()
-  const { profile, loading, error, createProfile, updateProfile, uploadLogo, clearError } = useCompanyStore()
+  const { user } = useAuthStatus()
+  const { data: profile, isLoading: profileLoading } = useCompanyProfile()
+  const createProfile = useCreateCompanyProfile()
+  const updateProfile = useUpdateCompanyProfile()
+  const uploadLogo = useUploadLogo()
+
+  const isEditing = !!profile
+  const loading = createProfile.isPending || updateProfile.isPending || profileLoading
+  const error = createProfile.error || updateProfile.error
 
   const {
     register,
@@ -61,35 +68,30 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
     mode: 'onChange',
   })
 
-  const isEditing = !!profile
-
   const onSubmit = async (data: CompanyProfileFormData) => {
     try {
-      clearError()
-      
       if (!user?.id) {
         throw new Error('User must be logged in')
       }
       
       if (isEditing) {
-        await updateProfile(data)
+        await updateProfile.mutateAsync(data)
       } else {
-        await createProfile(data, user.id)
+        await createProfile.mutateAsync(data)
       }
       
       onSuccess?.()
     } catch (error) {
-      // Error is handled by the store
+      // Error is handled by the mutation hooks
       console.error('Form submission failed:', error)
     }
   }
 
   const handleLogoUpload = async (file: File) => {
     try {
-      clearError()
-      await uploadLogo(file)
+      await uploadLogo.mutateAsync(file)
     } catch (error) {
-      // Error is handled by the store
+      // Error is handled by the mutation hook
       console.error('Logo upload failed:', error)
     }
   }
@@ -97,8 +99,7 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
   const handleLogoRemove = async () => {
     if (profile) {
       try {
-        clearError()
-        await updateProfile({ logoUrl: undefined } as any)
+        await updateProfile.mutateAsync({ logoUrl: undefined } as any)
       } catch (error) {
         console.error('Logo removal failed:', error)
       }
@@ -122,8 +123,21 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
     } else {
       reset()
     }
-    clearError()
     onCancel?.()
+  }
+
+  if (profileLoading) {
+    return (
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardContent className="p-8">
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -140,7 +154,7 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
           {error && (
             <div className="rounded-xl bg-red-50 border border-red-200 p-4 animate-fade-in">
               <p className="text-sm text-red-600" role="alert">
-                {error}
+                {error instanceof Error ? error.message : 'An error occurred'}
               </p>
             </div>
           )}
@@ -155,8 +169,8 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
               currentLogo={profile?.logoUrl}
               onLogoUpload={handleLogoUpload}
               onLogoRemove={handleLogoRemove}
-              loading={loading}
-              error={error}
+              loading={uploadLogo.isPending}
+              error={uploadLogo.error instanceof Error ? uploadLogo.error.message : undefined}
             />
           </FormSection>
 

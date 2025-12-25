@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { CompanyProfileForm } from '../components/features/company/CompanyProfileForm'
-import { useCompanyStore } from '../store/companyStore'
-import { useAuthStore } from '../store/authStore'
+import { useCompanyProfile } from '../hooks/useCompany'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { LoadingSpinner } from '../components/ui/LoadingSpinner'
@@ -25,16 +24,8 @@ import {
  * Requirements: 2.1 - WHEN a user creates a company profile, THE System SHALL store business name, address, contact information, and tax number
  */
 export const CompanyProfilePage: React.FC = () => {
-  const { user } = useAuthStore()
-  const { profile, loading, loadProfile } = useCompanyStore()
+  const { data: profile, isLoading: loading } = useCompanyProfile()
   const [isEditing, setIsEditing] = useState(false)
-
-  // Load company profile on mount
-  useEffect(() => {
-    if (user?.id) {
-      loadProfile(user.id)
-    }
-  }, [user?.id, loadProfile])
 
   // If no profile exists, show form by default
   useEffect(() => {

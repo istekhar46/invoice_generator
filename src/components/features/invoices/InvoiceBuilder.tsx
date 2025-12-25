@@ -10,9 +10,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import type { Invoice, Customer, LineItem } from '../../../types/entities'
 import type { InvoiceFormData } from '../../../types/forms'
 import { invoiceSchema } from '../../../types/forms'
-import { useInvoiceStore } from '../../../store/invoiceStore'
-import { useCustomerStore } from '../../../store/customerStore'
-import { useCompanyStore } from '../../../store/companyStore'
+import { useCreateInvoice, useUpdateInvoice } from '../../../hooks/useInvoices'
+import { useCompanyProfile } from '../../../hooks/useCompany'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { Card, CardHeader, CardTitle, CardContent } from '../../ui/Card'
@@ -35,6 +34,7 @@ import {
   Check
 } from 'lucide-react'
 import { formatCurrency } from '../../../utils/formatters'
+import { transformLineItemToDto, transformInvoiceResponse } from '../../../utils/apiTransformers'
 
 interface InvoiceBuilderProps {
   invoice?: Invoice | null
@@ -82,9 +82,12 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
-  const { createInvoice, updateInvoice, loading, error, clearError } = useInvoiceStore()
-  const { loadCustomers, getCustomer } = useCustomerStore()
-  const { profile: companyProfile, loadProfile } = useCompanyStore()
+  const createInvoice = useCreateInvoice()
+  const updateInvoice = useUpdateInvoice()
+  const { data: companyProfile } = useCompanyProfile()
+  
+  const loading = createInvoice.isPending || updateInvoice.isPending
+  const error = createInvoice.error || updateInvoice.error
 
   // Form setup with React Hook Form and Zod validation
   const {
@@ -109,21 +112,10 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
 
   const watchedValues = watch()
 
-  // Load data on mount
-  useEffect(() => {
-    // Get user ID from auth store
-    const authUser = JSON.parse(localStorage.getItem('user') || 'null')
-    if (authUser?.id) {
-      loadCustomers(authUser.id)
-      loadProfile(authUser.id)
-    }
-  }, [loadCustomers, loadProfile])
-
   // Initialize form with existing invoice data
   useEffect(() => {
     if (invoice) {
-      const customer = getCustomer(invoice.customerId)
-      setSelectedCustomer(customer)
+      // Find customer by ID (we'll need to get this from the parent component)
       setLineItems(invoice.lineItems)
       
       reset({
@@ -138,7 +130,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       // Skip to details step if editing
       setCurrentStep('details')
     }
-  }, [invoice, getCustomer, reset])
+  }, [invoice, reset])
 
   // Update form when line items change
   useEffect(() => {
@@ -206,7 +198,6 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     try {
       setSubmitError(null)
       setSubmitSuccess(false)
-      clearError()
       
       // Additional validation
       if (!selectedCustomer) {
@@ -225,21 +216,27 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
         return
       }
       
+      // Transform line items to match API format (uppercase enum values)
+      const transformedData = {
+        ...data,
+        lineItems: lineItems.map(transformLineItemToDto)
+      }
+      
       if (invoice) {
         // Update existing invoice
-        await updateInvoice(invoice.id, data)
+        await updateInvoice.mutateAsync({ id: invoice.id, data: transformedData })
         setSubmitSuccess(true)
         setTimeout(() => {
           onSave?.(invoice)
         }, 1500) // Show success message briefly before closing
       } else {
         // Create new invoice
-        await createInvoice(data)
+        const newInvoice = await createInvoice.mutateAsync(transformedData)
         setSubmitSuccess(true)
         setTimeout(() => {
-          // The created invoice will be available in the store
-          // For now, we'll call onSave with a placeholder
-          onSave?.(invoice!)
+          // Transform API response to match frontend Invoice type
+          const transformedInvoice = transformInvoiceResponse(newInvoice)
+          onSave?.(transformedInvoice)
         }, 1500) // Show success message briefly before closing
       }
     } catch (error) {
@@ -668,7 +665,6 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
           message={submitError || error || 'An unexpected error occurred'}
           onDismiss={() => {
             if (submitError) setSubmitError(null)
-            if (error) clearError()
           }}
           className="mb-6"
         />

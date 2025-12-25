@@ -4,8 +4,9 @@ import { InvoiceBuilder } from '../components/features/invoices/InvoiceBuilder'
 import { InvoicePreview } from '../components/features/invoices/InvoicePreview'
 import { Modal } from '../components/ui/Modal'
 import { ResponsiveContainer } from '../components/layout/ResponsiveLayout'
-import { useCompanyStore } from '../store/companyStore'
-import { useCustomerStore } from '../store/customerStore'
+import { useCompanyProfile } from '../hooks/useCompany'
+import { useCustomer } from '../hooks/useCustomers'
+import { transformCustomerResponse } from '../utils/apiTransformers'
 import type { Invoice } from '../types/entities'
 
 /**
@@ -19,8 +20,11 @@ export const InvoicesPage: React.FC = () => {
   const [showInvoicePreview, setShowInvoicePreview] = useState(false)
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null)
 
-  const { profile: companyProfile } = useCompanyStore()
-  const { getCustomer } = useCustomerStore()
+  const { data: companyProfile } = useCompanyProfile()
+  const { data: customerDto } = useCustomer(selectedInvoice?.customerId || '')
+  
+  // Transform customer DTO to frontend Customer type
+  const selectedCustomer = customerDto ? transformCustomerResponse(customerDto) : null
 
   const handleCreateInvoice = () => {
     setEditingInvoice(null)
@@ -56,7 +60,6 @@ export const InvoicesPage: React.FC = () => {
   }
 
   // Get customer data for the selected invoice
-  const selectedCustomer = selectedInvoice ? getCustomer(selectedInvoice.customerId) : null
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50/30">

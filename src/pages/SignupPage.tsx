@@ -8,7 +8,7 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { ErrorAlert } from '../components/ui/ErrorAlert'
-import { useAuthStore } from '../store/authStore'
+import { useRegister } from '../hooks/useAuth'
 import { signupSchema } from '../types/forms'
 
 // Extended signup schema with password confirmation
@@ -28,7 +28,7 @@ type SignupWithConfirmFormData = z.infer<typeof signupWithConfirmSchema>
  */
 export const SignupPage: React.FC = () => {
   const navigate = useNavigate()
-  const { signup, loading, error, clearError } = useAuthStore()
+  const registerMutation = useRegister()
 
   const {
     register,
@@ -40,15 +40,14 @@ export const SignupPage: React.FC = () => {
 
   const onSubmit = async (data: SignupWithConfirmFormData) => {
     try {
-      clearError()
       // Extract the data needed for signup (without confirmPassword)
       const { confirmPassword, ...signupData } = data
-      await signup(signupData)
+      await registerMutation.mutateAsync(signupData)
       
       // Redirect to dashboard after successful signup
       navigate('/dashboard', { replace: true })
     } catch (error) {
-      // Error is handled by the store
+      // Error is handled by the mutation hook
       console.error('Signup failed:', error)
     }
   }
@@ -78,11 +77,10 @@ export const SignupPage: React.FC = () => {
           className="backdrop-blur-sm bg-white/90 border-white/20 shadow-medium"
         >
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-            {error && (
+            {registerMutation.error && (
               <ErrorAlert
                 title="Signup Failed"
-                message={error}
-                onDismiss={clearError}
+                message={registerMutation.error instanceof Error ? registerMutation.error.message : 'An error occurred'}
               />
             )}
 
@@ -138,11 +136,11 @@ export const SignupPage: React.FC = () => {
               variant="primary"
               size="lg"
               fullWidth={true}
-              loading={loading}
-              disabled={loading}
+              loading={registerMutation.isPending}
+              disabled={registerMutation.isPending}
               className="group"
             >
-              {loading ? (
+              {registerMutation.isPending ? (
                 'Creating account...'
               ) : (
                 <>

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { Header } from './Header'
 import { Breadcrumbs } from './Breadcrumbs'
 import { ResponsiveContainer } from './ResponsiveLayout'
-import { useAuthStore } from '../../store/authStore'
+import { useAuthStatus, useLogout } from '../../hooks/useAuth'
 import { cn } from '../../utils/classNames'
 
 export interface MainLayoutProps {
@@ -21,12 +21,8 @@ export interface MainLayoutProps {
 const MainLayout: React.FC<MainLayoutProps> = ({ className }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const navigate = useNavigate()
-  const { user, isAuthenticated, loading, logout, loadUser } = useAuthStore()
-
-  // Load user session on mount
-  useEffect(() => {
-    loadUser()
-  }, [loadUser])
+  const { user, isAuthenticated } = useAuthStatus()
+  const logout = useLogout()
 
   const handleMenuToggle = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen)
@@ -34,8 +30,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ className }) => {
 
   const handleLogout = async () => {
     try {
-      await logout()
-      navigate('/login', { replace: true })
+      await logout.mutateAsync()
+      // Navigation is handled by the logout mutation
     } catch (error) {
       console.error('Logout failed:', error)
       // Force navigation even if logout fails
@@ -51,7 +47,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ className }) => {
         onMenuToggle={handleMenuToggle}
         onLogout={handleLogout}
         isMobileMenuOpen={isMobileMenuOpen}
-        isLoading={loading}
+        isLoading={logout.isPending}
       />
 
       {/* Main content area with responsive container */}

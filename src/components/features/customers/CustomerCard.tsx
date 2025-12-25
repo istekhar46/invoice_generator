@@ -7,6 +7,7 @@ import React from 'react'
 import type { Customer } from '../../../types/entities'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../../ui/Card'
 import { Button } from '../../ui/Button'
+import { usePrefetchOnHover, usePrefetchRelated } from '../../../hooks'
 import { Edit, Trash2, Mail, Phone, MapPin } from 'lucide-react'
 
 interface CustomerCardProps {
@@ -28,6 +29,9 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
   selectable = false,
   selected = false,
 }) => {
+  const { prefetchCustomer, cancelPrefetch } = usePrefetchOnHover()
+  const { prefetchCustomerInvoices } = usePrefetchRelated()
+
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation()
     onEdit?.(customer)
@@ -42,6 +46,17 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
     if (selectable) {
       onSelect?.(customer)
     }
+  }
+
+  const handleMouseEnter = () => {
+    // Prefetch customer details and related invoices on hover
+    prefetchCustomer(customer.id)
+    prefetchCustomerInvoices(customer.id)
+  }
+
+  const handleMouseLeave = () => {
+    // Cancel prefetch if user moves away quickly
+    cancelPrefetch()
   }
 
   const formatDate = (date: Date) => {
@@ -60,6 +75,8 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
         ${selected ? 'ring-2 ring-blue-500 bg-blue-50' : ''}
       `}
       onClick={handleSelect}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">

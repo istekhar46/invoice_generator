@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import type { CustomerFormData } from '../../../types/forms'
 import { customerSchema } from '../../../types/forms'
 import type { Customer } from '../../../types/entities'
-import { useCustomerStore } from '../../../store/customerStore'
+import { useCreateCustomer, useUpdateCustomer } from '../../../hooks/useCustomers'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { Card, CardHeader, CardTitle, CardContent } from '../../ui/Card'
@@ -26,7 +26,12 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
   onSuccess,
   onCancel,
 }) => {
-  const { loading, error, addCustomer, updateCustomer, clearError } = useCustomerStore()
+  const createCustomer = useCreateCustomer()
+  const updateCustomer = useUpdateCustomer()
+
+  const isEditing = !!customer
+  const loading = createCustomer.isPending || updateCustomer.isPending
+  const error = createCustomer.error || updateCustomer.error
 
   const {
     register,
@@ -55,21 +60,17 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
     mode: 'onChange',
   })
 
-  const isEditing = !!customer
-
   const onSubmit = async (data: CustomerFormData) => {
     try {
-      clearError()
-      
       if (isEditing && customer) {
-        await updateCustomer(customer.id, data)
+        await updateCustomer.mutateAsync({ id: customer.id, data })
       } else {
-        await addCustomer(data)
+        await createCustomer.mutateAsync(data)
       }
       
       onSuccess?.()
     } catch (error) {
-      // Error is handled by the store
+      // Error is handled by the mutation hooks
       console.error('Form submission failed:', error)
     }
   }
@@ -88,7 +89,6 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
     } else {
       reset()
     }
-    clearError()
     onCancel?.()
   }
 
@@ -106,7 +106,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           {error && (
             <div className="rounded-xl bg-red-50 border border-red-200 p-4 animate-fade-in">
               <p className="text-sm text-red-600" role="alert">
-                {error}
+                {error instanceof Error ? error.message : 'An error occurred'}
               </p>
             </div>
           )}

@@ -4,33 +4,25 @@
  */
 
 import { useState, useCallback } from 'react'
-import { useInvoiceStore } from '../store/invoiceStore'
-import { useCompanyStore } from '../store/companyStore'
-import { useCustomerStore } from '../store/customerStore'
 import { downloadInvoicePDF, previewInvoicePDF } from '../services/pdf'
-import type { Invoice } from '../types/entities'
+import type { Invoice, Customer, CompanyProfile } from '../types/entities'
 
 interface UsePDFGenerationReturn {
   isGenerating: boolean
   error: string | null
-  downloadPDF: (invoiceId: string) => Promise<void>
-  previewPDF: (invoiceId: string) => Promise<void>
-  downloadInvoicePDFDirect: (invoice: Invoice) => Promise<void>
-  previewInvoicePDFDirect: (invoice: Invoice) => Promise<void>
+  downloadInvoicePDFDirect: (invoice: Invoice, customer: Customer, companyProfile: CompanyProfile) => Promise<void>
+  previewInvoicePDFDirect: (invoice: Invoice, customer: Customer, companyProfile: CompanyProfile) => Promise<void>
   clearError: () => void
 }
 
 /**
  * Custom hook for PDF generation functionality
+ * Note: This hook now requires invoice, customer, and company data to be passed in
+ * since we can't access the stores directly with TanStack Query
  */
 export const usePDFGeneration = (): UsePDFGenerationReturn => {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  // Store hooks
-  const { getInvoice } = useInvoiceStore()
-  const { profile: companyProfile } = useCompanyStore()
-  const { getCustomer } = useCustomerStore()
 
   /**
    * Clear error state
@@ -42,12 +34,11 @@ export const usePDFGeneration = (): UsePDFGenerationReturn => {
   /**
    * Validate required data for PDF generation
    */
-  const validatePDFData = useCallback((invoice: Invoice) => {
+  const validatePDFData = useCallback((invoice: Invoice, customer: Customer, companyProfile: CompanyProfile) => {
     if (!companyProfile) {
       throw new Error('Company profile is required to generate PDF. Please set up your company profile in Settings first.')
     }
 
-    const customer = getCustomer(invoice.customerId)
     if (!customer) {
       throw new Error('Customer information not found. Please ensure the customer exists.')
     }
@@ -64,68 +55,18 @@ export const usePDFGeneration = (): UsePDFGenerationReturn => {
     if (!invoice.serviceDate || !invoice.dueDate) {
       throw new Error('Service date and due date are required for PDF generation.')
     }
-
-    return { customer, company: companyProfile }
-  }, [companyProfile, getCustomer])
-
-  /**
-   * Download PDF for invoice by ID
-   */
-  const downloadPDF = useCallback(async (invoiceId: string) => {
-    setIsGenerating(true)
-    setError(null)
-
-    try {
-      const invoice = getInvoice(invoiceId)
-      if (!invoice) {
-        throw new Error('Invoice not found')
-      }
-
-      const { customer, company } = validatePDFData(invoice)
-      await downloadInvoicePDF(invoice, company, customer)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to download PDF'
-      setError(errorMessage)
-      throw err
-    } finally {
-      setIsGenerating(false)
-    }
-  }, [getInvoice, validatePDFData])
-
-  /**
-   * Preview PDF for invoice by ID
-   */
-  const previewPDF = useCallback(async (invoiceId: string) => {
-    setIsGenerating(true)
-    setError(null)
-
-    try {
-      const invoice = getInvoice(invoiceId)
-      if (!invoice) {
-        throw new Error('Invoice not found')
-      }
-
-      const { customer, company } = validatePDFData(invoice)
-      await previewInvoicePDF(invoice, company, customer)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to preview PDF'
-      setError(errorMessage)
-      throw err
-    } finally {
-      setIsGenerating(false)
-    }
-  }, [getInvoice, validatePDFData])
+  }, [])
 
   /**
    * Download PDF for invoice object directly
    */
-  const downloadInvoicePDFDirect = useCallback(async (invoice: Invoice) => {
+  const downloadInvoicePDFDirect = useCallback(async (invoice: Invoice, customer: Customer, companyProfile: CompanyProfile) => {
     setIsGenerating(true)
     setError(null)
 
     try {
-      const { customer, company } = validatePDFData(invoice)
-      await downloadInvoicePDF(invoice, company, customer)
+      validatePDFData(invoice, customer, companyProfile)
+      await downloadInvoicePDF(invoice, companyProfile, customer)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to download PDF'
       setError(errorMessage)
@@ -138,13 +79,13 @@ export const usePDFGeneration = (): UsePDFGenerationReturn => {
   /**
    * Preview PDF for invoice object directly
    */
-  const previewInvoicePDFDirect = useCallback(async (invoice: Invoice) => {
+  const previewInvoicePDFDirect = useCallback(async (invoice: Invoice, customer: Customer, companyProfile: CompanyProfile) => {
     setIsGenerating(true)
     setError(null)
 
     try {
-      const { customer, company } = validatePDFData(invoice)
-      await previewInvoicePDF(invoice, company, customer)
+      validatePDFData(invoice, customer, companyProfile)
+      await previewInvoicePDF(invoice, companyProfile, customer)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to preview PDF'
       setError(errorMessage)
@@ -157,8 +98,6 @@ export const usePDFGeneration = (): UsePDFGenerationReturn => {
   return {
     isGenerating,
     error,
-    downloadPDF,
-    previewPDF,
     downloadInvoicePDFDirect,
     previewInvoicePDFDirect,
     clearError,

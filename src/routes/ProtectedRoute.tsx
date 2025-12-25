@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { useAuthStore } from '../store/authStore'
+import { useAuthStatus } from '../hooks/useAuth'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -14,18 +15,13 @@ interface ProtectedRouteProps {
  */
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const location = useLocation()
-  const { isAuthenticated, loading, loadUser } = useAuthStore()
-  
-  // Load user session on mount
-  useEffect(() => {
-    loadUser()
-  }, [loadUser])
+  const { isAuthenticated, isLoading } = useAuthStatus()
   
   // Show loading while checking authentication
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <LoadingSpinner size="large" />
       </div>
     )
   }

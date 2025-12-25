@@ -7,11 +7,12 @@ import React from 'react'
 import { Download, Eye, Loader2 } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { usePDFGeneration } from '../../../hooks/usePDFGeneration'
+import { useCompanyProfile } from '../../../hooks/useCompany'
+import { transformCustomerResponse } from '../../../utils/apiTransformers'
 import type { Invoice } from '../../../types/entities'
 
 interface PDFActionsProps {
-  invoice?: Invoice
-  invoiceId?: string
+  invoice?: Invoice | any
   variant?: 'default' | 'compact'
   className?: string
   onError?: (error: string) => void
@@ -22,7 +23,6 @@ interface PDFActionsProps {
  */
 export const PDFActions: React.FC<PDFActionsProps> = ({
   invoice,
-  invoiceId,
   variant = 'default',
   className,
   onError,
@@ -30,12 +30,19 @@ export const PDFActions: React.FC<PDFActionsProps> = ({
   const {
     isGenerating,
     error,
-    downloadPDF,
-    previewPDF,
     downloadInvoicePDFDirect,
     previewInvoicePDFDirect,
     clearError,
   } = usePDFGeneration()
+
+  // Get company profile
+  const { data: companyProfile } = useCompanyProfile()
+  
+  // Extract customer from invoice response (API already includes it)
+  // The customer is embedded in the invoice response from the API
+  const customer = invoice?.customer 
+    ? transformCustomerResponse(invoice.customer) 
+    : null
 
   // Handle errors
   React.useEffect(() => {
@@ -46,12 +53,13 @@ export const PDFActions: React.FC<PDFActionsProps> = ({
   }, [error, onError, clearError])
 
   const handleDownload = async () => {
+    if (!invoice || !customer || !companyProfile) {
+      onError?.('Missing required data for PDF generation')
+      return
+    }
+
     try {
-      if (invoice) {
-        await downloadInvoicePDFDirect(invoice)
-      } else if (invoiceId) {
-        await downloadPDF(invoiceId)
-      }
+      await downloadInvoicePDFDirect(invoice, customer, companyProfile)
     } catch (err) {
       // Error is handled by the hook and passed to onError
       console.error('PDF download failed:', err)
@@ -59,19 +67,20 @@ export const PDFActions: React.FC<PDFActionsProps> = ({
   }
 
   const handlePreview = async () => {
+    if (!invoice || !customer || !companyProfile) {
+      onError?.('Missing required data for PDF generation')
+      return
+    }
+
     try {
-      if (invoice) {
-        await previewInvoicePDFDirect(invoice)
-      } else if (invoiceId) {
-        await previewPDF(invoiceId)
-      }
+      await previewInvoicePDFDirect(invoice, customer, companyProfile)
     } catch (err) {
       // Error is handled by the hook and passed to onError
       console.error('PDF preview failed:', err)
     }
   }
 
-  const isDisabled = isGenerating || (!invoice && !invoiceId)
+  const isDisabled = isGenerating || !invoice || !customer || !companyProfile
 
   if (variant === 'compact') {
     return (

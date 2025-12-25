@@ -8,6 +8,9 @@ export interface StatusBadgeProps extends React.HTMLAttributes<HTMLSpanElement> 
 
 const StatusBadge = React.forwardRef<HTMLSpanElement, StatusBadgeProps>(
   ({ status, className, ...props }, ref) => {
+    // Normalize status to lowercase to handle both 'DRAFT'/'draft' formats
+    const normalizedStatus = status?.toLowerCase() as 'draft' | 'sent' | 'paid' | undefined
+    
     const styles = {
       draft: {
         bg: 'bg-gray-100',
@@ -26,8 +29,11 @@ const StatusBadge = React.forwardRef<HTMLSpanElement, StatusBadgeProps>(
       },
     }
 
-    const style = styles[status]
-    const statusLabel = status.charAt(0).toUpperCase() + status.slice(1)
+    // Provide default fallback if status is undefined or invalid
+    const style = styles[normalizedStatus || 'draft']
+    const statusLabel = normalizedStatus 
+      ? normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1)
+      : 'Unknown'
 
     return (
       <span
