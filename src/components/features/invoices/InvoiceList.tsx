@@ -31,7 +31,9 @@ import {
   ArrowRight,
   Calendar,
   DollarSign,
-  User
+  User,
+  Grid3x3,
+  List
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '../../../utils/formatters'
 import { cn } from '../../../utils/classNames'
@@ -57,6 +59,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
   const [deletingInvoice, setDeletingInvoice] = useState<Invoice | null>(null)
   const [showActionsMenu, setShowActionsMenu] = useState<string | null>(null)
   const [pdfError, setPdfError] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
 
   // Build query parameters
   const queryParams: Omit<InvoiceQueryParams, 'page' | 'limit'> = useMemo(() => ({
@@ -200,7 +203,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       </div>
 
       {/* Modern Filters and Sort Controls */}
-      <Card padding="lg" className="bg-gradient-to- from-white to-gray-50/50">
+      <Card padding="lg" className="bg-linear-to-r from-white to-gray-50/50">
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Status Filter */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -273,6 +276,28 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                 <span>Total</span>
                 {getSortIcon('total')}
               </Button>
+
+              {/* View Mode Toggle */}
+              <div className="flex gap-1 ml-4 border-l border-gray-300 pl-4">
+                <Button
+                  variant={viewMode === 'grid' ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                  title="Grid View"
+                  className="flex items-center space-x-1"
+                >
+                  <Grid3x3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  title="List View"
+                  className="flex items-center space-x-1"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -324,7 +349,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
 
       {/* Invoice Cards Grid */}
       {invoices.length === 0 ? (
-        <Card padding="lg" className="text-center bg-gradient-to- from-white to-gray-50/50">
+        <Card padding="lg" className="text-center bg-linear-to-r from-white to-gray-50/50">
           <div className="py-12">
             <div className="p-4 bg-gradient-to- from-gray-100 to-gray-200 rounded-2xl w-fit mx-auto mb-6">
               <FileText className="h-12 w-12 text-gray-400" />
@@ -358,21 +383,38 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
             </div>
           )}
           
-          <ResponsiveGrid columns={{ mobile: 1, tablet: 2, desktop: 3 }} gap="lg">
-            {invoices.map((invoice, index) => (
-              <InvoiceCard
-                key={invoice.id}
-                invoice={invoice as any}
-                customerName={getCustomerName(invoice)}
-                onSelect={() => onInvoiceSelect?.(invoice as any)}
-                onEdit={() => handleEditInvoice(invoice as any)}
-                onDelete={() => handleDeleteInvoice(invoice as any)}
-                onStatusChange={(status) => handleStatusChange(invoice as any, status)}
-                onPdfError={handlePdfError}
-                index={index}
-              />
-            ))}
-          </ResponsiveGrid>
+          {viewMode === 'grid' ? (
+            <ResponsiveGrid columns={{ mobile: 1, tablet: 2, desktop: 3 }} gap="lg">
+              {invoices.map((invoice, index) => (
+                <InvoiceCard
+                  key={invoice.id}
+                  invoice={invoice as any}
+                  customerName={getCustomerName(invoice)}
+                  onSelect={() => onInvoiceSelect?.(invoice as any)}
+                  onEdit={() => handleEditInvoice(invoice as any)}
+                  onDelete={() => handleDeleteInvoice(invoice as any)}
+                  onStatusChange={(status) => handleStatusChange(invoice as any, status)}
+                  onPdfError={handlePdfError}
+                  index={index}
+                />
+              ))}
+            </ResponsiveGrid>
+          ) : (
+            <div className="space-y-3">
+              {invoices.map((invoice) => (
+                <InvoiceListRow
+                  key={invoice.id}
+                  invoice={invoice as any}
+                  customerName={getCustomerName(invoice)}
+                  onSelect={() => onInvoiceSelect?.(invoice as any)}
+                  onEdit={() => handleEditInvoice(invoice as any)}
+                  onDelete={() => handleDeleteInvoice(invoice as any)}
+                  onStatusChange={(status) => handleStatusChange(invoice as any, status)}
+                  onPdfError={handlePdfError}
+                />
+              ))}
+            </div>
+          )}
         </>
       )}
 
@@ -473,7 +515,7 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
       padding="lg" 
       hover={true}
       className={cn(
-        "cursor-pointer transition-all duration-300 animate-slide-up bg-gradient-to- from-white to-gray-50/50",
+        "cursor-pointer transition-all duration-300 animate-slide-up bg-linear-to-r from-white to-gray-50/50",
         "hover:shadow-glow hover:-translate-y-1"
       )}
       style={{ animationDelay: `${index * 100}ms` } as React.CSSProperties}
@@ -583,9 +625,7 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-          <div className="text-xs text-gray-500">
-            Due: {formatDate(invoice.dueDate)}
-          </div>
+         
           <div className="flex items-center space-x-2">
             <Button
               variant="ghost"
@@ -605,6 +645,157 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
               onError={onPdfError}
               className="opacity-75 hover:opacity-100"
             />
+          </div>
+           
+        </div>
+        <div className="text-xs text-gray-500">
+            Due: {formatDate(invoice.dueDate)}
+          </div>
+      </div>
+    </Card>
+  )
+}
+/**
+ * Invoice List Row Component (for list view)
+ */
+interface InvoiceListRowProps {
+  invoice: Invoice
+  customerName: string
+  onSelect: () => void
+  onEdit: () => void
+  onDelete: () => void
+  onStatusChange: (status: InvoiceStatus) => void
+  onPdfError: (error: string) => void
+}
+
+const InvoiceListRow: React.FC<InvoiceListRowProps> = ({
+  invoice,
+  customerName,
+  onSelect,
+  onEdit,
+  onDelete,
+  onStatusChange,
+  onPdfError,
+}) => {
+  const [showActionsMenu, setShowActionsMenu] = useState(false)
+
+  return (
+    <Card 
+      padding="lg" 
+      hover={true}
+      className={cn(
+        "cursor-pointer transition-all duration-300 bg-linear-to-r from-white to-gray-50/50",
+        "hover:shadow-glow hover:border-primary-200"
+      )}
+      onClick={onSelect}
+    >
+      <div className="flex items-center justify-between gap-4">
+        {/* Left Section - Invoice Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-semibold text-gray-900 truncate">
+                {invoice.invoiceNumber}
+              </h3>
+              <p className="text-xs text-gray-600 mt-1">{customerName}</p>
+            </div>
+            
+            {/* Middle Section - Dates and Amount */}
+            <div className="hidden sm:flex items-center gap-6">
+              <div className="flex items-center space-x-2 text-xs text-gray-600">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                <span>{formatDate(invoice.serviceDate)}</span>
+              </div>
+              
+              <div className="flex items-center space-x-2 text-sm font-semibold text-gray-900">
+                <DollarSign className="w-4 h-4 text-gray-400" />
+                <span>{formatCurrency(invoice.total)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Section - Status and Actions */}
+        <div className="flex items-center gap-3">
+          <StatusBadge status={invoice.status} />
+          
+          <PDFActions
+            invoice={invoice}
+            variant="compact"
+            onError={onPdfError}
+            className="opacity-75 hover:opacity-100"
+          />
+          
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowActionsMenu(!showActionsMenu)
+              }}
+              className="min-h-11 min-w-11"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+            
+            {showActionsMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-medium border border-gray-200 z-10 py-2">
+                <button
+                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onEdit()
+                    setShowActionsMenu(false)
+                  }}
+                >
+                  <Edit className="h-4 w-4 mr-3 text-gray-400" />
+                  Edit Invoice
+                </button>
+                
+                {invoice.status !== 'sent' && (
+                  <button
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onStatusChange('sent')
+                      setShowActionsMenu(false)
+                    }}
+                  >
+                    <Send className="h-4 w-4 mr-3 text-secondary-500" />
+                    Mark as Sent
+                  </button>
+                )}
+                
+                {invoice.status !== 'paid' && (
+                  <button
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onStatusChange('paid')
+                      setShowActionsMenu(false)
+                    }}
+                  >
+                    <Check className="h-4 w-4 mr-3 text-success-500" />
+                    Mark as Paid
+                  </button>
+                )}
+                
+                <div className="border-t border-gray-100 my-2" />
+                
+                <button
+                  className="flex items-center w-full px-4 py-2 text-sm text-danger-600 hover:bg-danger-50 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDelete()
+                    setShowActionsMenu(false)
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-3" />
+                  Delete Invoice
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

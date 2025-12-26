@@ -44,9 +44,12 @@ export type {
   UploadLogoResponse
 } from './companyApi'
 
+// Export dashboard API
+export { dashboardApi, DashboardApi } from './dashboardApi'
+export type { DashboardStatisticsDto } from './dashboardApi'
+
 // Export token management
 export { TokenManager } from '../auth/tokenManager'
 export type { TokenPair } from '../auth/tokenManager'
-
 // Export hooks
 export { useRequestCancellation, useApiErrorHandler } from '../../hooks/useRequestCancellation'

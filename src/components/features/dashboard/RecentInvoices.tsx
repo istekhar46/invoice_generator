@@ -24,6 +24,9 @@ interface StatusBadgeProps {
 }
 
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
+  // Normalize status to lowercase to handle both 'DRAFT' and 'draft' formats
+  const normalizedStatus = status?.toLowerCase() as 'draft' | 'sent' | 'paid' | undefined
+  
   const statusConfig = {
     draft: {
       label: 'Draft',
@@ -39,11 +42,11 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
     },
   }
 
-  const config = statusConfig[status]
+  const config = statusConfig[normalizedStatus || 'draft']
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.className}`}>
-      {config.label}
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config?.className || 'bg-gray-100 text-gray-800'}`}>
+      {config?.label || 'Unknown'}
     </span>
   )
 }
@@ -56,12 +59,12 @@ const RecentInvoicesLoading: React.FC = () => (
     {[...Array(3)].map((_, index) => (
       <div key={index} className="flex items-center justify-between py-3 border-b border-gray-200 last:border-b-0">
         <div className="flex-1">
-          <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded mb-2" />
-          <div className="h-3 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded w-2/3" />
+          <div className="h-4 bg-linear-to-r from-gray-200 via-gray-100 to-gray-200 bg-size-[200px_100%] animate-shimmer rounded mb-2" />
+          <div className="h-3 bg-linear-to-r from-gray-200 via-gray-100 to-gray-200 bg-size-[200px_100%] animate-shimmer rounded w-2/3" />
         </div>
         <div className="ml-4 text-right">
-          <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded mb-2 w-16" />
-          <div className="h-5 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded-full w-12" />
+          <div className="h-4 bg-linear-to-r from-gray-200 via-gray-100 to-gray-200 bg-size-[200px_100%] animate-shimmer rounded mb-2 w-16" />
+          <div className="h-5 bg-linear-to-r from-gray-200 via-gray-100 to-gray-200 bg-size-[200px_100%] animate-shimmer rounded-full w-12" />
         </div>
       </div>
     ))}

@@ -8,7 +8,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { CompanyProfileFormData } from '../../../types/forms'
 import { companyProfileSchema } from '../../../types/forms'
-import { useCompanyProfile, useCreateCompanyProfile, useUpdateCompanyProfile, useUploadLogo } from '../../../hooks/useCompany'
+import { useCompanyProfile, useCreateCompanyProfile, useUpdateCompanyProfile, useUploadLogo, useDeleteLogo } from '../../../hooks/useCompany'
 import { useAuthStatus } from '../../../hooks/useAuth'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
@@ -30,6 +30,7 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
   const createProfile = useCreateCompanyProfile()
   const updateProfile = useUpdateCompanyProfile()
   const uploadLogo = useUploadLogo()
+  const deleteLogo = useDeleteLogo()
 
   const isEditing = !!profile
   const loading = createProfile.isPending || updateProfile.isPending || profileLoading
@@ -96,13 +97,12 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
     }
   }
 
-  const handleLogoRemove = async () => {
-    if (profile) {
-      try {
-        await updateProfile.mutateAsync({ logoUrl: undefined } as any)
-      } catch (error) {
-        console.error('Logo removal failed:', error)
-      }
+  const handleLogoDelete = async () => {
+    try {
+      await deleteLogo.mutateAsync()
+    } catch (error) {
+      // Error is handled by the mutation hook
+      console.error('Logo deletion failed:', error)
     }
   }
 
@@ -168,9 +168,10 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
             <LogoUploader
               currentLogo={profile?.logoUrl}
               onLogoUpload={handleLogoUpload}
-              onLogoRemove={handleLogoRemove}
+              onLogoDelete={handleLogoDelete}
               loading={uploadLogo.isPending}
-              error={uploadLogo.error instanceof Error ? uploadLogo.error.message : undefined}
+              deleting={deleteLogo.isPending}
+              error={uploadLogo.error instanceof Error ? uploadLogo.error.message : deleteLogo.error instanceof Error ? deleteLogo.error.message : undefined}
             />
           </FormSection>
 

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
@@ -12,12 +12,15 @@ import { UserModule } from './user/user.module';
 import { CompanyModule } from './company/company.module';
 import { CustomerModule } from './customer/customer.module';
 import { InvoiceModule } from './invoice/invoice.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { HealthModule } from './health/health.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { SanitizationInterceptor } from './common/interceptors/sanitization.interceptor';
+import { initializeCloudinary } from './config/cloudinary.config';
 
 @Module({
   imports: [
@@ -47,8 +50,14 @@ import { SanitizationInterceptor } from './common/interceptors/sanitization.inte
     // Invoice management module
     InvoiceModule,
     
+    // Dashboard module
+    DashboardModule,
+    
     // Health check module
     HealthModule,
+    
+    // Cloudinary image storage module
+    CloudinaryModule,
     
     // Rate limiting module
     ThrottlerModule.forRootAsync({
@@ -114,4 +123,21 @@ import { SanitizationInterceptor } from './common/interceptors/sanitization.inte
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements OnModuleInit {
+  private readonly logger = new Logger(AppModule.name);
+
+  /**
+   * Initialize Cloudinary on module startup
+   * Validates environment configuration and sets up SDK
+   */
+  onModuleInit() {
+    try {
+      initializeCloudinary();
+    } catch (error) {
+      this.logger.error('Failed to initialize Cloudinary:', error);
+      // Don't throw - allow app to start without Cloudinary
+      // but operations requiring it will fail with clear error messages
+      this.logger.warn('Application started but Cloudinary is not configured');
+    }
+  }
+}

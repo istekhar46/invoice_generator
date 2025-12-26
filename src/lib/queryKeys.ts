@@ -48,6 +48,10 @@ export const queryKeys = {
   // Health check keys
   health: ['health'] as const,
   healthStatus: () => [...queryKeys.health, 'status'] as const,
+
+  // Dashboard keys
+  dashboard: ['dashboard'] as const,
+  dashboardStatistics: () => [...queryKeys.dashboard, 'statistics'] as const,
 } as const
 
 /**

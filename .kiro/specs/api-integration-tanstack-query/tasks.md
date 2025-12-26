@@ -152,10 +152,19 @@ This implementation plan converts the existing Zustand-based local storage syste
     - Add logo upload functionality with multipart form data
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
+  - [x] 7.1.1 Fix backend file upload validation
+    - Fix duplicate FileTypeValidator in company controller
+    - Update FileTypeValidator to accept specific MIME types (image/jpeg, image/png, image/gif)
+    - Test file upload with different image formats
+    - Add DELETE /company/profile/logo endpoint for logo deletion
+    - _Requirements: 6.4, 6.5_
+
   - [x] 7.2 Create company profile query hooks
     - Implement useCompanyProfile query
     - Implement company profile mutation hooks
     - Implement useUploadLogo mutation with progress tracking
+    - Implement useDeleteLogo mutation for logo deletion
+    - Update frontend UI for logo upload, update, and delete functionality
     - _Requirements: 6.5, 6.6, 7.4_
 
   - [ ]* 7.3 Write property test for file upload handling

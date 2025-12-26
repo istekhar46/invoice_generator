@@ -103,6 +103,14 @@ export class CompanyApi {
       },
     })
   }
+
+  /**
+   * Delete company logo
+   * Requirements: 6.4 - logo deletion via DELETE /company/profile/logo
+   */
+  async deleteLogo(): Promise<void> {
+    return apiClient.delete<void>(`${this.basePath}/profile/logo`)
+  }
 }
 
 // Export singleton instance

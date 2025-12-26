@@ -279,6 +279,8 @@ export function useCreateInvoice() {
         createdAt: new Date(newInvoice.createdAt),
         updatedAt: new Date(newInvoice.updatedAt),
       })
+      // Invalidate dashboard statistics cache when new invoice is created
+      cacheService.dashboard.invalidateStatistics()
       
       success('Invoice created', `Invoice ${newInvoice.invoiceNumber} has been created successfully`)
     },
@@ -415,6 +417,10 @@ export function useUpdateInvoiceStatus() {
       // Refetch to ensure consistency
       const cacheService = getCacheInvalidationService(queryClient)
       cacheService.invoices.invalidateInvoice(id)
+      // Also invalidate all invoice lists to update dashboard statistics
+      cacheService.invoices.invalidateAllLists()
+      // Invalidate dashboard statistics cache
+      cacheService.dashboard.invalidateStatistics()
     },
   })
 }
@@ -473,6 +479,8 @@ export function useDeleteInvoice() {
       // Always refetch lists after error or success
       const cacheService = getCacheInvalidationService(queryClient)
       cacheService.invoices.invalidateAllLists()
+      // Invalidate dashboard statistics cache when invoice is deleted
+      cacheService.dashboard.invalidateStatistics()
     },
   })
 }

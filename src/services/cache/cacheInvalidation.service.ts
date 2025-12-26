@@ -238,10 +238,40 @@ export class CacheInvalidationService {
     /**
      * Update logo URL in company profile
      */
-    updateLogo: (logoUrl: string) => {
+    updateLogo: (logoUrl: string | null | undefined) => {
       this.queryClient.setQueryData(queryKeys.companyProfile(), (old: any) => {
         if (!old) return old
-        return { ...old, logoUrl, updatedAt: new Date() }
+        return { ...old, logoUrl: logoUrl || null, updatedAt: new Date() }
+      })
+    },
+  }
+
+  /**
+   * Dashboard-related cache invalidation
+   */
+  dashboard = {
+    /**
+     * Invalidate dashboard statistics query
+     */
+    invalidateStatistics: () => {
+      this.queryClient.invalidateQueries({ 
+        queryKey: queryKeys.dashboardStatistics() 
+      })
+    },
+
+    /**
+     * Update dashboard statistics in cache (optimistic update)
+     */
+    updateStatistics: (statsData: any) => {
+      this.queryClient.setQueryData(queryKeys.dashboardStatistics(), statsData)
+    },
+
+    /**
+     * Remove dashboard statistics from cache
+     */
+    removeStatistics: () => {
+      this.queryClient.removeQueries({ 
+        queryKey: queryKeys.dashboardStatistics() 
       })
     },
   }

@@ -1,7 +1,17 @@
 import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, FileText, Users, Building2, TrendingUp, ArrowRight } from 'lucide-react'
-import { DashboardStats, RecentInvoices } from '../components/features/dashboard'
+import {
+  Plus,
+  FileText,
+  Users,
+  Building2,
+  TrendingUp,
+  ArrowRight,
+} from 'lucide-react'
+import {
+  DashboardStats,
+  RecentInvoices,
+} from '../components/features/dashboard'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
@@ -9,16 +19,22 @@ import { InvoiceBuilder } from '../components/features/invoices/InvoiceBuilder'
 import { CustomerForm } from '../components/features/customers/CustomerForm'
 import { ErrorDisplay } from '../components/shared/ErrorDisplay'
 import { PageLoading } from '../components/shared/LoadingState'
-import { ResponsiveGrid, ResponsiveStack, MobileOptimizedSection } from '../components/layout/ResponsiveLayout'
+import {
+  ResponsiveGrid,
+  ResponsiveStack,
+  MobileOptimizedSection,
+} from '../components/layout/ResponsiveLayout'
 import { useRecentInvoices } from '../hooks/useInvoices'
 import { useAllCustomers } from '../hooks/useCustomers'
+import { useDashboardStats } from '../hooks/useDashboardStats'
 import { useAuthStatus } from '../hooks/useAuth'
 import { DashboardStatisticsService } from '../services/dashboardStatistics.service'
 import type { Invoice } from '../types/entities'
+import type { DashboardStatistics } from '../services/dashboardStatistics.service'
 
 /**
  * DashboardPage component showing key business metrics and recent activity.
- * 
+ *
  * Requirements: 8.1 - THE System SHALL provide a dashboard showing recent invoices and key statistics
  * Requirements: 10.1, 10.2, 10.3, 10.4, 10.5 - Dashboard statistics and reactive updates
  * Requirements: 3.2, 3.3, 3.5, 9.2 - Responsive layout adaptation and mobile optimization
@@ -26,21 +42,38 @@ import type { Invoice } from '../types/entities'
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAuthStatus()
-  
+
   // Use TanStack Query hooks
-  const { 
-    data: invoicesResponse, 
-    isLoading: invoicesLoading, 
+  const {
+    data: invoicesResponse,
+    isLoading: invoicesLoading,
     error: invoicesError,
-    refetch: refetchInvoices
+    refetch: refetchInvoices,
   } = useRecentInvoices(10)
-  
-  const { 
-    data: customersResponse, 
+
+  const {
+    data: customersResponse,
     isLoading: customersLoading,
     error: customersError,
-    refetch: refetchCustomers
+    refetch: refetchCustomers,
   } = useAllCustomers()
+
+  // Fetch dashboard statistics from dedicated backend endpoint
+  const {
+    data: statistics,
+    isLoading: statsLoading,
+    error: statsError,
+  } = useDashboardStats()
+
+  // Provide default statistics if not yet loaded
+  const defaultStats: DashboardStatistics = statistics || {
+    totalInvoices: 0,
+    totalRevenue: 0,
+    pendingInvoices: 0,
+    paidInvoices: 0,
+    draftInvoices: 0,
+    averageInvoiceValue: 0,
+  }
 
   // Modal states
   const [showInvoiceBuilder, setShowInvoiceBuilder] = useState(false)
@@ -49,15 +82,10 @@ export const DashboardPage: React.FC = () => {
   // Extract data from responses
   const invoices = invoicesResponse?.data || []
   const customers = customersResponse?.data || []
-  const dashboardLoading = invoicesLoading || customersLoading
-  const hasError = invoicesError || customersError
+  const dashboardLoading = invoicesLoading || customersLoading || statsLoading
+  const hasError = invoicesError || customersError || statsError
 
-  // Calculate dashboard statistics
-  const statistics = useMemo(() => {
-    return DashboardStatisticsService.calculateStatistics(invoices as any)
-  }, [invoices])
-
-  // Get recent invoices with customer names
+  // Get recent invoices with customer names (still used for the recent invoices list)
   const recentInvoices = useMemo(() => {
     const customerLookup = (customerId: string) => {
       const customer = customers.find(c => c.id === customerId)
@@ -104,9 +132,9 @@ export const DashboardPage: React.FC = () => {
   // Show error state
   if (hasError) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50/30 p-6">
-        <ErrorDisplay 
-          error={invoicesError || customersError} 
+      <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-primary-50/30 p-6">
+        <ErrorDisplay
+          error={invoicesError || customersError}
           onRetry={() => {
             refetchInvoices()
             refetchCustomers()
@@ -118,7 +146,7 @@ export const DashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50/30">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-primary-50/30">
       <ResponsiveStack spacing="lg" className="animate-fade-in">
         {/* Modern Header Section with Welcome Message */}
         <MobileOptimizedSection padding="sm">
@@ -131,7 +159,7 @@ export const DashboardPage: React.FC = () => {
                 Here's what's happening with your business today
               </p>
             </div>
-            
+
             {/* Quick Action Button - Mobile Optimized */}
             <Button
               variant="primary"
@@ -149,7 +177,7 @@ export const DashboardPage: React.FC = () => {
         {/* Statistics Cards - Modern Grid with Staggered Animation */}
         <MobileOptimizedSection>
           <DashboardStats
-            statistics={statistics}
+            statistics={defaultStats}
             totalCustomers={customers.length}
             loading={dashboardLoading}
           />
@@ -172,18 +200,16 @@ export const DashboardPage: React.FC = () => {
             </div>
 
             {/* Quick Actions - Modern Card Design */}
-            <Card 
-              padding="lg" 
+            <Card
+              padding="lg"
               hover={true}
-              className="space-y-6 bg-gradient-to-br from-white to-gray-50/50"
+              className="space-y-6 bg-linear-to-br from-white to-gray-50/50"
             >
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-gradient-primary rounded-xl">
                   <TrendingUp className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="heading-4 text-gray-900">
-                  Quick Actions
-                </h3>
+                <h3 className="heading-4 text-gray-900">Quick Actions</h3>
               </div>
 
               <ResponsiveStack spacing="sm">
@@ -221,19 +247,19 @@ export const DashboardPage: React.FC = () => {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">This Month</span>
                     <span className="font-semibold text-gray-900">
-                      {statistics.totalInvoices} invoices
+                      {defaultStats.totalInvoices} invoices
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">Revenue</span>
                     <span className="font-semibold text-success-600">
-                      ${statistics.totalRevenue.toLocaleString()}
+                      ${defaultStats.totalRevenue.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">Pending</span>
                     <span className="font-semibold text-secondary-600">
-                      {statistics.pendingInvoices} invoices
+                      {defaultStats.pendingInvoices} invoices
                     </span>
                   </div>
                 </div>
@@ -288,16 +314,18 @@ const QuickActionButton: React.FC<QuickActionButtonProps> = ({
   title,
   description,
   gradient,
-  onClick
+  onClick,
 }) => {
   return (
     <button
       type="button"
-      className="w-full flex items-center justify-between p-4 text-left border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 hover:shadow-medium transition-all duration-200 min-h-[44px] group"
+      className="w-full flex items-center justify-between p-4 text-left border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 hover:shadow-medium transition-all duration-200 min-h-11 group"
       onClick={onClick}
     >
       <div className="flex items-center space-x-3">
-        <div className={`p-2.5 rounded-xl bg-gradient-to-br ${gradient} group-hover:shadow-glow transition-all duration-200 group-hover:scale-105`}>
+        <div
+          className={`p-2.5 rounded-xl bg-linear-to-br ${gradient} group-hover:shadow-glow transition-all duration-200 group-hover:scale-105`}
+        >
           <Icon className="w-5 h-5 text-white" />
         </div>
         <div>

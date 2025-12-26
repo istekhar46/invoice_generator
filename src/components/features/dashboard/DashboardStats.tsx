@@ -49,11 +49,11 @@ const StatCard: React.FC<StatCardProps> = ({
       >
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <div className="h-4 w-24 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded mb-2" />
-            <div className="h-8 w-32 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded mb-2" />
-            <div className="h-4 w-16 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded" />
+            <div className="h-4 w-24 bg-linear-to-r from-gray-200 via-gray-100 to-gray-200 bg-size-[200px_100%] animate-shimmer rounded mb-2" />
+            <div className="h-8 w-32 bg-linear-to-r from-gray-200 via-gray-100 to-gray-200 bg-size-[200px_100%] animate-shimmer rounded mb-2" />
+            <div className="h-4 w-16 bg-linear-to-r from-gray-200 via-gray-100 to-gray-200 bg-size-[200px_100%] animate-shimmer rounded" />
           </div>
-          <div className="p-3 rounded-2xl bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer">
+          <div className="p-3 rounded-2xl bg-linear-to-r from-gray-200 via-gray-100 to-gray-200 bg-size-[200px_100%] animate-shimmer">
             <div className="w-6 h-6" />
           </div>
         </div>
@@ -91,7 +91,7 @@ const StatCard: React.FC<StatCardProps> = ({
           )}
         </div>
         <div className={cn(
-          "p-3 rounded-2xl bg-gradient-to-br",
+          "p-3 rounded-2xl bg-linear-to-br",
           gradient
         )}>
           <Icon className="w-6 h-6 text-white" />

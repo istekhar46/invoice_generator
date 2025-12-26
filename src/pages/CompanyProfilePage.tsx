@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { CompanyProfileForm } from '../components/features/company/CompanyProfileForm'
-import { useCompanyProfile } from '../hooks/useCompany'
+import { useCompanyProfile, useUploadLogo, useDeleteLogo } from '../hooks/useCompany'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { LoadingSpinner } from '../components/ui/LoadingSpinner'
@@ -15,7 +15,10 @@ import {
   DollarSign,
   Percent,
   ArrowRight,
-  Plus
+  Plus,
+  Upload,
+  Trash2,
+  RefreshCw
 } from 'lucide-react'
 
 /**
@@ -25,6 +28,8 @@ import {
  */
 export const CompanyProfilePage: React.FC = () => {
   const { data: profile, isLoading: loading } = useCompanyProfile()
+  const uploadLogo = useUploadLogo()
+  const deleteLogo = useDeleteLogo()
   const [isEditing, setIsEditing] = useState(false)
 
   // If no profile exists, show form by default
@@ -45,6 +50,29 @@ export const CompanyProfilePage: React.FC = () => {
 
   const handleCancel = () => {
     setIsEditing(false)
+  }
+
+  const handleLogoUpload = async (file: File) => {
+    try {
+      await uploadLogo.mutateAsync(file)
+    } catch (error) {
+      console.error('Logo upload failed:', error)
+    }
+  }
+
+  const handleLogoDelete = async () => {
+    try {
+      await deleteLogo.mutateAsync()
+    } catch (error) {
+      console.error('Logo deletion failed:', error)
+    }
+  }
+
+  const handleLogoFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      handleLogoUpload(file)
+    }
   }
 
   if (loading && !profile) {
@@ -256,17 +284,96 @@ export const CompanyProfilePage: React.FC = () => {
                   <h3 className="heading-4 text-gray-900">Company Logo</h3>
                 </div>
                 
-                <div className="text-center">
+                <div className="space-y-3">
                   {profile?.logoUrl ? (
-                    <img 
-                      src={profile.logoUrl} 
-                      alt="Company Logo" 
-                      className="max-h-16 mx-auto rounded-lg shadow-sm"
-                    />
+                    <div className="space-y-3">
+                      <div className="flex justify-center">
+                        <img 
+                          src={profile.logoUrl} 
+                          alt="Company Logo" 
+                          className="max-h-20 max-w-full rounded-lg shadow-sm border border-gray-200 bg-white p-2"
+                        />
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/gif"
+                          onChange={handleLogoFileSelect}
+                          className="sr-only"
+                          id="logo-upload"
+                          disabled={uploadLogo.isPending || deleteLogo.isPending}
+                        />
+                        
+                        <Button
+                          variant="outline"
+                          size="small"
+                          onClick={() => document.getElementById('logo-upload')?.click()}
+                          disabled={uploadLogo.isPending || deleteLogo.isPending}
+                        >
+                          {uploadLogo.isPending ? (
+                            <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                          ) : (
+                            <Upload className="w-3 h-3 mr-1" />
+                          )}
+                          Replace
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          size="small"
+                          onClick={handleLogoDelete}
+                          disabled={uploadLogo.isPending || deleteLogo.isPending}
+                          className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                        >
+                          {deleteLogo.isPending ? (
+                            <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3 h-3 mr-1" />
+                          )}
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
                   ) : (
-                    <div className="p-4 bg-gray-100 rounded-xl">
-                      <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500">No logo uploaded</p>
+                    <div className="text-center space-y-3">
+                      <div className="p-4 bg-gray-100 rounded-xl">
+                        <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500 mb-3">No logo uploaded</p>
+                        
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/gif"
+                          onChange={handleLogoFileSelect}
+                          className="sr-only"
+                          id="logo-upload-empty"
+                          disabled={uploadLogo.isPending}
+                        />
+                        
+                        <Button
+                          variant="outline"
+                          size="small"
+                          onClick={() => document.getElementById('logo-upload-empty')?.click()}
+                          disabled={uploadLogo.isPending}
+                        >
+                          {uploadLogo.isPending ? (
+                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Upload className="w-4 h-4 mr-2" />
+                          )}
+                          Upload Logo
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {(uploadLogo.error || deleteLogo.error) && (
+                    <div className="text-center">
+                      <p className="text-xs text-red-600">
+                        {uploadLogo.error instanceof Error ? uploadLogo.error.message : 
+                         deleteLogo.error instanceof Error ? deleteLogo.error.message : 
+                         'An error occurred'}
+                      </p>
                     </div>
                   )}
                 </div>

@@ -7,13 +7,15 @@ import {
 import { CompanyProfile } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { BaseUserService } from '../common/services/base-user-service';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { CreateCompanyProfileDto, UpdateCompanyProfileDto } from './dto';
-import * as path from 'path';
-import * as fs from 'fs/promises';
 
 @Injectable()
 export class CompanyService extends BaseUserService {
-  constructor(prisma: PrismaService) {
+  constructor(
+    prisma: PrismaService,
+    private readonly cloudinaryService: CloudinaryService,
+  ) {
     super(prisma);
   }
 
@@ -125,7 +127,7 @@ export class CompanyService extends BaseUserService {
 
     // Delete logo file if it exists
     if (existingProfile?.logoUrl) {
-      await this.deleteLogo(existingProfile.logoUrl);
+      await this.cloudinaryService.deleteLogoFile(existingProfile.logoUrl, userId);
     }
 
     // Delete company profile with additional safety check
@@ -146,44 +148,17 @@ export class CompanyService extends BaseUserService {
       where: { userId },
     });
 
-    // Validate file type
-    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
-    if (!allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException(
-        'Invalid file type. Only JPEG, PNG, and GIF images are allowed.',
-      );
-    }
-
-    // Validate file size (5MB limit)
-    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
-    if (file.size > maxSize) {
-      throw new BadRequestException(
-        'File size too large. Maximum allowed size is 5MB.',
-      );
-    }
-
-    // Generate unique filename
-    const fileExtension = path.extname(file.originalname);
-    const fileName = `logo-${userId}-${Date.now()}${fileExtension}`;
-    const uploadDir = path.join(process.cwd(), 'uploads', 'logos');
-    const filePath = path.join(uploadDir, fileName);
-
     try {
-      // Ensure upload directory exists
-      await fs.mkdir(uploadDir, { recursive: true });
+      // Upload file to Cloudinary
+      // CloudinaryService handles file validation (MIME type, size)
+      const logoUrl = await this.cloudinaryService.uploadLogoFile(file, userId);
 
-      // Save file to disk
-      await fs.writeFile(filePath, file.buffer);
-
-      // Generate URL for the uploaded file
-      const logoUrl = `/uploads/logos/${fileName}`;
-
-      // Delete old logo if it exists
+      // Delete old logo from Cloudinary if it exists
       if (existingProfile?.logoUrl) {
-        await this.deleteLogo(existingProfile.logoUrl);
+        await this.cloudinaryService.deleteLogoFile(existingProfile.logoUrl, userId);
       }
 
-      // Update company profile with new logo URL using additional safety check
+      // Update company profile with new logo URL
       const updateResult = await this.prisma.companyProfile.updateMany({
         where: { userId },
         data: { logoUrl },
@@ -195,26 +170,47 @@ export class CompanyService extends BaseUserService {
 
       return logoUrl;
     } catch (error) {
-      // Clean up file if database update fails
-      try {
-        await fs.unlink(filePath);
-      } catch (unlinkError) {
-        // Ignore unlink errors
+      // If update fails but upload succeeded, try to delete the uploaded file
+      if (error instanceof NotFoundException) {
+        const logoUrl = await this.cloudinaryService.uploadLogoFile(file, userId);
+        await this.cloudinaryService.deleteLogoFile(logoUrl, userId);
       }
       throw error;
     }
   }
 
-  private async deleteLogo(logoUrl: string): Promise<void> {
+  async deleteLogo(userId: string): Promise<void> {
+    // Validate company profile ownership
+    await this.validateCompanyProfileOwnership(userId);
+
+    const existingProfile = await this.prisma.companyProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!existingProfile?.logoUrl) {
+      throw new NotFoundException('No logo found to delete');
+    }
+
     try {
-      // Extract filename from URL
-      const fileName = path.basename(logoUrl);
-      const filePath = path.join(process.cwd(), 'uploads', 'logos', fileName);
-      
-      // Delete file if it exists
-      await fs.unlink(filePath);
+      // Delete logo file from Cloudinary
+      await this.cloudinaryService.deleteLogoFile(existingProfile.logoUrl, userId);
+
+      // Update company profile to remove logo URL
+      const updateResult = await this.prisma.companyProfile.updateMany({
+        where: { userId },
+        data: { logoUrl: null },
+      });
+
+      if (updateResult.count === 0) {
+        throw new NotFoundException('Company profile not found or access denied');
+      }
     } catch (error) {
-      // Ignore file deletion errors (file might not exist)
+      // If it's a NotFoundException, re-throw it
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      // For other errors, wrap them
+      throw new BadRequestException(`Failed to delete logo: ${(error as any)?.message || 'Unknown error'}`);
     }
   }
 

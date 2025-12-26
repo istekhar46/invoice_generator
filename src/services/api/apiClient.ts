@@ -125,8 +125,11 @@ class BaseApiClient implements ApiClient {
 
           try {
             const refreshToken = TokenManager.getRefreshToken()
+            
+            // If no refresh token available, logout immediately
             if (!refreshToken) {
-              throw new Error('No refresh token available')
+              this.handleAuthFailure()
+              return Promise.reject(new Error('No refresh token available - please login again'))
             }
 
             // Attempt to refresh the token

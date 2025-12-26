@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { authApi, TokenManager } from '../services/api'
 import { getCacheInvalidationService } from '../services'
 import { queryKeys } from '../lib'
@@ -16,6 +17,9 @@ export const authQueryKeys = {
   auth: queryKeys.auth,
   profile: queryKeys.profile,
 }
+
+// Prevent multiple proactive refresh attempts per page load
+let hasAttemptedProactiveRefresh = false
 
 /**
  * Hook for user profile query
@@ -219,7 +223,30 @@ export function useRefreshToken() {
  */
 export function useAuthStatus() {
   const { data: user, isLoading, error } = useUserProfile()
+  const refreshMutation = useRefreshToken()
+
   const isAuthenticated = TokenManager.isAuthenticated() && !!user && !error
+
+  // Validate refresh token on mount and clear invalid auth.
+  // Also attempt a proactive refresh if we have a refresh token but no access token.
+  useEffect(() => {
+    // If there's a 401 error or missing refresh token, logout
+    if (error?.status === 401 || (error && !TokenManager.getRefreshToken())) {
+      TokenManager.clearTokens()
+      return
+    }
+
+    // If access token missing but refresh token exists, attempt refresh once on mount
+    const access = TokenManager.getAccessToken()
+    const refreshToken = TokenManager.getRefreshToken()
+
+    if (!access && refreshToken && !refreshMutation.isPending && !refreshMutation.isError && !hasAttemptedProactiveRefresh) {
+      // Mark attempted so we only try once per page load — prevents multiple concurrent refreshes
+      hasAttemptedProactiveRefresh = true
+      // Use mutate to trigger onSuccess/onError handlers defined in useRefreshToken
+      refreshMutation.mutate(refreshToken)
+    }
+  }, [error, refreshMutation])
 
   return {
     isAuthenticated,

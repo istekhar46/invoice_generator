@@ -12,7 +12,6 @@ import {
   UploadedFile,
   ParseFilePipe,
   MaxFileSizeValidator,
-  FileTypeValidator,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -195,7 +194,6 @@ export class CompanyController {
       new ParseFilePipe({
         validators: [
           new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
-          new FileTypeValidator({ fileType: /(jpg|jpeg|png|gif)$/ }),
         ],
       }),
     )
@@ -203,5 +201,24 @@ export class CompanyController {
   ): Promise<{ logoUrl: string }> {
     const logoUrl = await this.companyService.uploadLogo(userId, file);
     return { logoUrl };
+  }
+
+  @Delete('profile/logo')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete company logo' })
+  @ApiResponse({
+    status: 204,
+    description: 'Logo deleted successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Company profile not found or no logo to delete',
+  })
+  async deleteLogo(@CurrentUser('id') userId: string): Promise<void> {
+    await this.companyService.deleteLogo(userId);
   }
 }

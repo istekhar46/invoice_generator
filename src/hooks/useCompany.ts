@@ -196,6 +196,50 @@ export function useUploadLogo() {
 }
 
 /**
+ * Hook for deleting company logo
+ * Handles logo deletion and cache management
+ * Requirements: 6.4 - logo deletion via DELETE /company/profile/logo
+ */
+export function useDeleteLogo() {
+  const queryClient = useQueryClient()
+  const { success, error } = useToast()
+
+  return useMutation({
+    mutationFn: () => companyApi.deleteLogo(),
+    onMutate: async () => {
+      // Cancel any outgoing refetches for the profile
+      await queryClient.cancelQueries({ queryKey: queryKeys.companyProfile() })
+
+      // Snapshot the previous profile
+      const previousProfile = queryClient.getQueryData(queryKeys.companyProfile())
+
+      // Optimistically remove the logo
+      if (previousProfile) {
+        const cacheService = getCacheInvalidationService(queryClient)
+        cacheService.company.updateLogo(null)
+      }
+
+      return { previousProfile }
+    },
+    onSuccess: () => {
+      // Use centralized cache invalidation service
+      const cacheService = getCacheInvalidationService(queryClient)
+      cacheService.company.updateLogo(null)
+      
+      success('Logo deleted', 'Company logo has been removed successfully')
+    },
+    onError: (err, _, context) => {
+      // Rollback on error
+      if (context?.previousProfile) {
+        queryClient.setQueryData(queryKeys.companyProfile(), context.previousProfile)
+      }
+      console.error('Failed to delete company logo:', err)
+      error('Failed to delete logo', 'Please try again')
+    },
+  })
+}
+
+/**
  * Hook to check if company profile exists
  * Provides reactive company profile status
  * Requirements: 7.4 - cache invalidation for company profile operations
