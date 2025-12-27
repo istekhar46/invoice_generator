@@ -132,6 +132,12 @@ class BaseApiClient implements ApiClient {
               return Promise.reject(new Error('No refresh token available - please login again'))
             }
 
+            // Check if we're offline before attempting refresh
+            if (typeof navigator !== 'undefined' && !navigator.onLine) {
+              this.isRefreshing = false
+              return Promise.reject(new Error('Cannot refresh token while offline'))
+            }
+
             // Attempt to refresh the token
             const response = await this.axiosInstance.post('/auth/refresh', {
               refreshToken,

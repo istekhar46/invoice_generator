@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { authApi, TokenManager } from '../services/api'
 import { getCacheInvalidationService } from '../services'
 import { queryKeys } from '../lib'
@@ -17,9 +17,6 @@ export const authQueryKeys = {
   auth: queryKeys.auth,
   profile: queryKeys.profile,
 }
-
-// Prevent multiple proactive refresh attempts per page load
-let hasAttemptedProactiveRefresh = false
 
 /**
  * Hook for user profile query
@@ -94,6 +91,7 @@ export function useLogin() {
     onError: (err: any) => {
       // Clear any existing tokens on login failure
       TokenManager.clearTokens()
+      
       console.error('Login failed:', err)
       
       // Show different error messages based on network status and error type
@@ -224,6 +222,9 @@ export function useRefreshToken() {
 export function useAuthStatus() {
   const { data: user, isLoading, error } = useUserProfile()
   const refreshMutation = useRefreshToken()
+  
+  // Use a ref to track proactive refresh attempts per hook instance
+  const hasAttemptedProactiveRefresh = useRef(false)
 
   const isAuthenticated = TokenManager.isAuthenticated() && !!user && !error
 
@@ -233,6 +234,7 @@ export function useAuthStatus() {
     // If there's a 401 error or missing refresh token, logout
     if (error?.status === 401 || (error && !TokenManager.getRefreshToken())) {
       TokenManager.clearTokens()
+      hasAttemptedProactiveRefresh.current = false
       return
     }
 
@@ -240,13 +242,20 @@ export function useAuthStatus() {
     const access = TokenManager.getAccessToken()
     const refreshToken = TokenManager.getRefreshToken()
 
-    if (!access && refreshToken && !refreshMutation.isPending && !refreshMutation.isError && !hasAttemptedProactiveRefresh) {
-      // Mark attempted so we only try once per page load — prevents multiple concurrent refreshes
-      hasAttemptedProactiveRefresh = true
+    if (!access && refreshToken && !refreshMutation.isPending && !refreshMutation.isError && !hasAttemptedProactiveRefresh.current) {
+      // Mark attempted so we only try once per hook instance — prevents multiple concurrent refreshes
+      hasAttemptedProactiveRefresh.current = true
       // Use mutate to trigger onSuccess/onError handlers defined in useRefreshToken
       refreshMutation.mutate(refreshToken)
     }
   }, [error, refreshMutation])
+
+  // Reset the flag when tokens are successfully refreshed
+  useEffect(() => {
+    if (refreshMutation.isSuccess) {
+      hasAttemptedProactiveRefresh.current = false
+    }
+  }, [refreshMutation.isSuccess])
 
   return {
     isAuthenticated,
