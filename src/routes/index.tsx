@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { MainLayout } from '../components/layout/MainLayout'
+import { NavigationProvider } from '../components/providers/NavigationProvider'
 import { ProtectedRoute } from './ProtectedRoute'
 import { PublicRoute } from './PublicRoute'
 
@@ -18,7 +19,11 @@ import {
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <MainLayout />,
+    element: (
+      <NavigationProvider>
+        <MainLayout />
+      </NavigationProvider>
+    ),
     children: [
       // Root redirect to dashboard for authenticated users, login for unauthenticated
       {

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { authApi, TokenManager } from '../services/api'
 import { getCacheInvalidationService } from '../services'
 import { queryKeys } from '../lib'
@@ -144,6 +145,7 @@ export function useRegister() {
  */
 export function useLogout() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const { success } = useToast()
 
   return useMutation({
@@ -158,10 +160,8 @@ export function useLogout() {
       
       success('Logged out', 'You have been logged out successfully')
       
-      // Redirect to login page
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login'
-      }
+      // Navigate to login page using React Router
+      navigate('/login', { replace: true })
     },
     onError: (err) => {
       // Even if server logout fails, clear local state
@@ -171,9 +171,8 @@ export function useLogout() {
       const cacheService = getCacheInvalidationService(queryClient)
       cacheService.crossEntity.onLogout()
       
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login'
-      }
+      // Navigate to login page using React Router
+      navigate('/login', { replace: true })
     },
     // Always attempt logout even if offline
     retry: false,
@@ -187,6 +186,7 @@ export function useLogout() {
  */
 export function useRefreshToken() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   return useMutation({
     mutationFn: (refreshToken: string) => authApi.refreshToken(refreshToken),
@@ -206,9 +206,8 @@ export function useRefreshToken() {
       const cacheService = getCacheInvalidationService(queryClient)
       cacheService.crossEntity.onLogout()
       
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login'
-      }
+      // Navigate to login page using React Router
+      navigate('/login', { replace: true })
     },
     retry: false, // Don't retry token refresh
   })

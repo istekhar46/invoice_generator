@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 import { Header } from './Header'
 import { Breadcrumbs } from './Breadcrumbs'
 import { ResponsiveContainer } from './ResponsiveLayout'
@@ -20,7 +20,6 @@ export interface MainLayoutProps {
  */
 const MainLayout: React.FC<MainLayoutProps> = ({ className }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const navigate = useNavigate()
   const { user, isAuthenticated } = useAuthStatus()
   const logout = useLogout()
 
@@ -34,8 +33,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ className }) => {
       // Navigation is handled by the logout mutation
     } catch (error) {
       console.error('Logout failed:', error)
-      // Force navigation even if logout fails
-      navigate('/login', { replace: true })
+      // Navigation is handled by the logout mutation's onError
     }
   }
 

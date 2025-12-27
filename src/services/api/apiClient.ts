@@ -2,6 +2,7 @@ import axios from 'axios'
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import { ENV } from '../../utils/env'
 import { TokenManager } from '../auth/tokenManager'
+import { navigationService } from '../navigation/navigationService'
 
 // Request configuration interface
 export interface RequestConfig extends AxiosRequestConfig {
@@ -203,10 +204,8 @@ class BaseApiClient implements ApiClient {
     // Clear tokens
     TokenManager.clearTokens()
     
-    // Redirect to login page
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login'
-    }
+    // Navigate to login page using navigation service
+    navigationService.navigateToLogin()
   }
 
   async get<T>(url: string, config?: RequestConfig): Promise<T> {

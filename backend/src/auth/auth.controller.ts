@@ -150,9 +150,9 @@ export class AuthController {
   })
   async logout(
     @CurrentUser() user: User,
-    @Body() refreshTokenDto?: RefreshTokenDto,
+    @Body() body?: { refreshToken?: string },
   ) {
-    await this.authService.logout(user.id, refreshTokenDto?.refreshToken);
+    await this.authService.logout(user.id, body?.refreshToken);
     return { message: 'Successfully logged out' };
   }
 

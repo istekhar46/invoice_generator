@@ -41,3 +41,6 @@ export {
   getPrefetchService,
   createPrefetchService,
 } from './prefetch'
+
+// Navigation service
+export { navigationService } from './navigation/navigationService'

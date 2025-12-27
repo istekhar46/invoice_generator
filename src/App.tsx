@@ -5,7 +5,7 @@ import { router } from './routes'
 import { ErrorBoundary } from './components/shared'
 import { OfflineIndicator, OfflineBanner } from './components/shared/OfflineIndicator'
 import { ToastProvider } from './hooks/useToast'
-import { errorHandlerService, initializeCacheService } from './services'
+import { errorHandlerService, initializeCacheService, navigationService } from './services'
 import { queryClient } from './lib'
 import './index.css'
 
