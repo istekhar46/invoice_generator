@@ -81,6 +81,8 @@ The API will be available at `http://localhost:3001`
 | `PORT` | Server port | 3001 |
 | `NODE_ENV` | Environment | development |
 | `FRONTEND_URL` | Frontend URL for CORS | http://localhost:5173 |
+| `API_DEV_SERVER_URL` | Development server URL for Swagger docs | http://localhost:{PORT} |
+| `API_PROD_SERVER_URL` | Production server URL for Swagger docs | https://api.example.com |
 
 ## API Documentation
 

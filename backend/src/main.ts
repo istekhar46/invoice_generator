@@ -45,9 +45,14 @@ async function bootstrap(): Promise<void> {
   app.setGlobalPrefix('api/v1');
 
   const port = process.env.PORT ?? 3001;
+  const nodeEnv = process.env.NODE_ENV ?? 'development';
+
+  // Get server URLs from environment variables
+  const devServerUrl = process.env.API_DEV_SERVER_URL ?? `http://localhost:${port}`;
+  const prodServerUrl = process.env.API_PROD_SERVER_URL ?? 'https://api.example.com';
 
   // Setup Swagger/OpenAPI documentation
-  const config = new DocumentBuilder()
+  const configBuilder = new DocumentBuilder()
     .setTitle('Electrician Invoice API')
     .setDescription('A comprehensive backend API for the Electrician Invoice Generation Web Application. This API provides secure endpoints for user authentication, company profile management, customer management, and invoice generation with line items.')
     .setVersion('1.0')
@@ -67,10 +72,23 @@ async function bootstrap(): Promise<void> {
     .addTag('Company', 'Company profile management endpoints')
     .addTag('Customers', 'Customer management endpoints')
     .addTag('Invoices', 'Invoice and line item management endpoints')
-    .addTag('Health', 'System health check endpoints')
-    .addServer(`http://localhost:${port}`, 'Development server')
-    .addServer(`https://api.example.com`, 'Production server')
-    .build();
+    .addTag('Health', 'System health check endpoints');
+
+  // Add servers based on environment
+  if (nodeEnv === 'development') {
+    configBuilder.addServer(devServerUrl, 'Development server');
+    logger.log(`📡 Added development server: ${devServerUrl}`);
+    // Also add production server in development for testing
+    if (prodServerUrl !== 'https://api.example.com') {
+      configBuilder.addServer(prodServerUrl, 'Production server');
+      logger.log(`📡 Added production server: ${prodServerUrl}`);
+    }
+  } else {
+    configBuilder.addServer(prodServerUrl, 'Production server');
+    logger.log(`📡 Added production server: ${prodServerUrl}`);
+  }
+
+  const config = configBuilder.build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/v1/docs', app, document, {
