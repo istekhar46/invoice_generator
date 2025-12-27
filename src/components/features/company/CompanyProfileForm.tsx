@@ -159,21 +159,32 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
             </div>
           )}
 
-          {/* Logo Upload Section */}
-          <FormSection
-            title="Company Logo"
-            description="Upload your company logo to personalize your invoices"
-            variant="elevated"
-          >
-            <LogoUploader
-              currentLogo={profile?.logoUrl}
-              onLogoUpload={handleLogoUpload}
-              onLogoDelete={handleLogoDelete}
-              loading={uploadLogo.isPending}
-              deleting={deleteLogo.isPending}
-              error={uploadLogo.error instanceof Error ? uploadLogo.error.message : deleteLogo.error instanceof Error ? deleteLogo.error.message : undefined}
-            />
-          </FormSection>
+          {/* Logo Upload Section - Only show when editing existing profile */}
+          {isEditing && (
+            <FormSection
+              title="Company Logo"
+              description="Upload your company logo to personalize your invoices"
+              variant="elevated"
+            >
+              <LogoUploader
+                currentLogo={profile?.logoUrl}
+                onLogoUpload={handleLogoUpload}
+                onLogoDelete={handleLogoDelete}
+                loading={uploadLogo.isPending}
+                deleting={deleteLogo.isPending}
+                error={uploadLogo.error instanceof Error ? uploadLogo.error.message : deleteLogo.error instanceof Error ? deleteLogo.error.message : undefined}
+              />
+            </FormSection>
+          )}
+
+          {/* Info message for new profile creation */}
+          {!isEditing && (
+            <div className="rounded-xl bg-blue-50 border border-blue-200 p-4">
+              <p className="text-sm text-blue-700">
+                💡 <strong>Tip:</strong> You can upload your company logo after creating your profile.
+              </p>
+            </div>
+          )}
 
           {/* Business Information Section */}
           <FormSection

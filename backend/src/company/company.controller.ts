@@ -90,14 +90,15 @@ export class CompanyController {
     status: 401,
     description: 'Unauthorized',
   })
-  @ApiResponse({
-    status: 404,
-    description: 'Company profile not found',
-  })
   async getProfile(
     @CurrentUser('id') userId: string,
-  ): Promise<CompanyProfileResponseDto> {
+  ): Promise<CompanyProfileResponseDto | null> {
     const companyProfile = await this.companyService.findByUserId(userId);
+    
+    if (!companyProfile) {
+      return null;
+    }
+    
     return plainToClass(CompanyProfileResponseDto, companyProfile, {
       excludeExtraneousValues: true,
     });

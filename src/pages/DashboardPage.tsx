@@ -7,6 +7,7 @@ import {
   Building2,
   TrendingUp,
   ArrowRight,
+  AlertCircle,
 } from 'lucide-react'
 import {
   DashboardStats,
@@ -27,6 +28,7 @@ import {
 import { useRecentInvoices } from '../hooks/useInvoices'
 import { useAllCustomers } from '../hooks/useCustomers'
 import { useDashboardStats } from '../hooks/useDashboardStats'
+import { useCompanyProfileStatus } from '../hooks/useCompany'
 import { useAuthStatus } from '../hooks/useAuth'
 import { DashboardStatisticsService } from '../services/dashboardStatistics.service'
 import type { Invoice } from '../types/entities'
@@ -42,6 +44,7 @@ import type { DashboardStatistics } from '../services/dashboardStatistics.servic
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAuthStatus()
+  const { hasProfile, isLoading: companyLoading } = useCompanyProfileStatus()
 
   // Use TanStack Query hooks
   const {
@@ -173,6 +176,49 @@ export const DashboardPage: React.FC = () => {
             </Button>
           </div>
         </MobileOptimizedSection>
+
+        {/* Company Setup Prompt - Show when no profile exists */}
+        {!companyLoading && !hasProfile && (
+          <MobileOptimizedSection>
+            <Card className="bg-gradient-to-r from-primary-50 to-secondary-50 border-primary-200">
+              <div className="p-6">
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0">
+                    <div className="flex items-center justify-center w-12 h-12 bg-primary-100 rounded-lg">
+                      <AlertCircle className="w-6 h-6 text-primary-600" />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      Complete Your Company Setup
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                      Set up your company profile to start creating professional invoices and managing customers. 
+                      This will only take a few minutes.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Button
+                        onClick={() => navigate('/company?setup=true')}
+                        className="group"
+                      >
+                        <Building2 className="w-4 h-4 mr-2" />
+                        Setup Company Profile
+                        <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate('/company')}
+                        className="text-gray-600"
+                      >
+                        Skip for now
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </MobileOptimizedSection>
+        )}
 
         {/* Statistics Cards - Modern Grid with Staggered Animation */}
         <MobileOptimizedSection>

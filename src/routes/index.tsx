@@ -3,6 +3,7 @@ import { MainLayout } from '../components/layout/MainLayout'
 import { NavigationProvider } from '../components/providers/NavigationProvider'
 import { ProtectedRoute } from './ProtectedRoute'
 import { PublicRoute } from './PublicRoute'
+import { CompanySetupGuard } from '../components/guards/CompanySetupGuard'
 
 // Page components
 import {
@@ -62,7 +63,9 @@ export const router = createBrowserRouter([
         path: 'customers',
         element: (
           <ProtectedRoute>
-            <CustomersPage />
+            <CompanySetupGuard>
+              <CustomersPage />
+            </CompanySetupGuard>
           </ProtectedRoute>
         ),
       },
@@ -70,7 +73,9 @@ export const router = createBrowserRouter([
         path: 'invoices',
         element: (
           <ProtectedRoute>
-            <InvoicesPage />
+            <CompanySetupGuard>
+              <InvoicesPage />
+            </CompanySetupGuard>
           </ProtectedRoute>
         ),
       },

@@ -61,8 +61,8 @@ export class CompanyApi {
    * Get company profile for the current user
    * Requirements: 6.1 - fetch profile data via GET /company/profile
    */
-  async getProfile(): Promise<CompanyProfileResponseDto> {
-    return apiClient.get<CompanyProfileResponseDto>(`${this.basePath}/profile`)
+  async getProfile(): Promise<CompanyProfileResponseDto | null> {
+    return apiClient.get<CompanyProfileResponseDto | null>(`${this.basePath}/profile`)
   }
 
   /**

@@ -33,12 +33,16 @@ export function useCompanyProfile() {
       }
       return failureCount < 2
     },
-    select: (data: CompanyProfileResponseDto) => ({
-      ...data,
-      // Transform dates from strings to Date objects
-      createdAt: new Date(data.createdAt),
-      updatedAt: new Date(data.updatedAt),
-    }),
+    select: (data: CompanyProfileResponseDto | null) => {
+      if (!data) return null
+      
+      return {
+        ...data,
+        // Transform dates from strings to Date objects
+        createdAt: new Date(data.createdAt),
+        updatedAt: new Date(data.updatedAt),
+      }
+    },
   })
 }
 
@@ -62,7 +66,10 @@ export function useCreateCompanyProfile() {
         updatedAt: new Date(newProfile.updatedAt),
       })
       
-      success('Company profile created', `${newProfile.businessName} profile has been created successfully`)
+      success(
+        'Company profile created', 
+        `${newProfile.businessName} profile has been created successfully. You can now add your company logo!`
+      )
     },
     onError: (err) => {
       console.error('Failed to create company profile:', err)

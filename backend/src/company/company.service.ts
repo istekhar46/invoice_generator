@@ -60,7 +60,15 @@ export class CompanyService extends BaseUserService {
     }
   }
 
-  async findByUserId(userId: string): Promise<CompanyProfile> {
+  async findByUserId(userId: string): Promise<CompanyProfile | null> {
+    const companyProfile = await this.prisma.companyProfile.findUnique({
+      where: { userId },
+    });
+
+    return companyProfile;
+  }
+
+  private async findByUserIdOrThrow(userId: string): Promise<CompanyProfile> {
     const companyProfile = await this.prisma.companyProfile.findUnique({
       where: { userId },
     });
@@ -110,7 +118,7 @@ export class CompanyService extends BaseUserService {
       }
 
       // Return the updated profile
-      return await this.findByUserId(userId);
+      return await this.findByUserIdOrThrow(userId);
     } catch (error) {
       // Let the global exception filter handle Prisma errors
       throw error;

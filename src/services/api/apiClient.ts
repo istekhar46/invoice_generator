@@ -96,7 +96,11 @@ class BaseApiClient implements ApiClient {
     this.axiosInstance.interceptors.response.use(
       (response: AxiosResponse) => {
         if (ENV.DEV) {
-          console.log(`[API] Response ${response.status}:`, response.data)
+          if (response.status === 204) {
+            console.log(`[API] Response ${response.status}: No Content`)
+          } else {
+            console.log(`[API] Response ${response.status}:`, response.data)
+          }
         }
         return response
       },
@@ -210,27 +214,33 @@ class BaseApiClient implements ApiClient {
 
   async get<T>(url: string, config?: RequestConfig): Promise<T> {
     const response = await this.axiosInstance.get<any>(url, config)
-    return response.data?.data ?? response.data
+    // Check if response has a 'data' property (API wrapper format)
+    // Return response.data.data even if it's null, otherwise return response.data
+    return 'data' in response.data ? response.data.data : response.data
   }
 
   async post<T>(url: string, data?: any, config?: RequestConfig): Promise<T> {
     const response = await this.axiosInstance.post<any>(url, data, config)
-    return response.data?.data ?? response.data
+    return 'data' in response.data ? response.data.data : response.data
   }
 
   async put<T>(url: string, data?: any, config?: RequestConfig): Promise<T> {
     const response = await this.axiosInstance.put<any>(url, data, config)
-    return response.data?.data ?? response.data
+    return 'data' in response.data ? response.data.data : response.data
   }
 
   async patch<T>(url: string, data?: any, config?: RequestConfig): Promise<T> {
     const response = await this.axiosInstance.patch<any>(url, data, config)
-    return response.data?.data ?? response.data
+    return 'data' in response.data ? response.data.data : response.data
   }
 
   async delete<T>(url: string, config?: RequestConfig): Promise<T> {
     const response = await this.axiosInstance.delete<any>(url, config)
-    return response.data?.data ?? response.data
+    // Handle 204 No Content responses (empty body)
+    if (response.status === 204 || !response.data) {
+      return undefined as T
+    }
+    return 'data' in response.data ? response.data.data : response.data
   }
 
   // Create cancellation token for request cancellation
