@@ -6,7 +6,8 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build",
+    "prebuild": "prisma generate",
+    "build": "prisma generate && nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
@@ -33,7 +34,8 @@
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
     "docker:clean": "docker-compose down -v --remove-orphans",
-    "precommit": "npm run lint:check && npm run format:check && npm run test"
+    "precommit": "npm run lint:check && npm run format:check && npm run test",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.10",
