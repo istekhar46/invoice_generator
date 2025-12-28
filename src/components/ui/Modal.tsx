@@ -40,7 +40,7 @@ const Modal: React.FC<ModalProps> = ({
       <div className="fixed inset-0 flex w-screen items-center justify-center p-4">
         <DialogPanel
           className={cn(
-            'w-full rounded-lg bg-white p-6 shadow-xl',
+            'w-full rounded-lg bg-white p-6 shadow-xl h-[90vh] overflow-y-auto',
             sizeClasses[size],
             className
           )}
