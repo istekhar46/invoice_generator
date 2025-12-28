@@ -139,7 +139,7 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
   return (
     <div
       className={cn(
-        'fixed left-1/2 transform -translate-x-1/2 z-50 px-4 py-3 rounded-lg shadow-lg transition-all duration-300 max-w-sm',
+        'fixed left-1/2 transform -translate-x-1/2 z-50 px-4 py-3 rounded-lg shadow-lg transition-all duration-300 max-w -sm',
         position === 'top' ? 'top-4' : 'bottom-4',
         config.className,
         isOffline ? 'animate-slide-down' : 'animate-slide-up',
@@ -328,7 +328,7 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
       role="alert"
     >
       <div className="flex items-start">
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           {isOffline ? (
             <WifiOff className="h-5 w-5 text-danger-400" />
           ) : (
