@@ -30,17 +30,17 @@ initializeCacheService(queryClient)
  */
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <ErrorBoundary
-          onError={(error, errorInfo) => {
-            // Use centralized error handler
-            errorHandlerService.handleError(error, 'unknown', {
-              componentStack: errorInfo.componentStack,
-              errorBoundary: true,
-            })
-          }}
-        >
+    <ErrorBoundary
+      onError={(error, errorInfo) => {
+        // Use centralized error handler
+        errorHandlerService.handleError(error, 'unknown', {
+          componentStack: errorInfo.componentStack,
+          errorBoundary: true,
+        })
+      }}
+    >
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
           {/* Enhanced offline banner for full-width notifications */}
           <OfflineBanner 
             showQueueInfo={true}
@@ -54,11 +54,12 @@ function App() {
             showQueueInfo={true}
             position="top"
           />
-        </ErrorBoundary>
-        {/* React Query DevTools - only enabled in development */}
-        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-      </ToastProvider>
-    </QueryClientProvider>
+          
+          {/* React Query DevTools - only enabled in development */}
+          {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+        </ToastProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   )
 }
 

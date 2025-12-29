@@ -238,7 +238,7 @@ export const CustomerList: React.FC<CustomerListProps> = ({
             <h3 className="heading-3 text-gray-900 mb-2">
               {searchQuery ? 'No customers found' : 'No customers yet'}
             </h3>
-            <p className="text-body text-gray-600 mb-6 max-w -md mx-auto">
+            <p className="text-body text-gray-600 mb-6 max-w-md mx-auto">
               {searchQuery 
                 ? 'Try adjusting your search terms or clear the search to see all customers.'
                 : 'Get started by adding your first customer to manage your business relationships.'

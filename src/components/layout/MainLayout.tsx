@@ -27,6 +27,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ className }) => {
     setIsMobileMenuOpen(!isMobileMenuOpen)
   }
 
+  const handleMenuClose = () => {
+    setIsMobileMenuOpen(false)
+  }
+
   const handleLogout = async () => {
     try {
       await logout.mutateAsync()
@@ -43,6 +47,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ className }) => {
       <Header
         user={user}
         onMenuToggle={handleMenuToggle}
+        onMenuClose={handleMenuClose}
         onLogout={handleLogout}
         isMobileMenuOpen={isMobileMenuOpen}
         isLoading={logout.isPending}

@@ -361,7 +361,7 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
             {'\n'}
             Due Date: {formatDate(invoice.dueDate)}
             {'\n'}
-            Status: {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+            Status: {(invoice.status || 'draft').charAt(0).toUpperCase() + (invoice.status || 'draft').slice(1).toLowerCase()}
             {'\n'}
             Tax Rate: {formatTaxRate(invoice.taxRate)}
           </Text>
@@ -388,28 +388,34 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
 
         {/* Table Rows */}
         {invoice.lineItems && invoice.lineItems.length > 0 ? (
-          invoice.lineItems.map((item, index) => (
-            <View key={item.id || `item-${index}`} style={styles.tableRow}>
-              <View style={styles.colDescription}>
-                <Text style={styles.tableCellBold}>
-                  {item.type === 'material' ? '📦 ' : '🔧 '}
-                  {item.description || 'No description'}
+          invoice.lineItems.map((item, index) => {
+            // Handle both uppercase (MATERIAL, LABOR) and lowercase (material, labor) type values
+            const itemType = (item.type || '').toLowerCase()
+            const isMaterial = itemType === 'material'
+            
+            return (
+              <View key={item.id || `item-${index}`} style={styles.tableRow}>
+                <View style={styles.colDescription}>
+                  <Text style={styles.tableCellBold}>
+                    {isMaterial ? '📦 ' : '🔧 '}
+                    {item.description || 'No description'}
+                  </Text>
+                  <Text style={styles.tableCell}>
+                    {isMaterial ? 'Material' : 'Labor'}
+                  </Text>
+                </View>
+                <Text style={[styles.tableCell, styles.colQuantity]}>
+                  {item.quantity || 0}
                 </Text>
-                <Text style={styles.tableCell}>
-                  {item.type === 'material' ? 'Material' : 'Labor'}
+                <Text style={[styles.tableCell, styles.colRate]}>
+                  {formatCurrency(item.rate || 0)}
+                </Text>
+                <Text style={[styles.tableCellBold, styles.colAmount]}>
+                  {formatCurrency(item.amount || 0)}
                 </Text>
               </View>
-              <Text style={[styles.tableCell, styles.colQuantity]}>
-                {item.quantity || 0}
-              </Text>
-              <Text style={[styles.tableCell, styles.colRate]}>
-                {formatCurrency(item.rate || 0)}
-              </Text>
-              <Text style={[styles.tableCellBold, styles.colAmount]}>
-                {formatCurrency(item.amount || 0)}
-              </Text>
-            </View>
-          ))
+            )
+          })
         ) : (
           <View style={styles.tableRow}>
             <Text style={[styles.tableCell, { textAlign: 'center', flex: 1, fontStyle: 'italic' }]}>

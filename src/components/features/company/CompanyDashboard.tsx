@@ -57,7 +57,7 @@ export const CompanyDashboard: React.FC<CompanyDashboardProps> = ({
           </div>
 
           {/* Company Logo Section */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden" padding='none'>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Building2 className="w-5 h-5" />
@@ -147,7 +147,7 @@ export const CompanyDashboard: React.FC<CompanyDashboardProps> = ({
           {/* Company Information Grid */}
           <ResponsiveGrid>
             {/* Business Information */}
-            <Card className="hover:shadow-lg transition-shadow">
+            <Card padding='none' className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Building2 className="w-5 h-5" />
@@ -167,7 +167,7 @@ export const CompanyDashboard: React.FC<CompanyDashboardProps> = ({
             </Card>
 
             {/* Contact Information */}
-            <Card className="hover:shadow-lg transition-shadow">
+            <Card padding='none' className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Mail className="w-5 h-5" />
@@ -187,7 +187,7 @@ export const CompanyDashboard: React.FC<CompanyDashboardProps> = ({
             </Card>
 
             {/* Address Information */}
-            <Card className="hover:shadow-lg transition-shadow">
+            <Card padding='none' className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <MapPin className="w-5 h-5" />
@@ -203,7 +203,7 @@ export const CompanyDashboard: React.FC<CompanyDashboardProps> = ({
             </Card>
 
             {/* Default Rates */}
-            <Card className="hover:shadow-lg transition-shadow">
+            <Card padding='none' className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <DollarSign className="w-5 h-5" />
@@ -223,7 +223,7 @@ export const CompanyDashboard: React.FC<CompanyDashboardProps> = ({
             </Card>
 
             {/* Profile Dates */}
-            <Card className="hover:shadow-lg transition-shadow">
+            <Card padding='none' className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <FileText className="w-5 h-5" />

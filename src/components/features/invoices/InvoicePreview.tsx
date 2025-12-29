@@ -49,7 +49,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
   }
 
   return (
-    <Card className={className}>
+    <Card className={className} padding='none'>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Invoice Preview</CardTitle>

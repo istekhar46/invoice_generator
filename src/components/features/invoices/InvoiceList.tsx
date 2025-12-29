@@ -19,8 +19,6 @@ import { ResponsiveGrid, ResponsiveStack } from '../../layout/ResponsiveLayout'
 import { 
   FileText, 
   Plus, 
-  SortAsc, 
-  SortDesc, 
   Filter,
   Eye,
   Edit,
@@ -50,23 +48,19 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
   onInvoiceEdit,
   onCreateInvoice,
 }) => {
-  // State for filtering, sorting, pagination, and modals
+  // State for filtering, pagination, and modals
   const [selectedStatus, setSelectedStatus] = useState<InvoiceStatus | 'all'>('all')
-  const [sortBy, setSortBy] = useState<'invoiceNumber' | 'createdAt' | 'serviceDate' | 'total'>('createdAt')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deletingInvoice, setDeletingInvoice] = useState<Invoice | null>(null)
   const [showActionsMenu, setShowActionsMenu] = useState<string | null>(null)
   const [pdfError, setPdfError] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
 
   // Build query parameters
   const queryParams: Omit<InvoiceQueryParams, 'page' | 'limit'> = useMemo(() => ({
     status: selectedStatus !== 'all' ? selectedStatus.toUpperCase() as 'DRAFT' | 'SENT' | 'PAID' : undefined,
-    sortBy,
-    sortOrder,
-  }), [selectedStatus, sortBy, sortOrder])
+  }), [selectedStatus])
 
   // Use paginated invoices hook
   const { 
@@ -105,13 +99,6 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
   const handleStatusFilter = (status: InvoiceStatus | 'all') => {
     setSelectedStatus(status)
     setCurrentPage(1) // Reset to first page when filtering
-  }
-
-  const handleSort = (newSortBy: 'invoiceNumber' | 'createdAt' | 'serviceDate' | 'total') => {
-    const newSortOrder = sortBy === newSortBy && sortOrder === 'asc' ? 'desc' : 'asc'
-    setSortBy(newSortBy)
-    setSortOrder(newSortOrder)
-    setCurrentPage(1) // Reset to first page when sorting
   }
 
   const handlePageChange = (page: number) => {
@@ -158,11 +145,6 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
         console.error('Delete failed:', error)
       }
     }
-  }
-
-  const getSortIcon = (column: 'invoiceNumber' | 'createdAt' | 'serviceDate' | 'total') => {
-    if (sortBy !== column) return null
-    return sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />
   }
 
   const getCustomerName = (invoice: any) => {
@@ -243,62 +225,26 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
             </div>
           </div>
 
-          {/* Sort Controls */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:ml-auto">
-            <span className="text-sm font-semibold text-gray-700">Sort by:</span>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => handleSort('invoiceNumber')}
-                className="flex items-center space-x-1"
-              >
-                <span>Number</span>
-                {getSortIcon('invoiceNumber')}
-              </Button>
-              
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => handleSort('serviceDate')}
-                className="flex items-center space-x-1"
-              >
-                <span>Date</span>
-                {getSortIcon('serviceDate')}
-              </Button>
-
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => handleSort('total')}
-                className="flex items-center space-x-1"
-              >
-                <span>Total</span>
-                {getSortIcon('total')}
-              </Button>
-
-              {/* View Mode Toggle */}
-              <div className="flex gap-1 ml-4 border-l border-gray-300 pl-4">
-                <Button
-                  variant={viewMode === 'grid' ? 'primary' : 'secondary'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  title="Grid View"
-                  className="flex items-center space-x-1"
-                >
-                  <Grid3x3 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'primary' : 'secondary'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  title="List View"
-                  className="flex items-center space-x-1"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+          {/* View Mode Toggle - Hidden on mobile */}
+          <div className="hidden md:flex gap-1 ml-auto">
+            <Button
+              variant={viewMode === 'grid' ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              title="Grid View"
+              className="flex items-center space-x-1"
+            >
+              <Grid3x3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              title="List View"
+              className="flex items-center space-x-1"
+            >
+              <List className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </Card>

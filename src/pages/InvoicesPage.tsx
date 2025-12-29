@@ -82,7 +82,6 @@ export const InvoicesPage: React.FC = () => {
           <InvoiceBuilder
             invoice={editingInvoice}
             onSave={handleInvoiceSave}
-            onCancel={handleInvoiceBuilderCancel}
           />
         </Modal>
 

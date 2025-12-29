@@ -142,7 +142,7 @@ export const SettingsPage: React.FC = () => {
           </ResponsiveGrid>
 
           {/* Quick Actions */}
-          <Card padding="lg" className="bg-gradient-to-r from-primary-50 to-blue-50 border-primary-200">
+          <Card padding="none" className="bg-gradient-to-r from-primary-50 to-blue-50 border-primary-200">
             <div className="flex items-start space-x-4">
               <div className="p-3 bg-gradient-primary rounded-xl shadow-glow">
                 <Zap className="w-6 h-6 text-white" />

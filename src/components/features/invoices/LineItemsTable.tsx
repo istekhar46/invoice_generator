@@ -8,6 +8,7 @@ import type { LineItem, LineItemType } from '../../../types/entities'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { Card, CardHeader, CardTitle, CardContent } from '../../ui/Card'
+import { Modal } from '../../ui/Modal'
 import { Plus, Edit, Trash2, Check, X } from 'lucide-react'
 import { formatCurrency } from '../../../utils/formatters'
 import { InvoiceCalculationService } from '../../../services/invoiceCalculation.service'
@@ -39,6 +40,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [showMobileModal, setShowMobileModal] = useState(false)
   const [formData, setFormData] = useState<LineItemFormData>(emptyLineItem)
   const [errors, setErrors] = useState<Partial<LineItemFormData>>({})
 
@@ -87,6 +89,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
     onChange([...lineItems, newLineItem])
     setFormData(emptyLineItem)
     setShowAddForm(false)
+    setShowMobileModal(false)
     setErrors({})
   }
 
@@ -100,6 +103,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
         rate: item.rate.toString(),
       })
       setEditingId(id)
+      setShowMobileModal(true)
       setErrors({})
     }
   }
@@ -127,6 +131,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
     onChange(updatedLineItems)
     setEditingId(null)
     setFormData(emptyLineItem)
+    setShowMobileModal(false)
     setErrors({})
   }
 
@@ -138,6 +143,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
   const handleCancelEdit = () => {
     setEditingId(null)
     setShowAddForm(false)
+    setShowMobileModal(false)
     setFormData(emptyLineItem)
     setErrors({})
   }
@@ -153,6 +159,121 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
   const calculateSubtotal = (): number => {
     return lineItems.reduce((sum, item) => sum + item.amount, 0)
   }
+
+  const openAddForm = () => {
+    setFormData(emptyLineItem)
+    setEditingId(null)
+    setErrors({})
+    // On mobile, use modal; on desktop, use inline form
+    if (window.innerWidth < 768) {
+      setShowMobileModal(true)
+    } else {
+      setShowAddForm(true)
+    }
+  }
+
+  const renderMobileForm = () => (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Type *
+        </label>
+        <select
+          value={formData.type}
+          onChange={(e) => handleFormChange('type', e.target.value)}
+          className="w-full px-4 py-3 rounded-xl text-base border-2 border-gray-200 bg-gray-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white hover:border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed min-h-[44px]"
+          disabled={disabled}
+        >
+          <option value="labor">Labor</option>
+          <option value="material">Material</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Description *
+        </label>
+        <Input
+          type="text"
+          value={formData.description}
+          onChange={(e) => handleFormChange('description', e.target.value)}
+          placeholder="Enter description"
+          error={errors.description}
+          disabled={disabled}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Quantity *
+        </label>
+        <Input
+          type="number"
+          value={formData.quantity}
+          onChange={(e) => handleFormChange('quantity', e.target.value)}
+          placeholder="0"
+          min="0"
+          step="0.01"
+          error={errors.quantity}
+          disabled={disabled}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Rate *
+        </label>
+        <Input
+          type="number"
+          value={formData.rate}
+          onChange={(e) => handleFormChange('rate', e.target.value)}
+          placeholder="0.00"
+          min="0"
+          step="0.01"
+          error={errors.rate}
+          disabled={disabled}
+        />
+      </div>
+
+      <div className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200">
+        <div className="flex justify-between items-center">
+          <span className="text-sm font-medium text-gray-700">Amount:</span>
+          <span className="text-lg font-bold text-gray-900">
+            {formData.quantity && formData.rate && !errors.quantity && !errors.rate
+              ? formatCurrency(
+                  InvoiceCalculationService.calculateLineItemAmount(
+                    parseFloat(formData.quantity) || 0,
+                    parseFloat(formData.rate) || 0
+                  )
+                )
+              : '$0.00'
+            }
+          </span>
+        </div>
+      </div>
+
+      <div className="flex space-x-3 pt-4">
+        <Button
+          variant="outline"
+          type="button"
+          onClick={handleCancelEdit}
+          disabled={disabled}
+          className="flex-1"
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="primary"
+          type="button"
+          onClick={editingId ? handleUpdateLineItem : handleAddLineItem}
+          disabled={disabled}
+          className="flex-1"
+        >
+          {editingId ? 'Update Item' : 'Add Item'}
+        </Button>
+      </div>
+    </div>
+  )
 
   const renderFormRow = (isEditing: boolean = false, key?: string) => (
     <tr key={key} className="bg-gray-50/50">
@@ -255,160 +376,172 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
   )
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Line Items</CardTitle>
-          {!showAddForm && !editingId && (
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                setShowAddForm(true)
-              }}
-              disabled={disabled}
-              className="flex items-center space-x-2"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add Item</span>
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        {lineItems.length === 0 && !showAddForm ? (
-          <div className="text-center py-12">
-            <div className="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-              <Plus className="h-8 w-8 text-gray-400" />
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Line Items</CardTitle>
+            {!showAddForm && !editingId && (
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openAddForm()
+                }}
+                disabled={disabled}
+                className="flex items-center space-x-2"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Item</span>
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {lineItems.length === 0 && !showAddForm ? (
+            <div className="text-center py-12">
+              <div className="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <Plus className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No line items yet</h3>
+              <p className="text-gray-600 mb-6 max-w-sm mx-auto">
+                Add materials and labor charges to build your invoice.
+              </p>
+              <Button
+                variant="primary"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openAddForm()
+                }}
+                disabled={disabled}
+                className="flex items-center space-x-2"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Your First Line Item</span>
+              </Button>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No line items yet</h3>
-            <p className="text-gray-600 mb-6 max-w- sm mx-auto">
-              Add materials and labor charges to build your invoice.
-            </p>
-            <Button
-              variant="primary"
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                setShowAddForm(true)
-              }}
-              disabled={disabled}
-              className="flex items-center space-x-2"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add Your First Line Item</span>
-            </Button>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Quantity
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Rate
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {lineItems.map((item) => (
-                  editingId === item.id ? (
-                    // Show edit form for this item
-                    renderFormRow(true, item.id)
-                  ) : (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          item.type === 'labor' 
-                            ? 'bg-blue-100 text-blue-800' 
-                            : 'bg-green-100 text-green-800'
-                        }`}>
-                          {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {item.description}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {item.quantity}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {formatCurrency(item.rate)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
-                        {formatCurrency(item.amount)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="small"
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleEditLineItem(item.id)
-                            }}
-                            disabled={disabled || editingId !== null || showAddForm}
-                            title="Edit Line Item"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="small"
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDeleteLineItem(item.id)
-                            }}
-                            disabled={disabled || editingId !== null || showAddForm}
-                            title="Delete Line Item"
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                ))}
-                
-                {/* Add Form Row */}
-                {showAddForm && renderFormRow(false, 'add-form')}
-                
-                {/* Subtotal Row */}
-                {lineItems.length > 0 && (
-                  <tr className="border-t-2 border-gray-300 bg-gray-50">
-                    <td colSpan={4} className="px-4 py-3 text-right text-sm font-medium text-gray-900">
-                      Subtotal:
-                    </td>
-                    <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
-                      {formatCurrency(calculateSubtotal())}
-                    </td>
-                    <td className="px-4 py-3"></td>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Type
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Description
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Quantity
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Rate
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {lineItems.map((item) => (
+                    editingId === item.id && window.innerWidth >= 768 ? (
+                      // Show edit form for this item (desktop only)
+                      renderFormRow(true, item.id)
+                    ) : (
+                      <tr key={item.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            item.type === 'labor' 
+                              ? 'bg-blue-100 text-blue-800' 
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {item.description}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {item.quantity}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {formatCurrency(item.rate)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
+                          {formatCurrency(item.amount)}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="small"
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEditLineItem(item.id)
+                              }}
+                              disabled={disabled || editingId !== null || showAddForm}
+                              title="Edit Line Item"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="small"
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteLineItem(item.id)
+                              }}
+                              disabled={disabled || editingId !== null || showAddForm}
+                              title="Delete Line Item"
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  ))}
+                  
+                  {/* Add Form Row (desktop only) */}
+                  {showAddForm && renderFormRow(false, 'add-form')}
+                  
+                  {/* Subtotal Row */}
+                  {lineItems.length > 0 && (
+                    <tr className="border-t-2 border-gray-300 bg-gray-50">
+                      <td colSpan={4} className="px-4 py-3 text-right text-sm font-medium text-gray-900">
+                        Subtotal:
+                      </td>
+                      <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
+                        {formatCurrency(calculateSubtotal())}
+                      </td>
+                      <td className="px-4 py-3"></td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Mobile Modal for Add/Edit */}
+      <Modal
+        open={showMobileModal}
+        onClose={handleCancelEdit}
+        title={editingId ? 'Edit Line Item' : 'Add Line Item'}
+        size="medium"
+      >
+        {renderMobileForm()}
+      </Modal>
+    </>
   )
 }

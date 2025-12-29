@@ -98,7 +98,7 @@ export const ToastComponent: React.FC<ToastProps> = ({
   return (
     <div
       className={cn(
-        'flex items-start p-4 rounded-lg border shadow-lg max-w -md w-full transition-all duration-300 transform',
+        'flex items-start p-4 rounded-lg border shadow-lg max-w-md w-full transition-all duration-300 transform',
         config.className,
         isVisible && !isExiting ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0',
         isExiting && '-translate-x-full opacity-0'

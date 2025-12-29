@@ -128,7 +128,7 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
 
   if (profileLoading) {
     return (
-      <Card className="w-full max-w-4xl mx-auto">
+      <Card padding='none' className="w-full max-w-4xl mx-auto">
         <CardContent className="p-8">
           <div className="animate-pulse space-y-4">
             <div className="h-4 bg-gray-200 rounded w-1/4"></div>
@@ -141,7 +141,7 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
   }
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
+    <Card padding='none' className="w-full max-w-4xl mx-auto">
       <CardHeader>
         <CardTitle>
           {isEditing ? 'Edit Company Profile' : 'Create Company Profile'}

@@ -23,7 +23,6 @@ import { CustomerList } from '../customers/CustomerList'
 import { LineItemsTable } from './LineItemsTable'
 import { InvoicePreview } from './InvoicePreview'
 import { 
-  FileText, 
   User, 
   Calendar, 
   Calculator, 
@@ -39,7 +38,6 @@ import { transformLineItemToDto, transformInvoiceResponse } from '../../../utils
 interface InvoiceBuilderProps {
   invoice?: Invoice | null
   onSave?: (invoice: Invoice) => void
-  onCancel?: () => void
   className?: string
 }
 
@@ -71,7 +69,6 @@ const stepConfig = {
 export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   invoice,
   onSave,
-  onCancel,
   className,
 }) => {
   const [currentStep, setCurrentStep] = useState<BuilderStep>('customer')
@@ -289,7 +286,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
               
               {index < steps.length - 1 && (
                 <div className={`
-                  w-12 h-0.5 mx-4 transition-colors
+                  w-8 h-0.5 mx-4 transition-colors
                   ${isCompleted ? 'bg-green-600' : 'bg-gray-300'}
                 `} />
               )}
@@ -301,7 +298,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   }
 
   const renderCustomerStep = () => (
-    <Card>
+    <Card padding='none'>
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
           <User className="h-5 w-5" />
@@ -360,7 +357,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 No Customer Selected
               </h3>
-              <p className="text-gray-600 mb-6 max -w-sm mx-auto">
+              <p className="text-gray-600 mb-6 max-w-sm mx-auto">
                 Choose a customer from your customer list to create an invoice for them.
               </p>
               <Button 
@@ -378,7 +375,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   )
 
   const renderDetailsStep = () => (
-    <Card>
+    <Card padding='none'>
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
           <Calendar className="h-5 w-5" />
@@ -509,7 +506,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       />
       
       {/* Real-time totals display */}
-      <Card>
+      <Card padding='none'>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Calculator className="h-5 w-5" />
@@ -544,7 +541,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     // Only show preview if we have the minimum required data
     if (!selectedCustomer || lineItems.length === 0) {
       return (
-        <Card>
+        <Card padding='none'>
           <CardContent className="text-center py-8">
             <div className="text-gray-500 mb-4">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -634,26 +631,8 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
 
   return (
     <div className={className}>
-      {/* Header */}
+      {/* Step Indicator */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <FileText className="h-8 w-8 text-blue-600" />
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {invoice ? 'Edit Invoice' : 'Create New Invoice'}
-              </h1>
-              <p className="text-gray-500">
-                {invoice ? `Editing ${invoice.invoiceNumber}` : 'Build your invoice step by step'}
-              </p>
-            </div>
-          </div>
-          
-          <Button variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-        </div>
-        
         {renderStepIndicator()}
       </div>
 
@@ -676,16 +655,6 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
           type="success"
           title="Success!"
           message={invoice ? 'Invoice updated successfully!' : 'Invoice created successfully!'}
-          className="mb-6"
-        />
-      )}
-
-      {/* Line Items Validation Error */}
-      {errors.lineItems && (
-        <ErrorAlert
-          type="error"
-          title="Line Items Required"
-          message={errors.lineItems.message || 'Please add at least one line item to the invoice'}
           className="mb-6"
         />
       )}

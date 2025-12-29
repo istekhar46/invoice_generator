@@ -10,6 +10,7 @@ export interface HeaderProps {
     email: string
   } | null
   onMenuToggle?: () => void
+  onMenuClose?: () => void
   onLogout?: () => void
   isMobileMenuOpen?: boolean
   className?: string
@@ -59,6 +60,7 @@ const navigation: NavigationItem[] = [
 const Header: React.FC<HeaderProps> = ({
   user,
   onMenuToggle,
+  onMenuClose,
   onLogout,
   isMobileMenuOpen = false,
   className,
@@ -79,8 +81,8 @@ const Header: React.FC<HeaderProps> = ({
   }
 
   const handleMenuClose = () => {
-    if (onMenuToggle) {
-      // Let parent handle this
+    if (onMenuClose) {
+      onMenuClose()
     } else {
       setLocalMobileMenuOpen(false)
     }

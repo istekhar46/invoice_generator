@@ -181,7 +181,6 @@ export const DashboardPage: React.FC = () => {
         {!companyLoading && !hasProfile && (
           <MobileOptimizedSection>
             <Card className="bg-gradient-to-r from-primary-50 to-secondary-50 border-primary-200">
-              <div className="p-6">
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
                     <div className="flex items-center justify-center w-12 h-12 bg-primary-100 rounded-lg">
@@ -215,7 +214,6 @@ export const DashboardPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </div>
             </Card>
           </MobileOptimizedSection>
         )}
@@ -247,7 +245,7 @@ export const DashboardPage: React.FC = () => {
 
             {/* Quick Actions - Modern Card Design */}
             <Card
-              padding="lg"
+              padding="sm"
               hover={true}
               className="space-y-6 bg-linear-to-br from-white to-gray-50/50"
             >
@@ -323,7 +321,6 @@ export const DashboardPage: React.FC = () => {
         >
           <InvoiceBuilder
             onSave={handleInvoiceSave}
-            onCancel={() => setShowInvoiceBuilder(false)}
           />
         </Modal>
 
