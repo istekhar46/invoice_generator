@@ -92,7 +92,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     handleSubmit,
     watch,
     setValue,
-    formState: { errors, isValid },
+    formState: { errors },
     reset,
   } = useForm<InvoiceFormData>({
     resolver: zodResolver(invoiceSchema),
@@ -109,11 +109,60 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
 
   const watchedValues = watch()
 
+  // Proper validation check - not relying on react-hook-form's isValid
+  const isFormValid = () => {
+    // Check if customer is selected
+    if (!selectedCustomer || !watchedValues.customerId) {
+      return false
+    }
+
+    // Check if dates are valid
+    if (!watchedValues.serviceDate || !watchedValues.dueDate) {
+      return false
+    }
+
+    // Check if tax rate is valid
+    if (watchedValues.taxRate === undefined || watchedValues.taxRate === null) {
+      return false
+    }
+
+    // Check if there are line items
+    if (lineItems.length === 0) {
+      return false
+    }
+
+    // Check if there are any form errors
+    if (Object.keys(errors).length > 0) {
+      return false
+    }
+
+    return true
+  }
+
   // Initialize form with existing invoice data
   useEffect(() => {
     if (invoice) {
-      // Find customer by ID (we'll need to get this from the parent component)
       setLineItems(invoice.lineItems)
+      
+      // Set selected customer if invoice has customer data
+      // The API response includes the customer object
+      if ((invoice as any).customer) {
+        const customerData = (invoice as any).customer
+        const customer: Customer = {
+          id: customerData.id,
+          userId: invoice.userId,
+          name: customerData.name,
+          email: customerData.email,
+          phone: customerData.phone,
+          address: customerData.address,
+          city: customerData.city,
+          state: customerData.state,
+          zipCode: customerData.zipCode,
+          createdAt: customerData.createdAt ? new Date(customerData.createdAt) : new Date(),
+          updatedAt: customerData.updatedAt ? new Date(customerData.updatedAt) : new Date(),
+        }
+        setSelectedCustomer(customer)
+      }
       
       reset({
         customerId: invoice.customerId,
@@ -185,7 +234,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       case 'items':
         return lineItems.length > 0 && !errors.lineItems
       case 'review':
-        return isValid && lineItems.length > 0
+        return isFormValid()
       default:
         return false
     }
@@ -286,7 +335,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
               
               {index < steps.length - 1 && (
                 <div className={`
-                  w-8 h-0.5 mx-4 transition-colors
+                  w-6 h-0.5 mx-4 transition-colors
                   ${isCompleted ? 'bg-green-600' : 'bg-gray-300'}
                 `} />
               )}
@@ -312,8 +361,8 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
             description="Customer information for this invoice"
             variant="elevated"
           >
-            <div className="bg-gradient-to-r from-primary-50 to-primary-100 border border-primary-200 rounded-2xl p-6">
-              <div className="flex items-start justify-between">
+            <div className="bg-linear-to-r from-primary-50 to-primary-100 border border-primary-200 rounded-2xl p-4 md:p-6">
+              <div className="flex flex-col md:flex-row gap-3 items-start justify-between">
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-primary-900">{selectedCustomer.name}</h3>
                   <div className="space-y-1 text-sm text-primary-700">
@@ -337,7 +386,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={() => setShowCustomerModal(true)}
-                  className="ml-4 flex-shrink-0"
+                  className="ml-4 shrink-0"
                 >
                   Change Customer
                 </Button>
@@ -478,7 +527,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                 <textarea
                   {...field}
                   rows={4}
-                  className="w-full px-4 py-3 rounded-xl text-base border-2 border-gray-200 bg-gray-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white hover:border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed placeholder:text-gray-400 min-h-[44px] resize-none"
+                  className="w-full px-4 py-3 rounded-xl text-base border-2 border-gray-200 bg-gray-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white hover:border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed placeholder:text-gray-400 min-h-11 resize-none"
                   placeholder="Add any additional notes or terms for this invoice..."
                   onChange={(e) => {
                     field.onChange(e)
@@ -661,47 +710,46 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
 
       {/* Step Content */}
       <LoadingOverlay loading={loading} message={invoice ? 'Updating invoice...' : 'Creating invoice...'}>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="mb-8">
-            {renderStepContent()}
-          </div>
+        <div className="mb-8">
+          {renderStepContent()}
+        </div>
 
-          {/* Navigation */}
-          <FormActions align="between" responsive={false}>
+        {/* Navigation */}
+        <FormActions align="between" responsive={false}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handlePrevStep}
+            disabled={currentStep === 'customer' || loading}
+            className="flex items-center space-x-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Previous</span>
+          </Button>
+
+          {currentStep === 'review' ? (
             <Button
               type="button"
-              variant="outline"
-              onClick={handlePrevStep}
-              disabled={currentStep === 'customer' || loading}
+              loading={loading}
+              disabled={!isFormValid() || submitSuccess}
+              onClick={handleSubmit(onSubmit)}
               className="flex items-center space-x-2"
             >
-              <ArrowLeft className="h-4 w-4" />
-              <span>Previous</span>
+              <Save className="h-4 w-4" />
+              <span>{invoice ? 'Update Invoice' : 'Save Invoice'}</span>
             </Button>
-
-            {currentStep === 'review' ? (
-              <Button
-                type="submit"
-                loading={loading}
-                disabled={!isValid || lineItems.length === 0 || submitSuccess}
-                className="flex items-center space-x-2"
-              >
-                <Save className="h-4 w-4" />
-                <span>{invoice ? 'Update Invoice' : 'Save Invoice'}</span>
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                onClick={handleNextStep}
-                disabled={!canProceedToNext() || loading}
-                className="flex items-center space-x-2"
-              >
-                <span>Next</span>
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            )}
-          </FormActions>
-        </form>
+          ) : (
+            <Button
+              type="button"
+              onClick={handleNextStep}
+              disabled={!canProceedToNext() || loading}
+              className="flex items-center space-x-2"
+            >
+              <span>Next</span>
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          )}
+        </FormActions>
       </LoadingOverlay>
 
       {/* Customer Selection Modal */}
