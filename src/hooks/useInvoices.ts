@@ -302,51 +302,110 @@ export function useCreateInvoice() {
 /**
  * Hook for updating an existing invoice
  * Implements optimistic updates with rollback on error
+ * Requirements: 1.3, 2.4, 2.5, 7.1, 7.2
  */
 export function useUpdateInvoice() {
   const queryClient = useQueryClient()
   const { success, error } = useToast()
+  const { isOnline } = useOnlineStatus()
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateInvoiceDto }) =>
       invoiceApi.updateInvoice(id, data),
     onMutate: async ({ id, data }) => {
-      // Cancel any outgoing refetches
+      // Cancel any outgoing refetches to prevent race conditions
       await queryClient.cancelQueries({ queryKey: queryKeys.invoice(id) })
+      await queryClient.cancelQueries({ queryKey: queryKeys.invoices })
 
-      // Snapshot the previous value
+      // Snapshot the previous invoice value for rollback
       const previousInvoice = queryClient.getQueryData(queryKeys.invoice(id))
 
-      // Optimistically update the invoice
+      // Snapshot all invoice lists for rollback
+      const previousLists = queryClient.getQueriesData({ queryKey: queryKeys.invoices })
+
+      // Optimistically update the invoice in detail cache
       if (previousInvoice) {
-        const cacheService = getCacheInvalidationService(queryClient)
-        cacheService.invoices.updateInvoice(id, {
+        queryClient.setQueryData(queryKeys.invoice(id), {
           ...previousInvoice,
           ...data,
           // Transform dates if they exist in the update data
-          serviceDate: data.serviceDate ? new Date(data.serviceDate) : (previousInvoice as any).serviceDate,
-          dueDate: data.dueDate ? new Date(data.dueDate) : (previousInvoice as any).dueDate,
+          serviceDate: data.serviceDate 
+            ? (data.serviceDate instanceof Date ? data.serviceDate : new Date(data.serviceDate))
+            : (previousInvoice as any).serviceDate,
+          dueDate: data.dueDate 
+            ? (data.dueDate instanceof Date ? data.dueDate : new Date(data.dueDate))
+            : (previousInvoice as any).dueDate,
           updatedAt: new Date(),
         })
       }
 
-      return { previousInvoice }
+      // Optimistically update the invoice in all list caches
+      queryClient.setQueriesData(
+        { queryKey: queryKeys.invoices },
+        (old: PaginatedInvoiceResponse | undefined) => {
+          if (!old || !old.data) return old
+          return {
+            ...old,
+            data: old.data.map(invoice => 
+              invoice.id === id 
+                ? {
+                    ...invoice,
+                    ...data,
+                    serviceDate: data.serviceDate 
+                      ? (data.serviceDate instanceof Date ? data.serviceDate : new Date(data.serviceDate))
+                      : invoice.serviceDate,
+                    dueDate: data.dueDate 
+                      ? (data.dueDate instanceof Date ? data.dueDate : new Date(data.dueDate))
+                      : invoice.dueDate,
+                    updatedAt: new Date(),
+                  }
+                : invoice
+            ),
+          }
+        }
+      )
+
+      return { previousInvoice, previousLists }
     },
-    onError: (err, { id }, context) => {
-      // Rollback on error
+    onError: (err: any, { id }, context) => {
+      // Rollback detail cache on error
       if (context?.previousInvoice) {
         queryClient.setQueryData(queryKeys.invoice(id), context.previousInvoice)
       }
+
+      // Rollback all list caches on error
+      if (context?.previousLists) {
+        context.previousLists.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data)
+        })
+      }
+
       console.error('Failed to update invoice:', err)
-      error('Failed to update invoice', 'Please check your input and try again')
+      
+      // User-friendly error messages based on error status
+      if (!isOnline) {
+        error('Cannot update while offline', 'Please check your internet connection and try again')
+      } else if (err?.status === 400 || err?.status === 422) {
+        // Extract detailed validation error message
+        const errorMessage = err?.data?.message || err?.message || 'Please check your input and try again'
+        error('Invalid invoice data', errorMessage)
+      } else if (err?.status === 404) {
+        error('Invoice not found', 'The invoice may have been deleted')
+      } else if (err?.status === 403) {
+        error('Access denied', 'You do not have permission to update this invoice')
+      } else {
+        error('Failed to update invoice', err?.message || 'Please try again')
+      }
     },
     onSuccess: (updatedInvoice) => {
       success('Invoice updated', `Invoice ${updatedInvoice.invoiceNumber} has been updated successfully`)
     },
     onSettled: (_, __, { id }) => {
-      // Always refetch after error or success
-      const cacheService = getCacheInvalidationService(queryClient)
-      cacheService.invoices.invalidateInvoice(id)
+      // Always refetch to ensure cache consistency
+      queryClient.invalidateQueries({ queryKey: queryKeys.invoice(id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.invoices })
+      // Invalidate dashboard statistics as invoice data may affect totals
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard })
     },
   })
 }
@@ -428,26 +487,34 @@ export function useUpdateInvoiceStatus() {
 /**
  * Hook for deleting an invoice
  * Implements optimistic updates with rollback on error
+ * Requirements: 3.3, 4.5, 7.3, 7.4, 7.5
  */
 export function useDeleteInvoice() {
   const queryClient = useQueryClient()
   const { success, error } = useToast()
+  const { isOnline } = useOnlineStatus()
 
   return useMutation({
     mutationFn: (id: string) => invoiceApi.deleteInvoice(id),
     onMutate: async (invoiceId) => {
-      // Cancel any outgoing refetches
+      // Cancel any outgoing refetches to prevent race conditions
       await queryClient.cancelQueries({ queryKey: queryKeys.invoice(invoiceId) })
       await queryClient.cancelQueries({ queryKey: queryKeys.invoices })
 
-      // Snapshot the previous invoice lists
+      // Snapshot the previous invoice for rollback
+      const previousInvoice = queryClient.getQueryData(queryKeys.invoice(invoiceId))
+
+      // Snapshot all invoice lists for rollback
       const previousLists = queryClient.getQueriesData({ queryKey: queryKeys.invoices })
 
-      // Optimistically remove the invoice from all lists
+      // Optimistically remove the invoice from detail cache
+      queryClient.removeQueries({ queryKey: queryKeys.invoice(invoiceId) })
+
+      // Optimistically remove the invoice from all list caches
       queryClient.setQueriesData(
         { queryKey: queryKeys.invoices },
         (old: PaginatedInvoiceResponse | undefined) => {
-          if (!old) return old
+          if (!old || !old.data) return old
           return {
             ...old,
             data: old.data.filter(invoice => invoice.id !== invoiceId),
@@ -456,31 +523,44 @@ export function useDeleteInvoice() {
         }
       )
 
-      return { previousLists, invoiceId }
+      return { previousInvoice, previousLists, invoiceId }
     },
-    onError: (err, _, context) => {
-      // Rollback on error
+    onError: (err: any, invoiceId, context) => {
+      // Rollback detail cache on error
+      if (context?.previousInvoice) {
+        queryClient.setQueryData(queryKeys.invoice(invoiceId), context.previousInvoice)
+      }
+
+      // Rollback all list caches on error
       if (context?.previousLists) {
         context.previousLists.forEach(([queryKey, data]) => {
           queryClient.setQueryData(queryKey, data)
         })
       }
+
       console.error('Failed to delete invoice:', err)
-      error('Failed to delete invoice', 'Please try again')
-    },
-    onSuccess: (_, invoiceId) => {
-      // Use centralized cache invalidation service
-      const cacheService = getCacheInvalidationService(queryClient)
-      cacheService.invoices.removeInvoice(invoiceId)
       
+      // User-friendly error messages based on error status
+      if (!isOnline) {
+        error('Cannot delete while offline', 'Please check your internet connection and try again')
+      } else if (err?.status === 404) {
+        error('Invoice not found', 'The invoice may have already been deleted')
+      } else if (err?.status === 403) {
+        error('Access denied', 'You do not have permission to delete this invoice')
+      } else {
+        error('Failed to delete invoice', err?.message || 'Please try again')
+      }
+    },
+    onSuccess: () => {
       success('Invoice deleted', 'Invoice has been removed successfully')
     },
     onSettled: () => {
-      // Always refetch lists after error or success
-      const cacheService = getCacheInvalidationService(queryClient)
-      cacheService.invoices.invalidateAllLists()
-      // Invalidate dashboard statistics cache when invoice is deleted
-      cacheService.dashboard.invalidateStatistics()
+      // Always refetch to ensure cache consistency
+      queryClient.invalidateQueries({ queryKey: queryKeys.invoices })
+      // Invalidate dashboard statistics as invoice deletion affects totals
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard })
+      // Invalidate customer-related queries as they may show invoice counts
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers })
     },
   })
 }

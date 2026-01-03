@@ -55,6 +55,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
   const [deletingInvoice, setDeletingInvoice] = useState<Invoice | null>(null)
   const [showActionsMenu, setShowActionsMenu] = useState<string | null>(null)
   const [pdfError, setPdfError] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
 
   // Build query parameters
@@ -131,18 +132,36 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
     setPdfError(null)
   }
 
+  const clearDeleteError = () => {
+    setDeleteError(null)
+  }
+
   const handleEditInvoice = (invoice: Invoice) => {
     onInvoiceEdit?.(invoice)
   }
 
   const confirmDelete = async () => {
-    if (deletingInvoice) {
-      try {
-        await deleteInvoiceMutation.mutateAsync(deletingInvoice.id)
-        setShowDeleteConfirm(false)
-        setDeletingInvoice(null)
-      } catch (error) {
-        console.error('Delete failed:', error)
+    if (!deletingInvoice) return
+    
+    try {
+      setDeleteError(null)
+      await deleteInvoiceMutation.mutateAsync(deletingInvoice.id)
+      setShowDeleteConfirm(false)
+      setDeletingInvoice(null)
+    } catch (error: any) {
+      console.error('Delete failed:', error)
+      
+      // Set specific error message based on error type
+      if (error?.status === 403) {
+        setDeleteError('You do not have permission to delete this invoice.')
+      } else if (error?.status === 404) {
+        setDeleteError('Invoice not found. It may have already been deleted.')
+      } else if (error?.status === 0) {
+        setDeleteError('Network error. Please check your internet connection and try again.')
+      } else if (error?.message) {
+        setDeleteError(error.message)
+      } else {
+        setDeleteError('Failed to delete invoice. Please try again.')
       }
     }
   }
@@ -293,6 +312,36 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
         </Card>
       )}
 
+      {/* Delete Error Display */}
+      {deleteError && (
+        <Card padding="lg" className="border-danger-200 bg-danger-50">
+          <div className="flex justify-between items-start">
+            <div className="flex items-start space-x-3">
+              <div className="p-2 bg-danger-100 rounded-xl">
+                <Trash2 className="h-5 w-5 text-danger-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-danger-800">Delete Failed</h3>
+                <p className="text-sm text-danger-700 mt-1" role="alert">
+                  {deleteError}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearDeleteError}
+              className="text-danger-400 hover:text-danger-600"
+            >
+              <span className="sr-only">Close</span>
+              <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {/* Invoice Cards Grid */}
       {invoices.length === 0 ? (
         <Card padding="lg" className="text-center bg-linear-to-r from-white to-gray-50/50">
@@ -381,11 +430,24 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       {/* Delete Confirmation Modal */}
       <Modal
         open={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
+        onClose={() => {
+          if (!deleteInvoiceMutation.isPending) {
+            setShowDeleteConfirm(false)
+            setDeleteError(null)
+          }
+        }}
         title="Delete Invoice"
         size="small"
       >
         <div className="space-y-4">
+          {deleteError && (
+            <div className="p-3 bg-danger-50 border border-danger-200 rounded-lg">
+              <p className="text-sm text-danger-700" role="alert">
+                {deleteError}
+              </p>
+            </div>
+          )}
+          
           <p className="text-sm text-gray-600">
             Are you sure you want to delete invoice <strong>{deletingInvoice?.invoiceNumber}</strong>? 
             This action cannot be undone.
@@ -394,7 +456,10 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
           <div className="flex justify-end space-x-2">
             <Button
               variant="secondary"
-              onClick={() => setShowDeleteConfirm(false)}
+              onClick={() => {
+                setShowDeleteConfirm(false)
+                setDeleteError(null)
+              }}
               disabled={deleteInvoiceMutation.isPending}
             >
               Cancel
@@ -403,8 +468,9 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
               variant="danger"
               onClick={confirmDelete}
               loading={deleteInvoiceMutation.isPending}
+              disabled={deleteInvoiceMutation.isPending}
             >
-              Delete Invoice
+              {deleteInvoiceMutation.isPending ? 'Deleting...' : 'Delete Invoice'}
             </Button>
           </div>
         </div>

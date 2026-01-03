@@ -180,9 +180,9 @@ export const DashboardPage: React.FC = () => {
         {/* Company Setup Prompt - Show when no profile exists */}
         {!companyLoading && !hasProfile && (
           <MobileOptimizedSection>
-            <Card className="bg-gradient-to-r from-primary-50 to-secondary-50 border-primary-200">
+            <Card className="bg-linear-to-r from-primary-50 to-secondary-50 border-primary-200">
                 <div className="flex items-start space-x-4">
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <div className="flex items-center justify-center w-12 h-12 bg-primary-100 rounded-lg">
                       <AlertCircle className="w-6 h-6 text-primary-600" />
                     </div>

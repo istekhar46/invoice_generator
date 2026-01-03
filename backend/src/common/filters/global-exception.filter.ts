@@ -5,9 +5,16 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  BadRequestException,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
+
+export interface ValidationError {
+  field: string;
+  message: string;
+  value?: any;
+}
 
 export interface ApiErrorResponse {
   statusCode: number;
@@ -16,6 +23,7 @@ export interface ApiErrorResponse {
   timestamp: string;
   path: string;
   details?: any;
+  validationErrors?: ValidationError[];
 }
 
 @Catch()
@@ -30,6 +38,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message: string | string[] = 'Internal server error';
     let details: any;
+    let validationErrors: ValidationError[] | undefined;
 
     // Handle HTTP exceptions
     if (exception instanceof HttpException) {
@@ -41,6 +50,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
         message = (exceptionResponse as any).message ?? exception.message;
         details = (exceptionResponse as any).details;
+        
+        // Handle validation errors from class-validator
+        if (status === HttpStatus.BAD_REQUEST && Array.isArray(message)) {
+          validationErrors = this.extractValidationErrors(message);
+          message = 'Validation failed';
+        }
       }
     }
     // Handle Prisma errors
@@ -75,6 +90,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       path: request.url,
       ...(details && { details }),
+      ...(validationErrors && validationErrors.length > 0 && { validationErrors }),
     };
 
     // Log error for monitoring
@@ -153,5 +169,25 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
   private getErrorName(status: number): string {
     return HttpStatus[status] ?? 'Unknown Error';
+  }
+
+  private extractValidationErrors(messages: string[]): ValidationError[] {
+    const validationErrors: ValidationError[] = [];
+    
+    for (const msg of messages) {
+      // Parse validation error messages from class-validator
+      // Format is typically: "field message" or "nested.field message"
+      const parts = msg.split(' ');
+      if (parts.length >= 2) {
+        const field = parts[0];
+        const message = parts.slice(1).join(' ');
+        validationErrors.push({ field, message });
+      } else {
+        // If we can't parse it, add it as a general error
+        validationErrors.push({ field: 'unknown', message: msg });
+      }
+    }
+    
+    return validationErrors;
   }
 }

@@ -19,8 +19,8 @@ export interface CreateInvoiceDto {
 
 export interface UpdateInvoiceDto {
   customerId?: string
-  serviceDate?: Date
-  dueDate?: Date
+  serviceDate?: string | Date  // Accept both for flexibility, but will be serialized to string
+  dueDate?: string | Date      // Accept both for flexibility, but will be serialized to string
   lineItems?: CreateLineItemDto[]
   notes?: string
   taxRate?: number
@@ -135,9 +135,50 @@ export class InvoiceApi {
   /**
    * Update an existing invoice
    * Supports partial updates of invoice data and line items
+   * Transforms dates to ISO strings before sending to backend
    */
   async updateInvoice(id: string, data: UpdateInvoiceDto): Promise<InvoiceResponseDto> {
-    return apiClient.put<InvoiceResponseDto>(`${this.basePath}/${id}`, data)
+    // Transform the data before sending
+    const transformedData: any = {}
+    
+    // Only include fields that are explicitly provided
+    if (data.customerId !== undefined) {
+      transformedData.customerId = data.customerId
+    }
+    
+    // Transform Date objects to ISO strings
+    if (data.serviceDate !== undefined) {
+      transformedData.serviceDate = data.serviceDate instanceof Date
+        ? data.serviceDate.toISOString()
+        : new Date(data.serviceDate).toISOString()
+    }
+    
+    if (data.dueDate !== undefined) {
+      transformedData.dueDate = data.dueDate instanceof Date
+        ? data.dueDate.toISOString()
+        : new Date(data.dueDate).toISOString()
+    }
+    
+    // Include line items if provided (already transformed to uppercase enums)
+    if (data.lineItems !== undefined) {
+      transformedData.lineItems = data.lineItems
+    }
+    
+    // Handle optional notes (omit undefined, preserve empty string and null)
+    if (data.notes !== undefined) {
+      transformedData.notes = data.notes || undefined
+    }
+    
+    // Include tax rate if provided
+    if (data.taxRate !== undefined) {
+      transformedData.taxRate = data.taxRate
+    }
+    
+    // Send PUT request with transformed data
+    const responseDto = await apiClient.put<InvoiceResponseDto>(`${this.basePath}/${id}`, transformedData)
+    
+    // Return the response DTO directly (caller can transform if needed)
+    return responseDto
   }
 
   /**
@@ -150,9 +191,12 @@ export class InvoiceApi {
 
   /**
    * Delete an invoice
+   * Returns void for successful deletion (204 No Content)
    */
   async deleteInvoice(id: string): Promise<void> {
-    return apiClient.delete<void>(`${this.basePath}/${id}`)
+    // DELETE returns 204 No Content (empty response)
+    await apiClient.delete<void>(`${this.basePath}/${id}`)
+    // No return value needed for 204 responses - apiClient handles this
   }
 
   /**

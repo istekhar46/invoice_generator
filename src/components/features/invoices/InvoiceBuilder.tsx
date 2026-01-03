@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import type { Invoice, Customer, LineItem } from '../../../types/entities'
+import type { Invoice, Customer, LineItem, LineItemType } from '../../../types/entities'
 import type { InvoiceFormData } from '../../../types/forms'
 import { invoiceSchema } from '../../../types/forms'
 import { useCreateInvoice, useUpdateInvoice } from '../../../hooks/useInvoices'
@@ -109,40 +109,145 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
 
   const watchedValues = watch()
 
-  // Proper validation check - not relying on react-hook-form's isValid
-  const isFormValid = () => {
-    // Check if customer is selected
-    if (!selectedCustomer || !watchedValues.customerId) {
-      return false
-    }
+  // Validation helpers - single source of truth for each step
+  const validateCustomerStep = (): boolean => {
+    // When editing an invoice, customer is pre-selected, so we just need to check if it exists
+    // Don't check form errors for customerId since we skip the customer step when editing
+    return selectedCustomer !== null && !!watchedValues.customerId
+  }
 
-    // Check if dates are valid
+  const validateDetailsStep = (): boolean => {
+    // Check all required fields exist
     if (!watchedValues.serviceDate || !watchedValues.dueDate) {
       return false
     }
-
-    // Check if tax rate is valid
+    
+    // Check for form errors
+    if (errors.serviceDate || errors.dueDate || errors.taxRate) {
+      return false
+    }
+    
+    // Check tax rate is valid
     if (watchedValues.taxRate === undefined || watchedValues.taxRate === null) {
       return false
     }
+    
+    // Validate date logic: due date must be >= service date
+    if (watchedValues.dueDate < watchedValues.serviceDate) {
+      return false
+    }
+    
+    return true
+  }
 
-    // Check if there are line items
+  const validateItemsStep = (): boolean => {
+    // Must have at least one line item
     if (lineItems.length === 0) {
       return false
     }
+    
+    // Validate each line item has required fields and valid values
+    const allItemsValid = lineItems.every(item => {
+      // Check description is not empty
+      if (!item.description || !item.description.trim()) {
+        return false
+      }
+      
+      // Check quantity is positive
+      if (typeof item.quantity !== 'number' || item.quantity <= 0) {
+        return false
+      }
+      
+      // Check rate is non-negative
+      if (typeof item.rate !== 'number' || item.rate < 0) {
+        return false
+      }
+      
+      // Check type is valid
+      if (item.type !== 'material' && item.type !== 'labor') {
+        return false
+      }
+      
+      // Check amount is calculated correctly
+      if (typeof item.amount !== 'number' || item.amount < 0) {
+        return false
+      }
+      
+      return true
+    })
+    
+    return allItemsValid
+  }
 
-    // Check if there are any form errors
-    if (Object.keys(errors).length > 0) {
-      return false
+  const validateReviewStep = (): boolean => {
+    // All previous steps must be valid
+    const customerValid = validateCustomerStep()
+    const detailsValid = validateDetailsStep()
+    const itemsValid = validateItemsStep()
+    
+    // Check form errors, but exclude lineItems errors since we validate them separately
+    const formErrors = Object.keys(errors).filter(key => key !== 'lineItems')
+    const noErrors = formErrors.length === 0
+    
+    // Debug logging to help identify validation issues
+    if (!customerValid || !detailsValid || !itemsValid || !noErrors) {
+      console.log('Review step validation failed:', {
+        customerValid,
+        detailsValid,
+        itemsValid,
+        noErrors,
+        formErrors,
+        allErrors: errors,
+        lineItems: lineItems.length,
+        selectedCustomer: !!selectedCustomer,
+        watchedValues: {
+          customerId: watchedValues.customerId,
+          serviceDate: watchedValues.serviceDate,
+          dueDate: watchedValues.dueDate,
+          taxRate: watchedValues.taxRate,
+        }
+      })
     }
+    
+    return customerValid && detailsValid && itemsValid && noErrors
+  }
 
-    return true
+  // Determine if user can proceed to next step
+  const canProceedToNext = (): boolean => {
+    switch (currentStep) {
+      case 'customer':
+        return validateCustomerStep()
+      case 'details':
+        return validateDetailsStep()
+      case 'items':
+        return validateItemsStep()
+      case 'review':
+        return validateReviewStep()
+      default:
+        return false
+    }
   }
 
   // Initialize form with existing invoice data
   useEffect(() => {
     if (invoice) {
-      setLineItems(invoice.lineItems)
+      console.log('Initializing invoice form with data:', {
+        invoiceId: invoice.id,
+        customerId: invoice.customerId,
+        hasCustomer: !!(invoice as any).customer,
+        customerIdFromNested: (invoice as any).customer?.id,
+      })
+      
+      // Normalize line items - ensure type is lowercase
+      const normalizedLineItems = invoice.lineItems.map(item => ({
+        ...item,
+        type: item.type.toLowerCase() as LineItemType
+      }))
+      
+      setLineItems(normalizedLineItems)
+      
+      // Extract customerId - it might be in invoice.customerId or invoice.customer.id
+      let customerId = invoice.customerId
       
       // Set selected customer if invoice has customer data
       // The API response includes the customer object
@@ -162,25 +267,47 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
           updatedAt: customerData.updatedAt ? new Date(customerData.updatedAt) : new Date(),
         }
         setSelectedCustomer(customer)
+        
+        // If customerId is not in the invoice object, get it from customer.id
+        if (!customerId) {
+          customerId = customerData.id
+        }
       }
       
-      reset({
-        customerId: invoice.customerId,
+      const formData = {
+        customerId: customerId || '',
         serviceDate: new Date(invoice.serviceDate),
         dueDate: new Date(invoice.dueDate),
-        lineItems: invoice.lineItems,
+        lineItems: normalizedLineItems,
         notes: invoice.notes || '',
         taxRate: invoice.taxRate,
-      })
+      }
+      
+      console.log('Resetting form with data:', formData)
+      
+      reset(formData)
+      
+      // Explicitly set customerId to ensure it's in the form state
+      if (customerId) {
+        setValue('customerId', customerId, { 
+          shouldValidate: true,
+          shouldDirty: false,
+          shouldTouch: false 
+        })
+      }
       
       // Skip to details step if editing
       setCurrentStep('details')
     }
-  }, [invoice, reset])
+  }, [invoice, reset, setValue])
 
   // Update form when line items change
   useEffect(() => {
-    setValue('lineItems', lineItems, { shouldValidate: true })
+    setValue('lineItems', lineItems, { 
+      shouldValidate: true,
+      shouldDirty: true,
+      shouldTouch: true 
+    })
   }, [lineItems, setValue])
 
   // Calculate totals for real-time display
@@ -220,78 +347,78 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     }
   }
 
-  const canProceedToNext = () => {
-    switch (currentStep) {
-      case 'customer':
-        return selectedCustomer !== null && !errors.customerId
-      case 'details':
-        return watchedValues.serviceDate && 
-               watchedValues.dueDate && 
-               watchedValues.taxRate !== undefined &&
-               !errors.serviceDate &&
-               !errors.dueDate &&
-               !errors.taxRate
-      case 'items':
-        return lineItems.length > 0 && !errors.lineItems
-      case 'review':
-        return isFormValid()
-      default:
-        return false
-    }
-  }
-
   const onSubmit = async (data: InvoiceFormData) => {
     try {
       setSubmitError(null)
       setSubmitSuccess(false)
       
-      // Additional validation
-      if (!selectedCustomer) {
-        setSubmitError('Please select a customer before saving the invoice.')
+      // Final validation before submit (should already be validated by review step)
+      if (!validateReviewStep()) {
+        setSubmitError('Please complete all required fields before saving.')
         return
       }
       
-      if (lineItems.length === 0) {
-        setSubmitError('Please add at least one line item before saving the invoice.')
-        return
-      }
-      
-      // Validate date logic
-      if (data.dueDate < data.serviceDate) {
-        setSubmitError('Due date cannot be before the service date.')
-        return
-      }
-      
-      // Transform line items to match API format (uppercase enum values)
-      const transformedData = {
-        ...data,
-        lineItems: lineItems.map(transformLineItemToDto)
+      // Build the payload with proper transformations
+      const payload = {
+        customerId: data.customerId,
+        serviceDate: data.serviceDate,
+        dueDate: data.dueDate,
+        lineItems: lineItems.map(transformLineItemToDto),
+        notes: data.notes || undefined,
+        taxRate: data.taxRate,
       }
       
       if (invoice) {
         // Update existing invoice
-        await updateInvoice.mutateAsync({ id: invoice.id, data: transformedData })
+        const updatedInvoice = await updateInvoice.mutateAsync({ 
+          id: invoice.id, 
+          data: payload 
+        })
         setSubmitSuccess(true)
+        
+        // Wait briefly to show success message, then close
         setTimeout(() => {
-          onSave?.(invoice)
-        }, 1500) // Show success message briefly before closing
+          const transformedInvoice = transformInvoiceResponse(updatedInvoice)
+          onSave?.(transformedInvoice)
+        }, 1500)
       } else {
         // Create new invoice
-        const newInvoice = await createInvoice.mutateAsync(transformedData)
+        const newInvoice = await createInvoice.mutateAsync(payload)
         setSubmitSuccess(true)
+        
+        // Wait briefly to show success message, then close
         setTimeout(() => {
-          // Transform API response to match frontend Invoice type
           const transformedInvoice = transformInvoiceResponse(newInvoice)
           onSave?.(transformedInvoice)
-        }, 1500) // Show success message briefly before closing
+        }, 1500)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save invoice:', error)
-      setSubmitError(
-        error instanceof Error 
-          ? error.message 
-          : 'An unexpected error occurred while saving the invoice. Please try again.'
-      )
+      
+      // Enhanced error handling with specific messages
+      if (error?.status === 400 || error?.status === 422) {
+        // Validation error
+        if (error?.data?.errors && Array.isArray(error.data.errors)) {
+          const fieldErrors = error.data.errors
+            .map((err: any) => `${err.field}: ${err.message}`)
+            .join(', ')
+          setSubmitError(`Validation failed: ${fieldErrors}`)
+        } else if (error?.data?.message) {
+          setSubmitError(`Validation error: ${error.data.message}`)
+        } else {
+          setSubmitError('Invalid invoice data. Please check your input and try again.')
+        }
+      } else if (error?.status === 404) {
+        setSubmitError('Invoice not found. It may have been deleted.')
+      } else if (error?.status === 403) {
+        setSubmitError('You do not have permission to save this invoice.')
+      } else if (error?.status === 0) {
+        setSubmitError('Network error. Please check your internet connection and try again.')
+      } else if (error?.message) {
+        setSubmitError(error.message)
+      } else {
+        setSubmitError('An unexpected error occurred. Please try again.')
+      }
     }
   }
 
@@ -471,7 +598,12 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                     // Clear submit error when user makes changes
                     if (submitError) setSubmitError(null)
                   }}
-                  error={errors.dueDate?.message}
+                  error={
+                    errors.dueDate?.message || 
+                    (watchedValues.dueDate && watchedValues.serviceDate && watchedValues.dueDate < watchedValues.serviceDate
+                      ? 'Due date must be on or after service date'
+                      : undefined)
+                  }
                   helpText="Payment due date (typically 30 days after service date)"
                 />
               )}
@@ -689,7 +821,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       {(error || submitError) && (
         <ErrorAlert
           type="error"
-          title="Error"
+          title={submitError ? "Validation Error" : "Error"}
           message={submitError || error || 'An unexpected error occurred'}
           onDismiss={() => {
             if (submitError) setSubmitError(null)
@@ -731,7 +863,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
             <Button
               type="button"
               loading={loading}
-              disabled={!isFormValid() || submitSuccess}
+              disabled={!validateReviewStep() || submitSuccess || loading}
               onClick={handleSubmit(onSubmit)}
               className="flex items-center space-x-2"
             >

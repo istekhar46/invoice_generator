@@ -102,6 +102,12 @@ class BaseApiClient implements ApiClient {
             console.log(`[API] Response ${response.status}:`, response.data)
           }
         }
+        
+        // Handle 204 No Content explicitly - return undefined
+        if (response.status === 204) {
+          return response
+        }
+        
         return response
       },
       async (error) => {
@@ -167,10 +173,17 @@ class BaseApiClient implements ApiClient {
           }
         }
         
-        // Transform axios error to ApiError
+        // Transform axios error to ApiError with improved error messages
         if (error.response) {
+          // Extract error message with fallback chain
+          const errorMessage = 
+            error.response.data?.message || 
+            error.response.data?.error ||
+            this.getDefaultErrorMessage(error.response.status) ||
+            error.message
+          
           throw new ApiError(
-            error.response.data?.message || error.message,
+            errorMessage,
             error.response.status,
             error.response.statusText,
             error.response.data
@@ -210,6 +223,23 @@ class BaseApiClient implements ApiClient {
     
     // Navigate to login page using navigation service
     navigationService.navigateToLogin()
+  }
+
+  private getDefaultErrorMessage(status: number): string {
+    const errorMessages: Record<number, string> = {
+      400: 'Invalid request - please check your input',
+      401: 'Authentication required - please log in',
+      403: 'Access denied - you do not have permission',
+      404: 'Resource not found',
+      409: 'Conflict - the resource may have been modified',
+      422: 'Validation failed - please check your input',
+      500: 'Server error - please try again later',
+      502: 'Bad gateway - server is temporarily unavailable',
+      503: 'Service unavailable - please try again later',
+      504: 'Gateway timeout - request took too long',
+    }
+    
+    return errorMessages[status] || ''
   }
 
   async get<T>(url: string, config?: RequestConfig): Promise<T> {

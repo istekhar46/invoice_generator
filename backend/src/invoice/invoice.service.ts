@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { Invoice, LineItem, InvoiceStatus } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
@@ -39,6 +40,8 @@ export interface InvoiceWithRelations extends Invoice {
 
 @Injectable()
 export class InvoiceService extends BaseUserService {
+  private readonly logger = new Logger(InvoiceService.name);
+
   constructor(prisma: PrismaService) {
     super(prisma);
   }
@@ -231,26 +234,43 @@ export class InvoiceService extends BaseUserService {
     id: string,
     updateInvoiceDto: UpdateInvoiceDto,
   ): Promise<InvoiceWithRelations> {
+    this.logger.log(`Update invoice request - userId: ${userId}, invoiceId: ${id}, fields: ${Object.keys(updateInvoiceDto).join(', ')}`);
+
     // Validate that at least one field is being updated
     if (Object.keys(updateInvoiceDto).length === 0) {
+      this.logger.warn(`Update failed - no fields provided - userId: ${userId}, invoiceId: ${id}`);
       throw new BadRequestException(
         'At least one field must be provided for update',
       );
     }
 
     // Validate invoice ownership
-    await this.validateInvoiceOwnership(id, userId);
+    try {
+      await this.validateInvoiceOwnership(id, userId);
+    } catch (error) {
+      this.logger.error(`Update failed - invoice ownership validation failed - userId: ${userId}, invoiceId: ${id}`, error instanceof Error ? error.stack : String(error));
+      throw error;
+    }
 
     // If updating customer, verify it belongs to user
     if (updateInvoiceDto.customerId) {
-      await this.validateCustomerOwnership(updateInvoiceDto.customerId, userId);
+      try {
+        await this.validateCustomerOwnership(updateInvoiceDto.customerId, userId);
+      } catch (error) {
+        this.logger.error(`Update failed - customer ownership validation failed - userId: ${userId}, customerId: ${updateInvoiceDto.customerId}`, error instanceof Error ? error.stack : String(error));
+        throw error;
+      }
     }
 
     const existingInvoice = await this.prisma.invoice.findFirst({
       where: this.buildUserIsolatedWhere(userId, { id }),
+      include: {
+        lineItems: true,
+      },
     });
 
     if (!existingInvoice) {
+      this.logger.error(`Update failed - invoice not found - userId: ${userId}, invoiceId: ${id}`);
       throw new NotFoundException('Invoice not found or access denied');
     }
 
@@ -258,16 +278,24 @@ export class InvoiceService extends BaseUserService {
     if (updateInvoiceDto.serviceDate || updateInvoiceDto.dueDate) {
       const serviceDate = updateInvoiceDto.serviceDate || existingInvoice.serviceDate;
       const dueDate = updateInvoiceDto.dueDate || existingInvoice.dueDate;
-      this.validateInvoiceDates(serviceDate, dueDate);
+      
+      try {
+        this.validateInvoiceDates(serviceDate, dueDate);
+      } catch (error) {
+        this.logger.error(`Update failed - date validation failed - userId: ${userId}, invoiceId: ${id}, serviceDate: ${serviceDate}, dueDate: ${dueDate}`, error instanceof Error ? error.stack : String(error));
+        throw error;
+      }
     }
 
     try {
       // Update invoice with line items in a transaction
-      const updatedInvoice = await this.prisma.$transaction(async (tx) => {
+      await this.prisma.$transaction(async (tx) => {
         let updateData: any = { ...updateInvoiceDto };
 
         // If line items are being updated, recalculate totals
         if (updateInvoiceDto.lineItems) {
+          this.logger.log(`Updating line items - userId: ${userId}, invoiceId: ${id}, lineItemCount: ${updateInvoiceDto.lineItems.length}`);
+          
           const taxRate = updateInvoiceDto.taxRate ?? existingInvoice.taxRate;
           const totals = this.calculateTotals(updateInvoiceDto.lineItems, taxRate);
           
@@ -278,10 +306,12 @@ export class InvoiceService extends BaseUserService {
             total: totals.total,
           };
 
-          // Delete existing line items
-          await tx.lineItem.deleteMany({
+          // Delete existing line items (atomic replacement)
+          const deleteResult = await tx.lineItem.deleteMany({
             where: { invoiceId: id },
           });
+          
+          this.logger.log(`Deleted existing line items - userId: ${userId}, invoiceId: ${id}, deletedCount: ${deleteResult.count}`);
 
           // Create new line items
           const lineItemsData = updateInvoiceDto.lineItems.map((item) => ({
@@ -296,8 +326,12 @@ export class InvoiceService extends BaseUserService {
           await tx.lineItem.createMany({
             data: lineItemsData,
           });
+          
+          this.logger.log(`Created new line items - userId: ${userId}, invoiceId: ${id}, createdCount: ${lineItemsData.length}`);
         } else if (updateInvoiceDto.taxRate !== undefined) {
           // If only tax rate is updated, recalculate with existing line items
+          this.logger.log(`Recalculating totals with new tax rate - userId: ${userId}, invoiceId: ${id}, taxRate: ${updateInvoiceDto.taxRate}`);
+          
           const existingLineItems = await tx.lineItem.findMany({
             where: { invoiceId: id },
           });
@@ -329,15 +363,20 @@ export class InvoiceService extends BaseUserService {
         });
 
         if (updateResult.count === 0) {
+          this.logger.error(`Update failed - invoice not found during update - userId: ${userId}, invoiceId: ${id}`);
           throw new NotFoundException('Invoice not found or access denied');
         }
-
-        return existingInvoice;
+        
+        this.logger.log(`Invoice updated successfully - userId: ${userId}, invoiceId: ${id}`);
       });
 
       // Return updated invoice with relations
       return await this.findById(userId, id);
     } catch (error) {
+      // Log database errors
+      if (error && typeof error === 'object' && 'code' in error) {
+        this.logger.error(`Update failed - database error - userId: ${userId}, invoiceId: ${id}, errorCode: ${(error as any).code}, errorMessage: ${(error as any).message}`, error instanceof Error ? error.stack : String(error));
+      }
       // Let the global exception filter handle Prisma errors
       throw error;
     }
@@ -371,19 +410,47 @@ export class InvoiceService extends BaseUserService {
   }
 
   async delete(userId: string, id: string): Promise<void> {
-    // Validate invoice ownership
-    await this.validateInvoiceOwnership(id, userId);
+    this.logger.log(`Delete invoice request - userId: ${userId}, invoiceId: ${id}`);
+
+    // Validate invoice ownership before deletion
+    try {
+      await this.validateInvoiceOwnership(id, userId);
+    } catch (error) {
+      this.logger.error(`Delete failed - invoice ownership validation failed - userId: ${userId}, invoiceId: ${id}`, error instanceof Error ? error.stack : String(error));
+      throw error;
+    }
 
     try {
+      // Get line item count before deletion for logging
+      const lineItemCount = await this.prisma.lineItem.count({
+        where: { invoiceId: id },
+      });
+
       // Delete invoice with additional safety check (line items will be deleted automatically due to cascade)
       const deleteResult = await this.prisma.invoice.deleteMany({
         where: this.buildUserIsolatedWhere(userId, { id }),
       });
 
       if (deleteResult.count === 0) {
+        this.logger.error(`Delete failed - invoice not found during deletion - userId: ${userId}, invoiceId: ${id}`);
         throw new NotFoundException('Invoice not found or access denied');
       }
+
+      // Verify cascade deletion occurred
+      const remainingLineItems = await this.prisma.lineItem.count({
+        where: { invoiceId: id },
+      });
+
+      if (remainingLineItems > 0) {
+        this.logger.error(`Delete warning - cascade deletion may have failed - userId: ${userId}, invoiceId: ${id}, remainingLineItems: ${remainingLineItems}`);
+      }
+
+      this.logger.log(`Invoice deleted successfully - userId: ${userId}, invoiceId: ${id}, deletedLineItems: ${lineItemCount}`);
     } catch (error) {
+      // Log database errors
+      if (error && typeof error === 'object' && 'code' in error) {
+        this.logger.error(`Delete failed - database error - userId: ${userId}, invoiceId: ${id}, errorCode: ${(error as any).code}, errorMessage: ${(error as any).message}`, error instanceof Error ? error.stack : String(error));
+      }
       // Let the global exception filter handle Prisma errors
       throw error;
     }
@@ -439,7 +506,13 @@ export class InvoiceService extends BaseUserService {
   private validateInvoiceDates(serviceDate: Date, dueDate: Date): void {
     // Ensure due date is not before service date
     if (dueDate < serviceDate) {
-      throw new BadRequestException('Due date cannot be before service date');
+      throw new BadRequestException({
+        message: 'Due date cannot be before service date',
+        details: {
+          serviceDate: serviceDate.toISOString(),
+          dueDate: dueDate.toISOString(),
+        },
+      });
     }
 
     // Ensure service date is not too far in the future (optional business rule)
@@ -447,7 +520,13 @@ export class InvoiceService extends BaseUserService {
     oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
     
     if (serviceDate > oneYearFromNow) {
-      throw new BadRequestException('Service date cannot be more than one year in the future');
+      throw new BadRequestException({
+        message: 'Service date cannot be more than one year in the future',
+        details: {
+          serviceDate: serviceDate.toISOString(),
+          maxAllowedDate: oneYearFromNow.toISOString(),
+        },
+      });
     }
   }
 }
