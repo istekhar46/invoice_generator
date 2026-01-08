@@ -1,9 +1,19 @@
 import React, { useState } from 'react'
-import { Menu, X, User, LogOut, LayoutDashboard, Users, FileText, Settings, Building2 } from 'lucide-react'
+import {
+  Menu,
+  X,
+  User,
+  LogOut,
+  LayoutDashboard,
+  Users,
+  FileText,
+  Settings,
+  Building2,
+} from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 import { Button } from '../ui/Button'
 import { cn } from '../../utils/classNames'
-import logo from  '../../assets/logo_2.jpg'
+import logo from '../../assets/logo_2.jpg'
 
 export interface HeaderProps {
   user?: {
@@ -72,7 +82,7 @@ const Header: React.FC<HeaderProps> = ({
 
   // Use local state if onMenuToggle is not provided
   const mobileMenuOpen = onMenuToggle ? isMobileMenuOpen : localMobileMenuOpen
-  
+
   const handleMenuToggle = () => {
     if (onMenuToggle) {
       onMenuToggle()
@@ -90,7 +100,7 @@ const Header: React.FC<HeaderProps> = ({
   }
 
   // Filter navigation items based on authentication status
-  const filteredNavigation = navigation.filter((item) => {
+  const filteredNavigation = navigation.filter(item => {
     if (item.requiresAuth && !isAuthenticated) {
       return false
     }
@@ -108,7 +118,7 @@ const Header: React.FC<HeaderProps> = ({
         className
       )}
     >
-      <div className="flex h-16 sm:h-20 items-center justify-between px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <div className="flex h-16 sm:h-20 items-center justify-between px-4 gap-2 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         {/* Left side - Logo and mobile menu button */}
         <div className="flex items-center space-x-3">
           {/* Mobile menu button - only show when authenticated */}
@@ -129,27 +139,30 @@ const Header: React.FC<HeaderProps> = ({
           )}
 
           {/* Modern Logo with gradient and hover animations */}
-          <Link 
-            to={isAuthenticated ? "/dashboard" : "/"} 
-            className="flex items-center space-x-1 group"
-          >
-            <div className="p-2.5 rounded-xl transition-all duration-300 group-hover:scale-105 w-[30%]">
-              {/* <Zap className="w-6 h-6 text-white" /> */}
-              <img src={logo} alt="logo" className='w-full mix-blend-multiply' />
-            </div>
+          <div className="flex justify-items-start items-center space-x-1 group">
+            <Link to={isAuthenticated ? '/dashboard' : '/'}>
+              <div className="rounded-xl transition-all duration-300 group-hover:scale-105">
+                {/* <Zap className="w-6 h-6 text-white" /> */}
+                <img
+                  src={logo}
+                  alt="logo"
+                  className="w-[4rem] md:w-20 mix-blend-multiply"
+                />
+              </div>
+            </Link>
             <div className="hidden sm:block">
               <span className="text-xl font-bold bg-linear-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
                 Invoiceo
               </span>
               <p className="text-xs text-gray-500">Invoicing Services</p>
             </div>
-          </Link>
+          </div>
         </div>
 
         {/* Desktop Navigation - Modern pill style */}
         {isAuthenticated && (
           <nav className="hidden md:flex items-center space-x-2 bg-gray-100 rounded-2xl p-2">
-            {filteredNavigation.map((item) => (
+            {filteredNavigation.map(item => (
               <NavLink
                 key={item.name}
                 to={item.href}
@@ -215,7 +228,7 @@ const Header: React.FC<HeaderProps> = ({
       {/* Mobile Navigation - Slide down animation */}
       {isAuthenticated && mobileMenuOpen && (
         <nav className="md:hidden py-4 border-t border-gray-200 animate-slide-down bg-white/90 backdrop-blur-lg">
-          {filteredNavigation.map((item) => (
+          {filteredNavigation.map(item => (
             <NavLink
               key={item.name}
               to={item.href}
