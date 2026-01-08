@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
-import { Menu, X, User, LogOut, Zap, LayoutDashboard, Users, FileText, Settings, Building2 } from 'lucide-react'
+import { Menu, X, User, LogOut, LayoutDashboard, Users, FileText, Settings, Building2 } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 import { Button } from '../ui/Button'
 import { cn } from '../../utils/classNames'
+import logo from  '../../assets/logo_2.jpg'
 
 export interface HeaderProps {
   user?: {
@@ -115,7 +116,7 @@ const Header: React.FC<HeaderProps> = ({
             <Button
               variant="ghost"
               size="small"
-              className="mr-2 md:hidden min-h-[44px] min-w-[44px]"
+              className="mr-2 md:hidden min-h-11 min-w-11"
               onClick={handleMenuToggle}
               aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
             >
@@ -130,16 +131,17 @@ const Header: React.FC<HeaderProps> = ({
           {/* Modern Logo with gradient and hover animations */}
           <Link 
             to={isAuthenticated ? "/dashboard" : "/"} 
-            className="flex items-center space-x-3 group"
+            className="flex items-center space-x-1 group"
           >
-            <div className="bg-gradient-to-br from-primary-600 to-primary-500 p-2.5 rounded-xl shadow-lg group-hover:shadow-glow transition-all duration-300 group-hover:scale-105">
-              <Zap className="w-6 h-6 text-white" />
+            <div className="p-2.5 rounded-xl transition-all duration-300 group-hover:scale-105 w-[30%]">
+              {/* <Zap className="w-6 h-6 text-white" /> */}
+              <img src={logo} alt="logo" className='w-full mix-blend-multiply' />
             </div>
             <div className="hidden sm:block">
-              <span className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
-                Invoice Pro
+              <span className="text-xl font-bold bg-linear-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
+                Invoiceo
               </span>
-              <p className="text-xs text-gray-500">Electrical Services</p>
+              <p className="text-xs text-gray-500">Invoicing Services</p>
             </div>
           </Link>
         </div>
@@ -153,7 +155,7 @@ const Header: React.FC<HeaderProps> = ({
                 to={item.href}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 min-h-[44px]',
+                    'flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 min-h-11',
                     isActive
                       ? 'bg-white text-primary-600 shadow-sm'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
@@ -178,7 +180,7 @@ const Header: React.FC<HeaderProps> = ({
             <>
               {/* User info */}
               <div className="hidden sm:flex sm:items-center sm:space-x-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary-100 to-primary-200">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br from-primary-100 to-primary-200">
                   <User className="h-4 w-4 text-primary-600" />
                 </div>
                 <div className="hidden md:block">
@@ -194,7 +196,7 @@ const Header: React.FC<HeaderProps> = ({
                 variant="ghost"
                 size="small"
                 onClick={onLogout}
-                className="text-gray-600 hover:text-gray-900 min-h-[44px]"
+                className="text-gray-600 hover:text-gray-900 min-h-11"
                 aria-label="Logout"
               >
                 <LogOut className="h-4 w-4" />
@@ -220,7 +222,7 @@ const Header: React.FC<HeaderProps> = ({
               onClick={handleMenuClose}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center space-x-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 mb-1 min-h-[44px] mx-4',
+                  'flex items-center space-x-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 mb-1 min-h-11 mx-4',
                   isActive
                     ? 'bg-primary-50 text-primary-700'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
