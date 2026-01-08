@@ -13,7 +13,7 @@ import {
 import { Link, NavLink } from 'react-router-dom'
 import { Button } from '../ui/Button'
 import { cn } from '../../utils/classNames'
-import logo from '../../assets/logo_2.jpg'
+import logo from '../../assets/logo_3.png'
 
 export interface HeaderProps {
   user?: {
@@ -146,16 +146,16 @@ const Header: React.FC<HeaderProps> = ({
                 <img
                   src={logo}
                   alt="logo"
-                  className="w-[4rem] md:w-20 mix-blend-multiply"
+                  className="w-24 md:w-32 mix-blend- multiply"
                 />
               </div>
             </Link>
-            <div className="hidden sm:block">
+            {/* <div className="hidden sm:block">
               <span className="text-xl font-bold bg-linear-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
                 Invoiceo
               </span>
               <p className="text-xs text-gray-500">Invoicing Services</p>
-            </div>
+            </div> */}
           </div>
         </div>
 

@@ -53,7 +53,7 @@ export const SignupPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-linear-to-br from-primary-50 via-white to-secondary-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8 animate-fade-in">
         {/* Modern Logo and Branding */}
         <div className="text-center">
@@ -72,9 +72,9 @@ export const SignupPage: React.FC = () => {
 
         {/* Modern Card with Glass Morphism */}
         <Card 
-          padding="lg" 
+          padding="sm" 
           hover={true}
-          className="backdrop-blur-sm bg-white/90 border-white/20 shadow-medium"
+          className="backdrop-blur-sm bg-white/90 border-white/20 shadow-medium md:p-8"
         >
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
             {registerMutation.error && (

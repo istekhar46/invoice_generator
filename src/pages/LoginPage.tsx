@@ -2,13 +2,14 @@ import React from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Zap, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { ErrorDisplay } from '../components/shared'
 import { useLogin } from '../hooks/useAuth'
 import { loginSchema, type LoginFormData } from '../types/forms'
+import logo from '../assets/logo_3.png'
 
 /**
  * LoginPage component for user authentication.
@@ -47,13 +48,14 @@ export const LoginPage: React.FC = () => {
         {/* Modern Logo and Branding */}
         <div className="text-center">
           <div className="flex justify-center mb-6">
-            <div className="bg-gradient-primary p-4 rounded-2xl shadow-glow animate-bounce-subtle">
-              <Zap className="w-8 h-8 text-white" />
+            <div className="p-4 rounded-2xl animate-bounce-subtle">
+              {/* <Zap className="w-8 h-8 text-white" /> */}
+              <img src={logo} alt="logo" className='w-44'/>
             </div>
           </div>
-          <h1 className="heading-2 text-gray-900 mb-2">
+          {/* <h1 className="heading-2 text-gray-900 mb-2">
             Welcome back
-          </h1>
+          </h1> */}
           <p className="text-body text-gray-600">
             Sign in to your Invoice Pro account
           </p>
@@ -119,10 +121,11 @@ export const LoginPage: React.FC = () => {
           </form>
 
           {/* Demo credentials helper with modern styling */}
-          <div className="mt-6 p-4 bg-gradient-to from-primary-50 to-blue-50 border border-primary-200 rounded-xl">
+
+          {/* <div className="mt-6 p-4 bg-gradient-to from-primary-50 to-blue-50 border border-primary-200 rounded-xl">
             <div className="flex items-start space-x-3">
-              <div className="bg-primary-100 p-2 rounded-lg">
-                <Zap className="w-4 h-4 text-primary-600" />
+              <div className="p-2 rounded-lg">
+                <img src={logo} alt="logo" className='w-10'/>
               </div>
               <div>
                 <p className="text-sm font-semibold text-primary-800 mb-1">Demo Access</p>
@@ -131,7 +134,7 @@ export const LoginPage: React.FC = () => {
                 </p>
               </div>
             </div>
-          </div>
+          </div> */}
         </Card>
 
         {/* Modern Sign Up Link */}
