@@ -172,7 +172,7 @@ class BaseApiClient implements ApiClient {
           const operation = getOperationContext(originalRequest.url || '')
           
           // Get user-friendly error message
-          const { title, message } = getUserFriendlyErrorMessage(error.response.data, {
+          const { message } = getUserFriendlyErrorMessage(error.response.data, {
             status: error.response.status,
             statusText: error.response.statusText,
             operation,

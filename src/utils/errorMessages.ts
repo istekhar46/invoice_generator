@@ -154,7 +154,7 @@ function getAuthenticationErrorMessage(
  */
 function getConflictErrorMessage(
   error: any,
-  operation?: string
+  _operation?: string
 ): { title: string; message: string } {
   const errorMessage = extractErrorMessage(error)
   
