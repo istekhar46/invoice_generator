@@ -3,6 +3,7 @@ import { Logger } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
+import * as cookieParser from 'cookie-parser';
 import { join } from 'path';
 import { AppModule } from './app.module';
 
@@ -17,6 +18,9 @@ async function bootstrap(): Promise<void> {
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads/',
   });
+
+  // Enable cookie parser
+  app.use(cookieParser());
 
   // Security middleware
   app.use(helmet({
@@ -33,7 +37,8 @@ async function bootstrap(): Promise<void> {
     origin: process.env.FRONTEND_URL ?? 'http://localhost:5173',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Set-Cookie'],
   });
 
   // Configure secure cookies

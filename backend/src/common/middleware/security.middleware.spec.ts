@@ -80,7 +80,8 @@ describe('Security Middleware Configuration', () => {
         origin: process.env.FRONTEND_URL ?? 'http://localhost:5173',
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        exposedHeaders: ['Set-Cookie'],
       };
 
       expect(corsConfig.credentials).toBe(true);
@@ -92,7 +93,7 @@ describe('Security Middleware Configuration', () => {
       expect(corsConfig.methods).toContain('OPTIONS');
       expect(corsConfig.allowedHeaders).toContain('Content-Type');
       expect(corsConfig.allowedHeaders).toContain('Authorization');
-      expect(corsConfig.allowedHeaders).toContain('Accept');
+      expect(corsConfig.exposedHeaders).toContain('Set-Cookie');
     });
 
     it('should use environment variable for origin or default', () => {

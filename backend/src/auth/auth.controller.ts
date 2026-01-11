@@ -8,6 +8,7 @@ import {
   Res,
   HttpCode,
   HttpStatus,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
@@ -25,10 +26,23 @@ import { User } from '@prisma/client';
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
+  private readonly REFRESH_TOKEN_COOKIE_NAME = 'refreshToken';
+  private readonly REFRESH_TOKEN_COOKIE_OPTIONS;
+
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    // Configure refresh token cookie options
+    const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
+    this.REFRESH_TOKEN_COOKIE_OPTIONS = {
+      httpOnly: true,
+      secure: isProduction, // HTTPS only in production
+      sameSite: 'strict' as const,
+      path: '/api/v1/auth/refresh',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+    };
+  }
 
   @Public()
   @Post('register')
@@ -44,8 +58,24 @@ export class AuthController {
     description: 'User with this email already exists',
   })
   @ApiBody({ type: RegisterDto })
-  async register(@Body() registerDto: RegisterDto): Promise<AuthResponseDto> {
-    return this.authService.register(registerDto);
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthResponseDto> {
+    // Extract IP address from request
+    const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+    
+    const authResponse = await this.authService.register(registerDto, ipAddress);
+    
+    // Set refresh token as HttpOnly cookie
+    res.cookie(
+      this.REFRESH_TOKEN_COOKIE_NAME,
+      authResponse.refreshToken,
+      this.REFRESH_TOKEN_COOKIE_OPTIONS,
+    );
+
+    return authResponse;
   }
 
   @Public()
@@ -62,8 +92,24 @@ export class AuthController {
     description: 'Invalid credentials',
   })
   @ApiBody({ type: LoginDto })
-  async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthResponseDto> {
+    // Extract IP address from request
+    const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+    
+    const authResponse = await this.authService.login(loginDto, ipAddress);
+    
+    // Set refresh token as HttpOnly cookie
+    res.cookie(
+      this.REFRESH_TOKEN_COOKIE_NAME,
+      authResponse.refreshToken,
+      this.REFRESH_TOKEN_COOKIE_OPTIONS,
+    );
+
+    return authResponse;
   }
 
   @Public()
@@ -109,8 +155,28 @@ export class AuthController {
     description: 'Invalid refresh token',
   })
   @ApiBody({ type: RefreshTokenDto })
-  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto): Promise<AuthResponseDto> {
-    return this.authService.refreshToken(refreshTokenDto.refreshToken);
+  async refreshToken(
+    @Body() refreshTokenDto: RefreshTokenDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthResponseDto> {
+    // Try to get refresh token from cookie first, then fall back to body (backward compatibility)
+    const refreshToken = req.cookies?.[this.REFRESH_TOKEN_COOKIE_NAME] || refreshTokenDto.refreshToken;
+    
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token not provided');
+    }
+
+    const authResponse = await this.authService.refreshToken(refreshToken);
+    
+    // Set new refresh token as HttpOnly cookie
+    res.cookie(
+      this.REFRESH_TOKEN_COOKIE_NAME,
+      authResponse.refreshToken,
+      this.REFRESH_TOKEN_COOKIE_OPTIONS,
+    );
+
+    return authResponse;
   }
 
   @Get('me')
@@ -138,34 +204,24 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Logout user from current session' })
-  @ApiResponse({
-    status: 200,
-    description: 'User successfully logged out',
-  })
-  @ApiBody({ 
-    type: RefreshTokenDto,
-    required: false,
-    description: 'Optional refresh token to invalidate specific session'
-  })
-  async logout(
-    @CurrentUser() user: User,
-    @Body() body?: { refreshToken?: string },
-  ) {
-    await this.authService.logout(user.id, body?.refreshToken);
-    return { message: 'Successfully logged out' };
-  }
-
-  @Post('logout-all')
-  @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Logout user from all sessions' })
   @ApiResponse({
     status: 200,
     description: 'User successfully logged out from all sessions',
   })
-  async logoutAll(@CurrentUser() user: User) {
+  async logout(
+    @CurrentUser() user: User,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    // Invalidate all user refresh tokens in database
     await this.authService.logout(user.id);
-    return { message: 'Successfully logged out from all sessions' };
+    
+    // Clear refresh token cookie by setting Max-Age=0
+    res.cookie(this.REFRESH_TOKEN_COOKIE_NAME, '', {
+      ...this.REFRESH_TOKEN_COOKIE_OPTIONS,
+      maxAge: 0,
+    });
+    
+    return { message: 'Successfully logged out' };
   }
 }
