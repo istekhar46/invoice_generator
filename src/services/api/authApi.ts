@@ -12,10 +12,6 @@ export interface RegisterDto {
   displayName: string
 }
 
-export interface RefreshTokenDto {
-  refreshToken: string
-}
-
 // Response DTOs matching backend
 export interface UserResponseDto {
   id: string
@@ -29,7 +25,6 @@ export interface UserResponseDto {
 export interface AuthResponseDto {
   user: UserResponseDto
   accessToken: string
-  refreshToken: string
 }
 
 // Authentication API service
@@ -67,12 +62,10 @@ export class AuthApi {
   }
 
   /**
-   * Refresh access token using refresh token
+   * Refresh access token using refresh token from HttpOnly cookie
    */
-  async refreshToken(refreshToken: string): Promise<AuthResponseDto> {
-    return apiClient.post<AuthResponseDto>('/auth/refresh', {
-      refreshToken,
-    }, {
+  async refreshToken(): Promise<AuthResponseDto> {
+    return apiClient.post<AuthResponseDto>('/auth/refresh', {}, {
       skipAuth: true, // Don't include auth token for refresh
     })
   }

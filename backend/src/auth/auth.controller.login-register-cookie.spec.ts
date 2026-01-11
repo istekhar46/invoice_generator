@@ -23,15 +23,17 @@ describe('AuthController - Login and Register Cookie Integration', () => {
   };
 
   const mockAuthResponse = {
-    user: {
-      id: mockUser.id,
-      email: mockUser.email,
-      displayName: mockUser.displayName,
-      photoURL: mockUser.photoURL || undefined,
-      createdAt: mockUser.createdAt,
-      updatedAt: mockUser.updatedAt,
+    authResponse: {
+      user: {
+        id: mockUser.id,
+        email: mockUser.email,
+        displayName: mockUser.displayName,
+        photoURL: mockUser.photoURL || undefined,
+        createdAt: mockUser.createdAt,
+        updatedAt: mockUser.updatedAt,
+      },
+      accessToken: 'test-access-token',
     },
-    accessToken: 'test-access-token',
     refreshToken: 'test-refresh-token',
   } as any;
 
@@ -87,7 +89,8 @@ describe('AuthController - Login and Register Cookie Integration', () => {
 
       // Verify response contains access token in body
       expect(response.body.accessToken).toBe('test-access-token');
-      expect(response.body.refreshToken).toBe('test-refresh-token');
+      // Verify refresh token is NOT in response body (breaking change)
+      expect(response.body.refreshToken).toBeUndefined();
 
       // Verify refresh token is set as HttpOnly cookie
       const setCookieHeader = response.headers['set-cookie'];
@@ -98,7 +101,7 @@ describe('AuthController - Login and Register Cookie Integration', () => {
       expect(setCookieHeader[0]).toContain('Path=/api/v1/auth/refresh');
     });
 
-    it('should maintain backward compatibility by including refresh token in response body', async () => {
+    it('should not include refresh token in response body (breaking change)', async () => {
       jest.spyOn(authService, 'login').mockResolvedValue(mockAuthResponse);
 
       const response = await request(app.getHttpServer())
@@ -109,8 +112,11 @@ describe('AuthController - Login and Register Cookie Integration', () => {
         })
         .expect(200);
 
-      // Verify refresh token is still in response body for backward compatibility
-      expect(response.body.refreshToken).toBe('test-refresh-token');
+      // Verify refresh token is NOT in response body
+      expect(response.body.refreshToken).toBeUndefined();
+      // Verify only access token and user are in response
+      expect(response.body.accessToken).toBeDefined();
+      expect(response.body.user).toBeDefined();
     });
   });
 
@@ -129,7 +135,8 @@ describe('AuthController - Login and Register Cookie Integration', () => {
 
       // Verify response contains access token in body
       expect(response.body.accessToken).toBe('test-access-token');
-      expect(response.body.refreshToken).toBe('test-refresh-token');
+      // Verify refresh token is NOT in response body (breaking change)
+      expect(response.body.refreshToken).toBeUndefined();
 
       // Verify refresh token is set as HttpOnly cookie
       const setCookieHeader = response.headers['set-cookie'];
@@ -140,7 +147,7 @@ describe('AuthController - Login and Register Cookie Integration', () => {
       expect(setCookieHeader[0]).toContain('Path=/api/v1/auth/refresh');
     });
 
-    it('should maintain backward compatibility by including refresh token in response body', async () => {
+    it('should not include refresh token in response body (breaking change)', async () => {
       jest.spyOn(authService, 'register').mockResolvedValue(mockAuthResponse);
 
       const response = await request(app.getHttpServer())
@@ -152,8 +159,11 @@ describe('AuthController - Login and Register Cookie Integration', () => {
         })
         .expect(201);
 
-      // Verify refresh token is still in response body for backward compatibility
-      expect(response.body.refreshToken).toBe('test-refresh-token');
+      // Verify refresh token is NOT in response body
+      expect(response.body.refreshToken).toBeUndefined();
+      // Verify only access token and user are in response
+      expect(response.body.accessToken).toBeDefined();
+      expect(response.body.user).toBeDefined();
     });
   });
 });

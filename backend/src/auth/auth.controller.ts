@@ -66,12 +66,12 @@ export class AuthController {
     // Extract IP address from request
     const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
     
-    const authResponse = await this.authService.register(registerDto, ipAddress);
+    const { authResponse, refreshToken } = await this.authService.register(registerDto, ipAddress);
     
     // Set refresh token as HttpOnly cookie
     res.cookie(
       this.REFRESH_TOKEN_COOKIE_NAME,
-      authResponse.refreshToken,
+      refreshToken,
       this.REFRESH_TOKEN_COOKIE_OPTIONS,
     );
 
@@ -100,12 +100,12 @@ export class AuthController {
     // Extract IP address from request
     const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
     
-    const authResponse = await this.authService.login(loginDto, ipAddress);
+    const { authResponse, refreshToken } = await this.authService.login(loginDto, ipAddress);
     
     // Set refresh token as HttpOnly cookie
     res.cookie(
       this.REFRESH_TOKEN_COOKIE_NAME,
-      authResponse.refreshToken,
+      refreshToken,
       this.REFRESH_TOKEN_COOKIE_OPTIONS,
     );
 
@@ -133,11 +133,11 @@ export class AuthController {
     description: 'Redirect to frontend with tokens',
   })
   async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
-    const authResponse = req.user as AuthResponseDto;
+    const { authResponse } = req.user as { authResponse: AuthResponseDto; refreshToken: string };
     const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:5173');
     
-    // Redirect to frontend with tokens as query parameters
-    const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${authResponse.accessToken}&refreshToken=${authResponse.refreshToken}`;
+    // Redirect to frontend with only access token as query parameter
+    const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${authResponse.accessToken}`;
     res.redirect(redirectUrl);
   }
 
@@ -167,12 +167,12 @@ export class AuthController {
       throw new UnauthorizedException('Refresh token not provided');
     }
 
-    const authResponse = await this.authService.refreshToken(refreshToken);
+    const { authResponse, refreshToken: newRefreshToken } = await this.authService.refreshToken(refreshToken);
     
     // Set new refresh token as HttpOnly cookie
     res.cookie(
       this.REFRESH_TOKEN_COOKIE_NAME,
-      authResponse.refreshToken,
+      newRefreshToken,
       this.REFRESH_TOKEN_COOKIE_OPTIONS,
     );
 

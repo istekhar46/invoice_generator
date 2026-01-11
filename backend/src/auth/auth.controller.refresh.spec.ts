@@ -23,15 +23,17 @@ describe('AuthController - Refresh Token Cookie Integration', () => {
   };
 
   const mockAuthResponse = {
-    user: {
-      id: mockUser.id,
-      email: mockUser.email,
-      displayName: mockUser.displayName,
-      photoURL: mockUser.photoURL || undefined,
-      createdAt: mockUser.createdAt,
-      updatedAt: mockUser.updatedAt,
+    authResponse: {
+      user: {
+        id: mockUser.id,
+        email: mockUser.email,
+        displayName: mockUser.displayName,
+        photoURL: mockUser.photoURL || undefined,
+        createdAt: mockUser.createdAt,
+        updatedAt: mockUser.updatedAt,
+      },
+      accessToken: 'new-access-token',
     },
-    accessToken: 'new-access-token',
     refreshToken: 'new-refresh-token-value',
   } as any;
 
@@ -88,6 +90,8 @@ describe('AuthController - Refresh Token Cookie Integration', () => {
 
       // Verify response contains new access token
       expect(response.body.accessToken).toBe('new-access-token');
+      // Verify refresh token is NOT in response body (breaking change)
+      expect(response.body.refreshToken).toBeUndefined();
 
       // Verify new refresh token is set as cookie
       const setCookieHeader = response.headers['set-cookie'];
@@ -111,6 +115,8 @@ describe('AuthController - Refresh Token Cookie Integration', () => {
 
       // Verify response contains new access token
       expect(response.body.accessToken).toBe('new-access-token');
+      // Verify refresh token is NOT in response body (breaking change)
+      expect(response.body.refreshToken).toBeUndefined();
     });
 
     it('should prioritize cookie over request body', async () => {

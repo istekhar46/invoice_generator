@@ -219,11 +219,11 @@ describe('AuthService', () => {
             const result = await service.refreshToken(mockRefreshToken);
 
             // Verify new tokens were generated
-            expect(result.accessToken).toBe(mockNewAccessToken);
+            expect(result.authResponse.accessToken).toBe(mockNewAccessToken);
             expect(result.refreshToken).toMatch(/^[a-f0-9]{128}$/); // 64 bytes = 128 hex chars
-            expect(result.user.id).toBe(user.id);
-            expect(result.user.email).toBe(user.email);
-            expect(result.user.displayName).toBe(user.displayName);
+            expect(result.authResponse.user.id).toBe(user.id);
+            expect(result.authResponse.user.email).toBe(user.email);
+            expect(result.authResponse.user.displayName).toBe(user.displayName);
 
             // Verify refresh token was looked up in database
             expect(prismaService.refreshToken.findUnique).toHaveBeenCalledWith({
@@ -313,9 +313,9 @@ describe('AuthService', () => {
               displayName,
             });
 
-            expect(registerResult.user.email).toBe(email);
-            expect(registerResult.user.displayName).toBe(displayName);
-            expect(registerResult.accessToken).toBe(mockAccessToken);
+            expect(registerResult.authResponse.user.email).toBe(email);
+            expect(registerResult.authResponse.user.displayName).toBe(displayName);
+            expect(registerResult.authResponse.accessToken).toBe(mockAccessToken);
             expect(registerResult.refreshToken).toMatch(/^[a-f0-9]{128}$/); // 64 bytes = 128 hex chars
 
             // Now test login with the same credentials
@@ -345,13 +345,13 @@ describe('AuthService', () => {
               password,
             });
 
-            expect(loginResult.user.email).toBe(email);
-            expect(loginResult.user.displayName).toBe(displayName);
-            expect(loginResult.accessToken).toBe(mockLoginAccessToken);
+            expect(loginResult.authResponse.user.email).toBe(email);
+            expect(loginResult.authResponse.user.displayName).toBe(displayName);
+            expect(loginResult.authResponse.accessToken).toBe(mockLoginAccessToken);
             expect(loginResult.refreshToken).toMatch(/^[a-f0-9]{128}$/); // 64 bytes = 128 hex chars
 
             // Verify that the same user data is returned
-            expect(loginResult.user.id).toBe(registerResult.user.id);
+            expect(loginResult.authResponse.user.id).toBe(registerResult.authResponse.user.id);
           }
         ),
         { numRuns: 50 } // Reduced runs for faster execution
@@ -653,11 +653,11 @@ describe('AuthService', () => {
             const result = await service.refreshToken(originalRefreshToken);
 
             // Verify new tokens were generated
-            expect(result.accessToken).toBe(newAccessToken);
+            expect(result.authResponse.accessToken).toBe(newAccessToken);
             expect(result.refreshToken).toMatch(/^[a-f0-9]{128}$/); // New refresh token format
-            expect(result.user.id).toBe(user.id);
-            expect(result.user.email).toBe(user.email);
-            expect(result.user.displayName).toBe(user.displayName);
+            expect(result.authResponse.user.id).toBe(user.id);
+            expect(result.authResponse.user.email).toBe(user.email);
+            expect(result.authResponse.user.displayName).toBe(user.displayName);
 
             // Verify the old refresh token was looked up
             expect(prismaService.refreshToken.findUnique).toHaveBeenCalledWith({

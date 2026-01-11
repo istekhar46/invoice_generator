@@ -34,7 +34,7 @@ export class AuthService {
     setInterval(() => this.cleanupDeletedTokensCache(), 60 * 60 * 1000); // Every hour
   }
 
-  async register(registerDto: RegisterDto, ipAddress?: string): Promise<AuthResponseDto> {
+  async register(registerDto: RegisterDto, ipAddress?: string): Promise<{ authResponse: AuthResponseDto; refreshToken: string }> {
     const { email, password, displayName } = registerDto;
 
     // Check if user already exists
@@ -80,12 +80,15 @@ export class AuthService {
     );
 
     return {
-      user: plainToClass(UserResponseDto, user, { excludeExtraneousValues: true }),
-      ...tokens,
+      authResponse: {
+        user: plainToClass(UserResponseDto, user, { excludeExtraneousValues: true }),
+        accessToken: tokens.accessToken,
+      },
+      refreshToken: tokens.refreshToken,
     };
   }
 
-  async login(loginDto: LoginDto, ipAddress?: string): Promise<AuthResponseDto> {
+  async login(loginDto: LoginDto, ipAddress?: string): Promise<{ authResponse: AuthResponseDto; refreshToken: string }> {
     const { email, password } = loginDto;
 
     // Find user by email
@@ -132,12 +135,15 @@ export class AuthService {
     );
 
     return {
-      user: plainToClass(UserResponseDto, user, { excludeExtraneousValues: true }),
-      ...tokens,
+      authResponse: {
+        user: plainToClass(UserResponseDto, user, { excludeExtraneousValues: true }),
+        accessToken: tokens.accessToken,
+      },
+      refreshToken: tokens.refreshToken,
     };
   }
 
-  async googleLogin(googleUser: GoogleUser): Promise<AuthResponseDto> {
+  async googleLogin(googleUser: GoogleUser): Promise<{ authResponse: AuthResponseDto; refreshToken: string }> {
     let user = await this.prisma.user.findUnique({
       where: { googleId: googleUser.id },
     });
@@ -183,12 +189,15 @@ export class AuthService {
     const tokens = await this.generateTokens(user);
 
     return {
-      user: plainToClass(UserResponseDto, user, { excludeExtraneousValues: true }),
-      ...tokens,
+      authResponse: {
+        user: plainToClass(UserResponseDto, user, { excludeExtraneousValues: true }),
+        accessToken: tokens.accessToken,
+      },
+      refreshToken: tokens.refreshToken,
     };
   }
 
-  async refreshToken(refreshToken: string): Promise<AuthResponseDto> {
+  async refreshToken(refreshToken: string): Promise<{ authResponse: AuthResponseDto; refreshToken: string }> {
     try {
       // Check if the refresh token exists in the database and is not expired
       const storedToken = await this.prisma.refreshToken.findUnique({
@@ -245,8 +254,11 @@ export class AuthService {
       );
 
       return {
-        user: plainToClass(UserResponseDto, storedToken.user, { excludeExtraneousValues: true }),
-        ...tokens,
+        authResponse: {
+          user: plainToClass(UserResponseDto, storedToken.user, { excludeExtraneousValues: true }),
+          accessToken: tokens.accessToken,
+        },
+        refreshToken: tokens.refreshToken,
       };
     } catch (error) {
       if (error instanceof UnauthorizedException) {

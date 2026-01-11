@@ -105,7 +105,7 @@ Each task builds incrementally, ensuring the system remains functional throughou
   - Verify CORS configuration allows credentials
   - Ask the user if questions arise
 
-- [ ] 10. Frontend: Refactor TokenManager to use memory-only storage
+- [x] 10. Frontend: Refactor TokenManager to use memory-only storage
   - Remove all localStorage operations from TokenManager
   - Store access token in private class variable (memory only)
   - Remove getRefreshToken() method (no longer needed)
@@ -117,7 +117,7 @@ Each task builds incrementally, ensuring the system remains functional throughou
   - **Property 3: Access token memory-only storage**
   - **Validates: Requirements 1.3**
 
-- [ ] 11. Frontend: Update API client to send cookies with requests
+- [x] 11. Frontend: Update API client to send cookies with requests
   - Set withCredentials: true in axios configuration
   - Ensure Authorization header is still added for access tokens
   - Update request interceptor to handle memory-based token storage
@@ -127,7 +127,7 @@ Each task builds incrementally, ensuring the system remains functional throughou
   - **Property 4: Authorization header format**
   - **Validates: Requirements 1.4**
 
-- [ ] 12. Frontend: Refactor refresh flow to use cookie-based refresh tokens
+- [x] 12. Frontend: Refactor refresh flow to use cookie-based refresh tokens
   - Update POST /auth/refresh call to send no request body
   - Rely on browser to automatically send refresh token cookie
   - Update response handling to store only access token in memory
@@ -142,7 +142,7 @@ Each task builds incrementally, ensuring the system remains functional throughou
   - **Property 19: Request retry after refresh**
   - **Validates: Requirements 4.6**
 
-- [ ] 13. Frontend: Update login flow to use cookie-based refresh tokens
+- [x] 13. Frontend: Update login flow to use cookie-based refresh tokens
   - Update login response handling to store only access token in memory
   - Remove manual refresh token storage from login flow
   - Verify browser automatically stores refresh token cookie
@@ -156,7 +156,7 @@ Each task builds incrementally, ensuring the system remains functional throughou
   - **Property 12: No client-side cookie access**
   - **Validates: Requirements 3.4**
 
-- [ ] 14. Frontend: Update logout flow to clear memory-only tokens
+- [x] 14. Frontend: Update logout flow to clear memory-only tokens
   - Update logout to call POST /auth/logout (cookie cleared by server)
   - Clear access token from memory using clearAccessToken()
   - Ensure navigation to login page after logout
@@ -170,7 +170,7 @@ Each task builds incrementally, ensuring the system remains functional throughou
   - **Property 25: Logout navigation**
   - **Validates: Requirements 5.5**
 
-- [ ] 15. Frontend: Update auth hooks to use refactored TokenManager
+- [x] 15. Frontend: Update auth hooks to use refactored TokenManager
   - Update useLogin to use setAccessToken() instead of setTokens()
   - Update useLogout to use clearAccessToken() instead of clearTokens()
   - Update useRefreshToken to call refresh endpoint without body
@@ -201,7 +201,7 @@ Each task builds incrementally, ensuring the system remains functional throughou
   - **Property 39: Offline request queueing**
   - **Validates: Requirements 12.4**
 
-- [ ] 18. Frontend: Update error messages to be user-friendly
+- [x] 18. Frontend: Update error messages to be user-friendly
   - Replace technical error messages with user-friendly alternatives
   - Ensure no technical details are exposed in UI
   - Map error types to appropriate user messages
@@ -211,26 +211,26 @@ Each task builds incrementally, ensuring the system remains functional throughou
   - **Property 40: User-friendly error messages**
   - **Validates: Requirements 12.5**
 
-- [ ] 19. Checkpoint - Frontend refactoring complete
+- [x] 19. Checkpoint - Frontend refactoring complete
   - Ensure all frontend tests pass
   - Verify tokens are stored in memory only
   - Verify cookies are sent automatically with requests
   - Verify refresh flow works with cookies
   - Ask the user if questions arise
 
-- [ ] 20. Backend: Remove refresh token from response body (breaking change)
+- [x] 20. Backend: Remove refresh token from response body (breaking change)
   - Remove refreshToken field from AuthResponseDto
   - Update login, register, and refresh endpoints to not return refresh token in body
   - This completes the migration to cookie-only refresh tokens
   - _Requirements: 9.3_
 
-- [ ] 21. Frontend: Remove backward compatibility code
+- [x] 21. Frontend: Remove backward compatibility code
   - Remove any remaining references to refresh token in request bodies
   - Remove old localStorage-based token storage code
   - Clean up deprecated methods in TokenManager
   - _Requirements: 9.1, 9.2, 9.4_
 
-- [ ] 22. Backend: Add unit tests for token validation
+- [-] 22. Backend: Add unit tests for token validation
   - Test JWT signature validation with invalid signatures
   - Test token expiration validation with expired tokens
   - Test user existence validation with non-existent users

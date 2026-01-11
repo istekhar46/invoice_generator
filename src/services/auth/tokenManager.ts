@@ -1,54 +1,23 @@
-// Token storage keys
-const ACCESS_TOKEN_KEY = 'access_token'
-const REFRESH_TOKEN_KEY = 'refresh_token'
-
-export interface TokenPair {
-  accessToken: string
-  refreshToken: string
-}
-
 // Token management service
+// Uses memory-only storage for access tokens (no localStorage)
+// Refresh tokens are managed via HttpOnly cookies by the backend
 export class TokenManager {
-  // Get access token from storage
+  // In-memory storage for access token (not persisted)
+  private static accessToken: string | null = null
+
+  // Get access token from memory
   static getAccessToken(): string | null {
-    try {
-      return localStorage.getItem(ACCESS_TOKEN_KEY)
-    } catch (error) {
-      console.warn('Failed to get access token from localStorage:', error)
-      return null
-    }
+    return this.accessToken
   }
 
-  // Get refresh token from storage
-  static getRefreshToken(): string | null {
-    try {
-      return localStorage.getItem(REFRESH_TOKEN_KEY)
-    } catch (error) {
-      console.warn('Failed to get refresh token from localStorage:', error)
-      return null
-    }
+  // Set access token in memory
+  static setAccessToken(token: string): void {
+    this.accessToken = token
   }
 
-  // Set both tokens
-  static setTokens(accessToken: string, refreshToken: string): void {
-    try {
-      localStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
-      localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
-    } catch (error) {
-      console.error('Failed to store tokens in localStorage:', error)
-      // In case of storage failure, we should still continue but warn the user
-      // This could happen in private browsing mode or when storage is full
-    }
-  }
-
-  // Clear all tokens
-  static clearTokens(): void {
-    try {
-      localStorage.removeItem(ACCESS_TOKEN_KEY)
-      localStorage.removeItem(REFRESH_TOKEN_KEY)
-    } catch (error) {
-      console.warn('Failed to clear tokens from localStorage:', error)
-    }
+  // Clear access token from memory
+  static clearAccessToken(): void {
+    this.accessToken = null
   }
 
   // Check if user is authenticated
@@ -57,12 +26,12 @@ export class TokenManager {
     return !!token && !this.isTokenExpired(token)
   }
 
-  // Check if token is expired (basic check - in production you'd decode JWT)
+  // Check if token is expired
   static isTokenExpired(token: string): boolean {
     if (!token) return true
     
     try {
-      // Basic JWT structure check
+      // Decode JWT payload to check expiration
       const payload = JSON.parse(atob(token.split('.')[1]))
       const currentTime = Date.now() / 1000
       return payload.exp < currentTime

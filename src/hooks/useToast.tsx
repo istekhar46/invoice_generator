@@ -5,6 +5,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react'
 import { ToastContainer, type Toast } from '../components/ui/Toast'
+import { sanitizeErrorMessage } from '../utils/errorMessages'
 
 interface ToastContextType {
   toasts: Toast[]
@@ -139,7 +140,10 @@ export const useErrorHandler = () => {
       message = String((err as any).message)
     }
 
-    error(title, message)
+    // Sanitize the message to remove technical details
+    const sanitizedMessage = sanitizeErrorMessage(message)
+    
+    error(title, sanitizedMessage)
   }, [error])
 
   return { handleError }

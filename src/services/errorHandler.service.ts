@@ -4,6 +4,7 @@
  */
 
 import type { ErrorType } from '../components/shared/ErrorDisplay'
+import { sanitizeErrorMessage } from '../utils/errorMessages'
 
 export interface ErrorReport {
   error: Error
@@ -71,8 +72,14 @@ class ErrorHandlerService {
    * Handle an error with optional context
    */
   handleError(error: Error, type: ErrorType = 'unknown', context?: Record<string, any>) {
+    // Sanitize error message to remove technical details
+    const sanitizedMessage = sanitizeErrorMessage(error.message)
+    const sanitizedError = new Error(sanitizedMessage)
+    sanitizedError.name = error.name
+    sanitizedError.stack = error.stack
+    
     const errorReport: ErrorReport = {
-      error,
+      error: sanitizedError,
       type,
       context,
       timestamp: new Date(),
@@ -80,13 +87,17 @@ class ErrorHandlerService {
       url: window.location.href,
     }
 
-    // Store error report
-    this.storeErrorReport(errorReport)
+    // Store error report (with original error for debugging)
+    this.storeErrorReport({
+      ...errorReport,
+      error, // Store original error for debugging
+    })
 
-    // Log to console if enabled
+    // Log to console if enabled (with original error for debugging)
     if (this.config.enableConsoleLogging) {
       console.error('Error handled by ErrorHandlerService:', {
         message: error.message,
+        sanitizedMessage,
         stack: error.stack,
         type,
         context,
@@ -94,7 +105,7 @@ class ErrorHandlerService {
       })
     }
 
-    // Send to error reporting service if enabled
+    // Send to error reporting service if enabled (with sanitized error)
     if (this.config.enableErrorReporting) {
       this.reportError(errorReport)
     }

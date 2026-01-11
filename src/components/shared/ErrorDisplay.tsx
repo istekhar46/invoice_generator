@@ -7,6 +7,7 @@ import React from 'react'
 import { AlertTriangle, Wifi, Database, FileX, RefreshCw } from 'lucide-react'
 import { ErrorAlert } from '../ui/ErrorAlert'
 import { Button } from '../ui/Button'
+import { sanitizeErrorMessage } from '../../utils/errorMessages'
 
 export type ErrorType = 
   | 'network'
@@ -87,20 +88,23 @@ const getErrorConfig = (type: ErrorType) => {
 }
 
 /**
- * Extract error message from various error types
+ * Extract error message from various error types and sanitize it
  */
 const getErrorMessage = (error: Error | string | null): string => {
   if (!error) return 'An unknown error occurred'
   
+  let message: string
+  
   if (typeof error === 'string') {
-    return error
+    message = error
+  } else if (error instanceof Error) {
+    message = error.message || 'An unknown error occurred'
+  } else {
+    message = 'An unknown error occurred'
   }
   
-  if (error instanceof Error) {
-    return error.message || 'An unknown error occurred'
-  }
-  
-  return 'An unknown error occurred'
+  // Sanitize the message to remove technical details
+  return sanitizeErrorMessage(message)
 }
 
 /**

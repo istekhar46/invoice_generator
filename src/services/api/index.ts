@@ -7,7 +7,6 @@ export { authApi, AuthApi } from './authApi'
 export type { 
   LoginDto, 
   RegisterDto, 
-  RefreshTokenDto, 
   UserResponseDto, 
   AuthResponseDto 
 } from './authApi'
@@ -50,6 +49,6 @@ export type { DashboardStatisticsDto } from './dashboardApi'
 
 // Export token management
 export { TokenManager } from '../auth/tokenManager'
-export type { TokenPair } from '../auth/tokenManager'
+
 // Export hooks
 export { useRequestCancellation, useApiErrorHandler } from '../../hooks/useRequestCancellation'

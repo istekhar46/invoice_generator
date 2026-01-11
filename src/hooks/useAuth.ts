@@ -79,8 +79,9 @@ export function useLogin() {
     // Retry delay
     retryDelay: 2000,
     onSuccess: (data: AuthResponseDto) => {
-      // Store tokens securely
-      TokenManager.setTokens(data.accessToken, data.refreshToken)
+      // Store only access token in memory (refresh token automatically stored in HttpOnly cookie by browser)
+      // Requirements 3.3, 3.4: No manual refresh token handling - browser manages cookie automatically
+      TokenManager.setAccessToken(data.accessToken)
       
       // Use centralized cache invalidation service
       const cacheService = getCacheInvalidationService(queryClient)
@@ -91,19 +92,18 @@ export function useLogin() {
     },
     onError: (err: any) => {
       // Clear any existing tokens on login failure
-      TokenManager.clearTokens()
+      TokenManager.clearAccessToken()
       
       console.error('Login failed:', err)
       
-      // Show different error messages based on network status and error type
+      // Show user-friendly error message
+      // The error message is already user-friendly from apiClient
+      const errorMessage = err?.message || 'Please check your credentials and try again'
+      
       if (!isOnline) {
-        error('Cannot login while offline', 'Please check your internet connection and try again')
-      } else if (err?.status === 401) {
-        error('Invalid credentials', 'Please check your email and password')
-      } else if (err?.status === 400 || err?.status === 422) {
-        error('Invalid login data', err?.data?.message || 'Please check your input and try again')
+        error('Cannot Login', 'Please check your internet connection and try again')
       } else {
-        error('Login failed', 'Please check your credentials and try again')
+        error('Login Failed', errorMessage)
       }
     },
   })
@@ -121,8 +121,9 @@ export function useRegister() {
   return useMutation({
     mutationFn: (userData: RegisterDto) => authApi.register(userData),
     onSuccess: (data: AuthResponseDto) => {
-      // Store tokens after successful registration
-      TokenManager.setTokens(data.accessToken, data.refreshToken)
+      // Store only access token in memory (refresh token automatically stored in HttpOnly cookie by browser)
+      // Requirements 3.3, 3.4: No manual refresh token handling - browser manages cookie automatically
+      TokenManager.setAccessToken(data.accessToken)
       
       // Use centralized cache invalidation service
       const cacheService = getCacheInvalidationService(queryClient)
@@ -131,9 +132,13 @@ export function useRegister() {
       
       success('Account created!', `Welcome ${data.user.displayName || data.user.email}`)
     },
-    onError: (err) => {
+    onError: (err: any) => {
       console.error('Registration failed:', err)
-      error('Registration failed', 'Please check your information and try again')
+      
+      // Show user-friendly error message
+      // The error message is already user-friendly from apiClient
+      const errorMessage = err?.message || 'Please check your information and try again'
+      error('Registration Failed', errorMessage)
     },
   })
 }
@@ -151,8 +156,8 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => authApi.logout(),
     onSuccess: () => {
-      // Clear tokens from storage
-      TokenManager.clearTokens()
+      // Clear access token from memory (refresh token cookie cleared by server)
+      TokenManager.clearAccessToken()
       
       // Use centralized cache invalidation service
       const cacheService = getCacheInvalidationService(queryClient)
@@ -166,7 +171,7 @@ export function useLogout() {
     onError: (err) => {
       // Even if server logout fails, clear local state
       console.warn('Server logout failed, clearing local state:', err)
-      TokenManager.clearTokens()
+      TokenManager.clearAccessToken()
       
       const cacheService = getCacheInvalidationService(queryClient)
       cacheService.crossEntity.onLogout()
@@ -189,10 +194,10 @@ export function useRefreshToken() {
   const navigate = useNavigate()
 
   return useMutation({
-    mutationFn: (refreshToken: string) => authApi.refreshToken(refreshToken),
+    mutationFn: () => authApi.refreshToken(), // No parameter needed - cookie sent automatically
     onSuccess: (data: AuthResponseDto) => {
-      // Update tokens with new values
-      TokenManager.setTokens(data.accessToken, data.refreshToken)
+      // Update access token with new value (refresh token updated via cookie)
+      TokenManager.setAccessToken(data.accessToken)
       
       // Use centralized cache invalidation service
       const cacheService = getCacheInvalidationService(queryClient)
@@ -200,8 +205,8 @@ export function useRefreshToken() {
     },
     onError: (error) => {
       console.error('Token refresh failed:', error)
-      // Clear tokens and redirect to login
-      TokenManager.clearTokens()
+      // Clear access token and redirect to login
+      TokenManager.clearAccessToken()
       
       const cacheService = getCacheInvalidationService(queryClient)
       cacheService.crossEntity.onLogout()
@@ -227,25 +232,23 @@ export function useAuthStatus() {
 
   const isAuthenticated = TokenManager.isAuthenticated() && !!user && !error
 
-  // Validate refresh token on mount and clear invalid auth.
-  // Also attempt a proactive refresh if we have a refresh token but no access token.
+  // Validate authentication on mount and attempt proactive refresh if needed
   useEffect(() => {
-    // If there's a 401 error or missing refresh token, logout
-    if (error?.status === 401 || (error && !TokenManager.getRefreshToken())) {
-      TokenManager.clearTokens()
+    // If there's a 401 error, logout
+    if (error?.status === 401) {
+      TokenManager.clearAccessToken()
       hasAttemptedProactiveRefresh.current = false
       return
     }
 
-    // If access token missing but refresh token exists, attempt refresh once on mount
+    // If access token missing, attempt refresh once on mount
     const access = TokenManager.getAccessToken()
-    const refreshToken = TokenManager.getRefreshToken()
 
-    if (!access && refreshToken && !refreshMutation.isPending && !refreshMutation.isError && !hasAttemptedProactiveRefresh.current) {
+    if (!access && !refreshMutation.isPending && !refreshMutation.isError && !hasAttemptedProactiveRefresh.current) {
       // Mark attempted so we only try once per hook instance — prevents multiple concurrent refreshes
       hasAttemptedProactiveRefresh.current = true
       // Use mutate to trigger onSuccess/onError handlers defined in useRefreshToken
-      refreshMutation.mutate(refreshToken)
+      refreshMutation.mutate()
     }
   }, [error, refreshMutation])
 
@@ -274,8 +277,9 @@ export function useGoogleLogin() {
   return useMutation({
     mutationFn: (code: string) => authApi.googleLogin(code),
     onSuccess: (data: AuthResponseDto) => {
-      // Store tokens after successful Google login
-      TokenManager.setTokens(data.accessToken, data.refreshToken)
+      // Store only access token in memory (refresh token automatically stored in HttpOnly cookie by browser)
+      // Requirements 3.3, 3.4: No manual refresh token handling - browser manages cookie automatically
+      TokenManager.setAccessToken(data.accessToken)
       
       // Use centralized cache invalidation service
       const cacheService = getCacheInvalidationService(queryClient)

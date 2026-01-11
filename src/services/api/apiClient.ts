@@ -3,6 +3,7 @@ import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosReq
 import { ENV } from '../../utils/env'
 import { TokenManager } from '../auth/tokenManager'
 import { navigationService } from '../navigation/navigationService'
+import { getUserFriendlyErrorMessage, getOperationContext } from '../../utils/errorMessages'
 
 // Request configuration interface
 export interface RequestConfig extends AxiosRequestConfig {
@@ -59,6 +60,7 @@ class BaseApiClient implements ApiClient {
     this.axiosInstance = axios.create({
       baseURL: ENV.API_BASE_URL,
       timeout: 10000,
+      withCredentials: true, // Send cookies with requests
       headers: {
         'Content-Type': 'application/json',
       },
@@ -135,14 +137,6 @@ class BaseApiClient implements ApiClient {
           this.isRefreshing = true
 
           try {
-            const refreshToken = TokenManager.getRefreshToken()
-            
-            // If no refresh token available, logout immediately
-            if (!refreshToken) {
-              this.handleAuthFailure()
-              return Promise.reject(new Error('No refresh token available - please login again'))
-            }
-
             // Check if we're offline before attempting refresh
             if (typeof navigator !== 'undefined' && !navigator.onLine) {
               this.isRefreshing = false
@@ -150,12 +144,11 @@ class BaseApiClient implements ApiClient {
             }
 
             // Attempt to refresh the token
-            const response = await this.axiosInstance.post('/auth/refresh', {
-              refreshToken,
-            }, { skipAuth: true } as RequestConfig)
+            // Note: Refresh token is sent via HttpOnly cookie automatically
+            const response = await this.axiosInstance.post('/auth/refresh', {}, { skipAuth: true } as RequestConfig)
 
-            const { accessToken, refreshToken: newRefreshToken } = response.data
-            TokenManager.setTokens(accessToken, newRefreshToken)
+            const { accessToken } = response.data
+            TokenManager.setAccessToken(accessToken)
 
             // Process failed queue
             this.processQueue(null, accessToken)
@@ -173,30 +166,42 @@ class BaseApiClient implements ApiClient {
           }
         }
         
-        // Transform axios error to ApiError with improved error messages
+        // Transform axios error to ApiError with user-friendly messages
         if (error.response) {
-          // Extract error message with fallback chain
-          const errorMessage = 
-            error.response.data?.message || 
-            error.response.data?.error ||
-            this.getDefaultErrorMessage(error.response.status) ||
-            error.message
+          // Get operation context from URL
+          const operation = getOperationContext(originalRequest.url || '')
           
+          // Get user-friendly error message
+          const { title, message } = getUserFriendlyErrorMessage(error.response.data, {
+            status: error.response.status,
+            statusText: error.response.statusText,
+            operation,
+            isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
+          })
+          
+          // Use the user-friendly message
           throw new ApiError(
-            errorMessage,
+            message,
             error.response.status,
             error.response.statusText,
             error.response.data
           )
         } else if (error.request) {
+          // Network error - no response received
+          const { message } = getUserFriendlyErrorMessage(null, {
+            status: 0,
+            isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
+          })
+          
           throw new ApiError(
-            'Network error - please check your connection',
+            message,
             0,
             'Network Error'
           )
         } else {
+          // Unknown error
           throw new ApiError(
-            error.message || 'An unexpected error occurred',
+            'Something went wrong. Please try again',
             0,
             'Unknown Error'
           )
@@ -219,27 +224,10 @@ class BaseApiClient implements ApiClient {
 
   private handleAuthFailure() {
     // Clear tokens
-    TokenManager.clearTokens()
+    TokenManager.clearAccessToken()
     
     // Navigate to login page using navigation service
     navigationService.navigateToLogin()
-  }
-
-  private getDefaultErrorMessage(status: number): string {
-    const errorMessages: Record<number, string> = {
-      400: 'Invalid request - please check your input',
-      401: 'Authentication required - please log in',
-      403: 'Access denied - you do not have permission',
-      404: 'Resource not found',
-      409: 'Conflict - the resource may have been modified',
-      422: 'Validation failed - please check your input',
-      500: 'Server error - please try again later',
-      502: 'Bad gateway - server is temporarily unavailable',
-      503: 'Service unavailable - please try again later',
-      504: 'Gateway timeout - request took too long',
-    }
-    
-    return errorMessages[status] || ''
   }
 
   async get<T>(url: string, config?: RequestConfig): Promise<T> {
@@ -294,20 +282,14 @@ class BaseApiClient implements ApiClient {
 
   // Get user-friendly error message
   getErrorMessage(error: ApiError): string {
-    const errorType = this.classifyError(error)
+    // Use the centralized error message utility
+    const { message } = getUserFriendlyErrorMessage(error.data, {
+      status: error.status,
+      statusText: error.statusText,
+      isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
+    })
     
-    switch (errorType) {
-      case 'network':
-        return 'Unable to connect to the server. Please check your internet connection.'
-      case 'auth':
-        return 'You are not authorized to perform this action. Please log in again.'
-      case 'validation':
-        return error.data?.message || 'Please check your input and try again.'
-      case 'server':
-        return 'Server error occurred. Please try again later.'
-      default:
-        return error.message || 'An unexpected error occurred.'
-    }
+    return message
   }
 
   // Get the axios instance for advanced usage
