@@ -3,6 +3,7 @@ import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosReq
 import { ENV } from '../../utils/env'
 import { TokenManager } from '../auth/tokenManager'
 import { navigationService } from '../navigation/navigationService'
+import { authCleanupService } from '../auth/authCleanup'
 import { getUserFriendlyErrorMessage, getOperationContext } from '../../utils/errorMessages'
 
 // Request configuration interface
@@ -223,8 +224,8 @@ class BaseApiClient implements ApiClient {
   }
 
   private handleAuthFailure() {
-    // Clear tokens
-    TokenManager.clearAccessToken()
+    // Clear all authentication state (token + profile cache)
+    authCleanupService.clearAuthState()
     
     // Navigate to login page using navigation service
     navigationService.navigateToLogin()

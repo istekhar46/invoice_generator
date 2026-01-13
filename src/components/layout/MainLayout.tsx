@@ -56,7 +56,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ className }) => {
       {/* Main content area with responsive container */}
       <main className="flex-1">
         <ResponsiveContainer
-          maxWidth={isAuthenticated ? 'xl' : 'lg'}
+          // maxWidth={isAuthenticated ? 'xl' : 'lg'}
           padding="md"
           className="py-6"
         >

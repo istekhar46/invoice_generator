@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { createBrowserRouter } from 'react-router-dom'
 import { MainLayout } from '../components/layout/MainLayout'
 import { NavigationProvider } from '../components/providers/NavigationProvider'
 import { ProtectedRoute } from './ProtectedRoute'
@@ -7,6 +7,7 @@ import { CompanySetupGuard } from '../components/guards/CompanySetupGuard'
 
 // Page components
 import {
+  HomePage,
   LoginPage,
   SignupPage,
   DashboardPage,
@@ -26,10 +27,14 @@ export const router = createBrowserRouter([
       </NavigationProvider>
     ),
     children: [
-      // Root redirect to dashboard for authenticated users, login for unauthenticated
+      // Root route - Homepage for unauthenticated users, redirect to dashboard for authenticated
       {
         index: true,
-        element: <Navigate to="/dashboard" replace />,
+        element: (
+          <PublicRoute>
+            <HomePage />
+          </PublicRoute>
+        ),
       },
       
       // Public routes (only accessible when NOT authenticated)
@@ -107,6 +112,10 @@ export const router = createBrowserRouter([
 
 // Route metadata for breadcrumbs and navigation
 export const routeMetadata = {
+  '/': {
+    title: 'Home',
+    breadcrumb: 'Home',
+  },
   '/dashboard': {
     title: 'Dashboard',
     breadcrumb: 'Dashboard',

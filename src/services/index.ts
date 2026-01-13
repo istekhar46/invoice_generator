@@ -44,3 +44,6 @@ export {
 
 // Navigation service
 export { navigationService } from './navigation/navigationService'
+
+// Auth cleanup service
+export { authCleanupService } from './auth/authCleanup'

@@ -159,6 +159,9 @@ export function useLogout() {
       // Clear access token from memory (refresh token cookie cleared by server)
       TokenManager.clearAccessToken()
       
+      // Immediately remove profile query data to ensure UI updates instantly
+      queryClient.removeQueries({ queryKey: queryKeys.profile() })
+      
       // Use centralized cache invalidation service
       const cacheService = getCacheInvalidationService(queryClient)
       cacheService.crossEntity.onLogout()
@@ -172,6 +175,9 @@ export function useLogout() {
       // Even if server logout fails, clear local state
       console.warn('Server logout failed, clearing local state:', err)
       TokenManager.clearAccessToken()
+      
+      // Immediately remove profile query data to ensure UI updates instantly
+      queryClient.removeQueries({ queryKey: queryKeys.profile() })
       
       const cacheService = getCacheInvalidationService(queryClient)
       cacheService.crossEntity.onLogout()
@@ -205,9 +211,13 @@ export function useRefreshToken() {
     },
     onError: (error) => {
       console.error('Token refresh failed:', error)
-      // Clear access token and redirect to login
+      // Clear access token first
       TokenManager.clearAccessToken()
       
+      // Immediately remove profile query data to ensure UI updates instantly
+      queryClient.removeQueries({ queryKey: queryKeys.profile() })
+      
+      // Clear all other cached data
       const cacheService = getCacheInvalidationService(queryClient)
       cacheService.crossEntity.onLogout()
       
@@ -226,6 +236,7 @@ export function useRefreshToken() {
 export function useAuthStatus() {
   const { data: user, isLoading, error } = useUserProfile()
   const refreshMutation = useRefreshToken()
+  const queryClient = useQueryClient()
   
   // Use a ref to track proactive refresh attempts per hook instance
   const hasAttemptedProactiveRefresh = useRef(false)
@@ -234,9 +245,10 @@ export function useAuthStatus() {
 
   // Validate authentication on mount and attempt proactive refresh if needed
   useEffect(() => {
-    // If there's a 401 error, logout
+    // If there's a 401 error, clear tokens and profile data immediately
     if (error?.status === 401) {
       TokenManager.clearAccessToken()
+      queryClient.removeQueries({ queryKey: queryKeys.profile() })
       hasAttemptedProactiveRefresh.current = false
       return
     }
@@ -250,7 +262,7 @@ export function useAuthStatus() {
       // Use mutate to trigger onSuccess/onError handlers defined in useRefreshToken
       refreshMutation.mutate()
     }
-  }, [error, refreshMutation])
+  }, [error, refreshMutation, queryClient])
 
   // Reset the flag when tokens are successfully refreshed
   useEffect(() => {

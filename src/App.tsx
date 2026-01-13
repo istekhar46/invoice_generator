@@ -5,7 +5,7 @@ import { router } from './routes'
 import { ErrorBoundary } from './components/shared'
 import { OfflineIndicator, OfflineBanner } from './components/shared/OfflineIndicator'
 import { ToastProvider } from './hooks/useToast'
-import { errorHandlerService, initializeCacheService } from './services'
+import { errorHandlerService, initializeCacheService, authCleanupService } from './services'
 import { queryClient } from './lib'
 import './index.css'
 
@@ -18,6 +18,10 @@ errorHandlerService.updateConfig({
 // Initialize cache invalidation service
 // Requirements: 7.1, 7.6 - cache invalidation strategies and background refetch
 initializeCacheService(queryClient)
+
+// Initialize auth cleanup service
+// Ensures consistent authentication state cleanup across all logout/auth-failure scenarios
+authCleanupService.initialize(queryClient)
 
 /**
  * Main App component that sets up routing and provides the application shell.
