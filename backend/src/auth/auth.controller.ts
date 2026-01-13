@@ -29,18 +29,37 @@ export class AuthController {
   private readonly REFRESH_TOKEN_COOKIE_NAME = 'refreshToken';
   private readonly REFRESH_TOKEN_COOKIE_OPTIONS;
 
+  /**
+   * Initialize AuthController with configurable cookie settings
+   * 
+   * Cookie configuration is read from environment variables:
+   * - COOKIE_DOMAIN: Domain for the cookie (optional, defaults to current domain)
+   * - COOKIE_PATH: Path for the cookie (default: /api/v1/auth/refresh)
+   * - COOKIE_SECURE: Whether to use secure flag (default: true in production, false in dev)
+   * - COOKIE_SAME_SITE: SameSite attribute (default: strict, options: strict/lax/none)
+   * - COOKIE_MAX_AGE: Max age in milliseconds (default: 7 days)
+   */
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
   ) {
-    // Configure refresh token cookie options
+    // Configure refresh token cookie options from environment variables
     const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
+    
+    // Get cookie configuration from environment with sensible defaults
+    const cookieDomain = this.configService.get<string>('COOKIE_DOMAIN'); // undefined = current domain
+    const cookiePath = this.configService.get<string>('COOKIE_PATH', '/api/v1/auth/refresh');
+    const cookieSecure = this.configService.get<string>('COOKIE_SECURE', isProduction ? 'true' : 'false') === 'true';
+    const cookieSameSite = this.configService.get<'strict' | 'lax' | 'none'>('COOKIE_SAME_SITE', 'strict');
+    const cookieMaxAge = parseInt(this.configService.get<string>('COOKIE_MAX_AGE', String(7 * 24 * 60 * 60 * 1000)), 10);
+    
     this.REFRESH_TOKEN_COOKIE_OPTIONS = {
-      httpOnly: true,
-      secure: isProduction, // HTTPS only in production
-      sameSite: 'strict' as const,
-      path: '/api/v1/auth/refresh',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+      httpOnly: true, // Always true for security
+      secure: cookieSecure,
+      sameSite: cookieSameSite,
+      path: cookiePath,
+      maxAge: cookieMaxAge,
+      ...(cookieDomain && { domain: cookieDomain }), // Only set domain if provided
     };
   }
 
