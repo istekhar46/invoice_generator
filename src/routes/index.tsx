@@ -13,6 +13,7 @@ import {
   DashboardPage,
   CustomersPage,
   InvoicesPage,
+  QuickInvoicePage,
   CompanyProfilePage,
   SettingsPage,
   NotFoundPage,
@@ -85,6 +86,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'quick-invoice',
+        element: (
+          <ProtectedRoute>
+            <QuickInvoicePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'company',
         element: (
           <ProtectedRoute>
@@ -127,6 +136,10 @@ export const routeMetadata = {
   '/invoices': {
     title: 'Invoices',
     breadcrumb: 'Invoices',
+  },
+  '/quick-invoice': {
+    title: 'Quick Invoice',
+    breadcrumb: 'Quick Invoice',
   },
   '/company': {
     title: 'Company Profile',

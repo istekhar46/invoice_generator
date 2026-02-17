@@ -5,11 +5,12 @@ import { queryKeys } from '../lib'
 import { useToast } from './useToast'
 import { useOnlineStatus } from './useOnlineStatus'
 import { useAutoRetryOnReconnect } from './useRetry'
-import type { 
-  InvoiceQueryParams, 
-  InvoiceResponseDto, 
+import type {
+  InvoiceQueryParams,
+  InvoiceResponseDto,
   PaginatedInvoiceResponse,
   CreateInvoiceDto,
+  CreateQuickInvoiceDto,
   UpdateInvoiceDto
 } from '../services/api'
 
@@ -281,12 +282,67 @@ export function useCreateInvoice() {
       })
       // Invalidate dashboard statistics cache when new invoice is created
       cacheService.dashboard.invalidateStatistics()
-      
+
       success('Invoice created', `Invoice ${newInvoice.invoiceNumber} has been created successfully`)
     },
     onError: (err: any) => {
       console.error('Failed to create invoice:', err)
-      
+
+      // Show different error messages based on network status
+      if (!isOnline) {
+        error('Cannot create invoice while offline', 'Please check your internet connection and try again')
+      } else if (err?.status === 400 || err?.status === 422) {
+        error('Invalid invoice data', err?.data?.message || 'Please check your input and try again')
+      } else {
+        error('Failed to create invoice', 'Please check your input and try again')
+      }
+    },
+  })
+}
+
+/**
+ * Hook for creating a quick invoice (without saving company or customer details)
+ * Implements optimistic updates and proper cache invalidation
+ * Integrates offline support and retry mechanisms
+ */
+export function useCreateQuickInvoice() {
+  const queryClient = useQueryClient()
+  const { success, error } = useToast()
+  const { isOnline } = useOnlineStatus()
+
+  return useMutation({
+    mutationFn: (data: CreateQuickInvoiceDto) => invoiceApi.createQuickInvoice(data),
+    // Enhanced retry logic for offline support
+    retry: (failureCount, error: any) => {
+      // Don't retry if offline
+      if (!isOnline) return false
+      // Don't retry on authentication errors
+      if (error?.status === 401 || error?.status === 403) return false
+      // Don't retry on validation errors
+      if (error?.status === 400 || error?.status === 422) return false
+      // Retry once for other errors
+      return failureCount < 1
+    },
+    // Retry delay
+    retryDelay: 2000,
+    onSuccess: (newInvoice) => {
+      // Use centralized cache invalidation service
+      const cacheService = getCacheInvalidationService(queryClient)
+      cacheService.invoices.addInvoice({
+        ...newInvoice,
+        serviceDate: new Date(newInvoice.serviceDate),
+        dueDate: new Date(newInvoice.dueDate),
+        createdAt: new Date(newInvoice.createdAt),
+        updatedAt: new Date(newInvoice.updatedAt),
+      })
+      // Invalidate dashboard statistics cache when new invoice is created
+      cacheService.dashboard.invalidateStatistics()
+
+      success('Quick invoice created', `Invoice ${newInvoice.invoiceNumber} has been created successfully`)
+    },
+    onError: (err: any) => {
+      console.error('Failed to create quick invoice:', err)
+
       // Show different error messages based on network status
       if (!isOnline) {
         error('Cannot create invoice while offline', 'Please check your internet connection and try again')

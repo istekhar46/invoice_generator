@@ -25,6 +25,7 @@ export type {
 export { invoiceApi, InvoiceApi } from './invoiceApi'
 export type {
   CreateInvoiceDto,
+  CreateQuickInvoiceDto,
   UpdateInvoiceDto,
   UpdateInvoiceStatusDto,
   CreateLineItemDto,

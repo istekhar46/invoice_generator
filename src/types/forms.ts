@@ -95,6 +95,55 @@ export const invoiceSchema = z.object({
 export type InvoiceFormData = z.infer<typeof invoiceSchema>
 
 /**
+ * Quick invoice form schema and type
+ * For creating invoices without saving company or customer details
+ */
+export const quickInvoiceSchema = z.object({
+  // Optional customer ID - if provided, uses saved customer
+  customerId: z.string().optional(),
+
+  // Inline company details (all optional)
+  quickCompanyName: z.string().optional(),
+  quickCompanyAddress: z.string().optional(),
+  quickCompanyCity: z.string().optional(),
+  quickCompanyState: z.string().length(2, 'State must be 2 characters').optional(),
+  quickCompanyZipCode: z.string().regex(ZIP_CODE_REGEX, 'Invalid zip code format').optional(),
+  quickCompanyPhone: z.string().regex(PHONE_REGEX, 'Invalid phone number format').optional(),
+  quickCompanyEmail: z.string().email('Invalid email address').optional(),
+  quickCompanyTaxNumber: z.string().optional(),
+
+  // Inline customer details (all optional)
+  quickCustomerName: z.string().optional(),
+  quickCustomerEmail: z.string().email('Invalid email address').optional(),
+  quickCustomerPhone: z.string().regex(PHONE_REGEX, 'Invalid phone number format').optional(),
+  quickCustomerAddress: z.string().optional(),
+  quickCustomerCity: z.string().optional(),
+  quickCustomerState: z.string().length(2, 'State must be 2 characters').optional(),
+  quickCustomerZipCode: z.string().regex(ZIP_CODE_REGEX, 'Invalid zip code format').optional(),
+
+  // Standard invoice fields
+  serviceDate: z.date(),
+  dueDate: z.date(),
+  lineItems: z.array(lineItemSchema).min(1, 'At least one line item is required'),
+  notes: z.string().optional(),
+  taxRate: z.number().min(0, 'Tax rate must be positive').max(1, 'Tax rate must be between 0 and 1'),
+}).refine((data) => {
+  // Ensure due date is after service date
+  return data.dueDate >= data.serviceDate
+}, {
+  message: 'Due date must be on or after the service date',
+  path: ['dueDate'],
+}).refine((data) => {
+  // Either customerId OR quick customer details must be provided
+  return !!data.customerId || !!data.quickCustomerName
+}, {
+  message: 'Either select a customer or provide customer details',
+  path: ['quickCustomerName'],
+})
+
+export type QuickInvoiceFormData = z.infer<typeof quickInvoiceSchema>
+
+/**
  * Additional form types for specific use cases
  */
 export interface LineItemInput {

@@ -83,7 +83,7 @@ export type InvoiceStatus = 'draft' | 'sent' | 'paid'
 export interface Invoice {
   id: string
   userId: string
-  customerId: string
+  customerId: string | null
   invoiceNumber: string
   serviceDate: Date
   dueDate: Date
@@ -96,6 +96,23 @@ export interface Invoice {
   status: InvoiceStatus
   createdAt: Date
   updatedAt: Date
+  // Quick invoice fields
+  isQuickInvoice?: boolean
+  quickCompanyName?: string
+  quickCompanyAddress?: string
+  quickCompanyCity?: string
+  quickCompanyState?: string
+  quickCompanyZipCode?: string
+  quickCompanyPhone?: string
+  quickCompanyEmail?: string
+  quickCompanyTaxNumber?: string
+  quickCustomerName?: string
+  quickCustomerEmail?: string
+  quickCustomerPhone?: string
+  quickCustomerAddress?: string
+  quickCustomerCity?: string
+  quickCustomerState?: string
+  quickCustomerZipCode?: string
 }
 
 /**

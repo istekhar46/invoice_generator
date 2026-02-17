@@ -102,7 +102,7 @@ model Customer {
 model Invoice {
   id            String        @id @default(cuid())
   userId        String
-  customerId    String
+  customerId    String?
   invoiceNumber String        @unique
   serviceDate   DateTime
   dueDate       DateTime
@@ -114,12 +114,34 @@ model Invoice {
   status        InvoiceStatus @default(DRAFT)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
-  
+
+  // Inline company details for quick invoices (optional)
+  quickCompanyName    String?
+  quickCompanyAddress String?
+  quickCompanyCity    String?
+  quickCompanyState   String?
+  quickCompanyZipCode String?
+  quickCompanyPhone   String?
+  quickCompanyEmail   String?
+  quickCompanyTaxNumber String?
+
+  // Inline customer details for quick invoices (optional)
+  quickCustomerName    String?
+  quickCustomerEmail   String?
+  quickCustomerPhone   String?
+  quickCustomerAddress String?
+  quickCustomerCity    String?
+  quickCustomerState   String?
+  quickCustomerZipCode String?
+
+  // Flag to identify quick invoices
+  isQuickInvoice Boolean @default(false)
+
   // Relations
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  customer  Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer  Customer?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
   lineItems LineItem[]
-  
+
   // Indexes for query optimization
   @@index([userId])
   @@index([customerId])
@@ -128,6 +150,7 @@ model Invoice {
   @@index([createdAt])
   @@index([userId, status])
   @@index([userId, customerId])
+  @@index([isQuickInvoice])
   @@map("invoices")
 }
 
