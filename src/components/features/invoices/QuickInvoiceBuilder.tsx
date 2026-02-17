@@ -6,8 +6,9 @@
 import React, { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import type { Invoice, Customer, CompanyProfile, LineItem, LineItemType } from '../../../types/entities'
+import type { Invoice, LineItem } from '../../../types/entities'
 import type { QuickInvoiceFormData } from '../../../types/forms'
+import type { CreateQuickInvoiceDto } from '../../../services/api'
 import { quickInvoiceSchema } from '../../../types/forms'
 import { useCreateQuickInvoice } from '../../../hooks/useInvoices'
 import { Button } from '../../ui/Button'
@@ -67,7 +68,6 @@ interface QuickInvoiceBuilderProps {
 }
 
 export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
-  invoice,
   onSave,
   className,
 }) => {
@@ -75,7 +75,6 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
   const [lineItems, setLineItems] = useState<LineItem[]>([])
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
-  const [showPreview, setShowPreview] = useState(false)
 
   const createQuickInvoice = useCreateQuickInvoice()
 
@@ -89,11 +88,9 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
     watch,
     setValue,
     formState: { errors },
-    reset,
   } = useForm<QuickInvoiceFormData>({
     resolver: zodResolver(quickInvoiceSchema),
     defaultValues: {
-      isQuickInvoice: true,
       customerId: '',
       serviceDate: new Date(),
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
@@ -129,12 +126,6 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
   }
 
   const totals = calculateTotals()
-
-  // Validation helpers
-  const validateCompanyStep = (): boolean => {
-    // Company step is optional
-    return true
-  }
 
   const validateCustomerStep = (): boolean => {
     // Either customerId OR quick customer name must be provided
@@ -231,7 +222,7 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
     }
   }
 
-  const onSubmit = async (data: QuickInvoiceFormData) => {
+  const onSubmit = async (data: QuickInvoiceFormData): Promise<void> => {
     try {
       setSubmitError(null)
       setSubmitSuccess(false)
@@ -243,7 +234,7 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
       }
 
       // Build the payload
-      const payload = {
+      const payload: CreateQuickInvoiceDto = {
         isQuickInvoice: true,
         customerId: data.customerId || undefined,
         quickCompanyName: data.quickCompanyName || undefined,
@@ -317,9 +308,27 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
       setTimeout(() => {
         onSave?.(
           {
-            ...newInvoice,
+            id: newInvoice.id,
+            userId: '', // Will be set by the caller if needed
+            customerId: newInvoice.customer.id,
+            invoiceNumber: newInvoice.invoiceNumber,
             serviceDate: new Date(newInvoice.serviceDate),
             dueDate: new Date(newInvoice.dueDate),
+            lineItems: newInvoice.lineItems.map(item => ({
+              id: item.id,
+              invoiceId: newInvoice.id,
+              type: item.type.toLowerCase() as 'material' | 'labor',
+              description: item.description,
+              quantity: item.quantity,
+              rate: item.rate,
+              amount: item.amount,
+            })),
+            subtotal: newInvoice.subtotal,
+            taxRate: newInvoice.taxRate,
+            taxAmount: newInvoice.taxAmount,
+            total: newInvoice.total,
+            notes: newInvoice.notes,
+            status: newInvoice.status.toLowerCase() as 'draft' | 'sent' | 'paid',
             createdAt: new Date(newInvoice.createdAt),
             updatedAt: new Date(newInvoice.updatedAt),
           } as Invoice,
