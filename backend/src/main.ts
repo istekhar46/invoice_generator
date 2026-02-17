@@ -23,14 +23,16 @@ async function bootstrap(): Promise<void> {
   app.use(cookieParser());
 
   // Security middleware
-  app.use(helmet({
-    crossOriginEmbedderPolicy: false,
-    contentSecurityPolicy: {
-      directives: {
-        imgSrc: [`'self'`, 'data:', 'https:'],
+  app.use(
+    helmet({
+      crossOriginEmbedderPolicy: false,
+      contentSecurityPolicy: {
+        directives: {
+          imgSrc: [`'self'`, 'data:', 'https:'],
+        },
       },
-    },
-  }));
+    }),
+  );
 
   // Enable CORS
   app.enableCors({
@@ -59,7 +61,9 @@ async function bootstrap(): Promise<void> {
   // Setup Swagger/OpenAPI documentation
   const configBuilder = new DocumentBuilder()
     .setTitle('Electrician Invoice API')
-    .setDescription('A comprehensive backend API for the Electrician Invoice Generation Web Application. This API provides secure endpoints for user authentication, company profile management, customer management, and invoice generation with line items.')
+    .setDescription(
+      'A comprehensive backend API for the Electrician Invoice Generation Web Application. This API provides secure endpoints for user authentication, company profile management, customer management, and invoice generation with line items.',
+    )
     .setVersion('1.0')
     .addBearerAuth(
       {

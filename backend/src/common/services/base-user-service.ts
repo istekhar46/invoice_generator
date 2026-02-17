@@ -22,10 +22,7 @@ export abstract class BaseUserService {
   /**
    * Validates that a customer belongs to the specified user
    */
-  protected async validateCustomerOwnership(
-    customerId: string,
-    userId: string,
-  ): Promise<void> {
+  protected async validateCustomerOwnership(customerId: string, userId: string): Promise<void> {
     const customer = await this.prisma.customer.findFirst({
       where: {
         id: customerId,
@@ -42,10 +39,7 @@ export abstract class BaseUserService {
   /**
    * Validates that an invoice belongs to the specified user
    */
-  protected async validateInvoiceOwnership(
-    invoiceId: string,
-    userId: string,
-  ): Promise<void> {
+  protected async validateInvoiceOwnership(invoiceId: string, userId: string): Promise<void> {
     const invoice = await this.prisma.invoice.findFirst({
       where: {
         id: invoiceId,
@@ -62,9 +56,7 @@ export abstract class BaseUserService {
   /**
    * Validates that a company profile belongs to the specified user
    */
-  protected async validateCompanyProfileOwnership(
-    userId: string,
-  ): Promise<void> {
+  protected async validateCompanyProfileOwnership(userId: string): Promise<void> {
     const companyProfile = await this.prisma.companyProfile.findUnique({
       where: { userId },
       select: { id: true },

@@ -106,7 +106,9 @@ describe('BaseUserService', () => {
     it('should pass when customer belongs to user', async () => {
       mockPrismaService.customer.findFirst.mockResolvedValue({ id: 'customer123' });
 
-      await expect(service.testValidateCustomerOwnership('customer123', 'user123')).resolves.not.toThrow();
+      await expect(
+        service.testValidateCustomerOwnership('customer123', 'user123'),
+      ).resolves.not.toThrow();
 
       expect(mockPrismaService.customer.findFirst).toHaveBeenCalledWith({
         where: {
@@ -120,7 +122,9 @@ describe('BaseUserService', () => {
     it('should throw NotFoundException when customer does not belong to user', async () => {
       mockPrismaService.customer.findFirst.mockResolvedValue(null);
 
-      await expect(service.testValidateCustomerOwnership('customer123', 'user123')).rejects.toThrow(NotFoundException);
+      await expect(service.testValidateCustomerOwnership('customer123', 'user123')).rejects.toThrow(
+        NotFoundException,
+      );
 
       expect(mockPrismaService.customer.findFirst).toHaveBeenCalledWith({
         where: {
@@ -136,7 +140,9 @@ describe('BaseUserService', () => {
     it('should pass when invoice belongs to user', async () => {
       mockPrismaService.invoice.findFirst.mockResolvedValue({ id: 'invoice123' });
 
-      await expect(service.testValidateInvoiceOwnership('invoice123', 'user123')).resolves.not.toThrow();
+      await expect(
+        service.testValidateInvoiceOwnership('invoice123', 'user123'),
+      ).resolves.not.toThrow();
 
       expect(mockPrismaService.invoice.findFirst).toHaveBeenCalledWith({
         where: {
@@ -150,7 +156,9 @@ describe('BaseUserService', () => {
     it('should throw NotFoundException when invoice does not belong to user', async () => {
       mockPrismaService.invoice.findFirst.mockResolvedValue(null);
 
-      await expect(service.testValidateInvoiceOwnership('invoice123', 'user123')).rejects.toThrow(NotFoundException);
+      await expect(service.testValidateInvoiceOwnership('invoice123', 'user123')).rejects.toThrow(
+        NotFoundException,
+      );
 
       expect(mockPrismaService.invoice.findFirst).toHaveBeenCalledWith({
         where: {
@@ -177,7 +185,9 @@ describe('BaseUserService', () => {
     it('should throw NotFoundException when company profile does not exist', async () => {
       mockPrismaService.companyProfile.findUnique.mockResolvedValue(null);
 
-      await expect(service.testValidateCompanyProfileOwnership('user123')).rejects.toThrow(NotFoundException);
+      await expect(service.testValidateCompanyProfileOwnership('user123')).rejects.toThrow(
+        NotFoundException,
+      );
 
       expect(mockPrismaService.companyProfile.findUnique).toHaveBeenCalledWith({
         where: { userId: 'user123' },

@@ -25,7 +25,8 @@ describe('CloudinaryService', () => {
 
   const mockCloudinaryResponse = {
     public_id: 'logos/user123/company-logo',
-    secure_url: 'https://res.cloudinary.com/test/image/upload/v1234567890/logos/user123/company-logo.png',
+    secure_url:
+      'https://res.cloudinary.com/test/image/upload/v1234567890/logos/user123/company-logo.png',
     url: 'http://res.cloudinary.com/test/image/upload/v1234567890/logos/user123/company-logo.png',
     format: 'png',
     width: 200,
@@ -142,7 +143,7 @@ describe('CloudinaryService', () => {
     });
 
     it('should handle rate limit error', async () => {
-        mockUploadStream.end.mockImplementation(function (buffer: any) {
+      mockUploadStream.end.mockImplementation(function (buffer: any) {
         const callback = (cloudinary.uploader.upload_stream as jest.Mock).mock.results[0].value;
         setTimeout(() => {
           callback(new Error('rate limit exceeded'), null);
@@ -190,9 +191,7 @@ describe('CloudinaryService', () => {
     });
 
     it('should not throw on deletion error', async () => {
-      (cloudinary.uploader.destroy as jest.Mock).mockRejectedValue(
-        new Error('Deletion failed'),
-      );
+      (cloudinary.uploader.destroy as jest.Mock).mockRejectedValue(new Error('Deletion failed'));
 
       // Should not throw
       await expect(
@@ -251,8 +250,7 @@ describe('CloudinaryService', () => {
         const file = { ...mockFile, mimetype: mimeType };
 
         mockUploadStream.end.mockImplementation(function (buffer: any) {
-          const callback = (cloudinary.uploader.upload_stream as jest.Mock).mock.results[0]
-            .value;
+          const callback = (cloudinary.uploader.upload_stream as jest.Mock).mock.results[0].value;
           setTimeout(() => {
             callback(null, mockCloudinaryResponse);
           }, 0);
@@ -280,9 +278,7 @@ describe('CloudinaryService', () => {
     it('should reject file just over 5MB limit', async () => {
       const file = { ...mockFile, size: 5 * 1024 * 1024 + 1 };
 
-      await expect(service.uploadLogoFile(file, 'user123')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(service.uploadLogoFile(file, 'user123')).rejects.toThrow(BadRequestException);
     });
   });
 });

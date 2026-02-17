@@ -60,9 +60,7 @@ describe('Health Endpoints (e2e)', () => {
 
   describe('/health/live (GET)', () => {
     it('should return liveness status', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/health/live')
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/health/live').expect(200);
 
       expect(response.body.data).toHaveProperty('status', 'alive');
       expect(response.body.data).toHaveProperty('timestamp');

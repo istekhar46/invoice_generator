@@ -30,9 +30,7 @@ export function initializeCloudinary(): typeof cloudinary {
     api_secret: apiSecret,
   });
 
-  logger.log(
-    `✓ Cloudinary initialized for cloud: ${cloudName}`,
-  );
+  logger.log(`✓ Cloudinary initialized for cloud: ${cloudName}`);
 
   return cloudinary;
 }

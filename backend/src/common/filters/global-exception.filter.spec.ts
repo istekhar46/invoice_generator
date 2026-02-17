@@ -81,14 +81,11 @@ describe('GlobalExceptionFilter', () => {
 
   describe('Prisma Exception handling', () => {
     it('should handle unique constraint violation (P2002)', () => {
-      const exception = new Prisma.PrismaClientKnownRequestError(
-        'Unique constraint failed',
-        {
-          code: 'P2002',
-          clientVersion: '4.0.0',
-          meta: { target: ['email'] },
-        },
-      );
+      const exception = new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: '4.0.0',
+        meta: { target: ['email'] },
+      });
 
       filter.catch(exception, mockArgumentsHost);
 
@@ -106,13 +103,10 @@ describe('GlobalExceptionFilter', () => {
     });
 
     it('should handle record not found (P2025)', () => {
-      const exception = new Prisma.PrismaClientKnownRequestError(
-        'Record not found',
-        {
-          code: 'P2025',
-          clientVersion: '4.0.0',
-        },
-      );
+      const exception = new Prisma.PrismaClientKnownRequestError('Record not found', {
+        code: 'P2025',
+        clientVersion: '4.0.0',
+      });
 
       filter.catch(exception, mockArgumentsHost);
 
@@ -129,10 +123,9 @@ describe('GlobalExceptionFilter', () => {
     });
 
     it('should handle validation errors', () => {
-      const exception = new Prisma.PrismaClientValidationError(
-        'Invalid data provided',
-        { clientVersion: '4.0.0' },
-      );
+      const exception = new Prisma.PrismaClientValidationError('Invalid data provided', {
+        clientVersion: '4.0.0',
+      });
 
       filter.catch(exception, mockArgumentsHost);
 

@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, Logger, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { v2 as cloudinary } from 'cloudinary';
 import { buildUploadOptions, CloudinaryUploadOptions } from '../config/cloudinary.config';
 
@@ -13,7 +18,7 @@ export class CloudinaryService {
   /**
    * Upload logo file to Cloudinary
    * Accepts a file buffer from multipart upload and stores it in Cloudinary
-   * 
+   *
    * @param file - Express.Multer.File object containing file buffer and metadata
    * @param userId - User ID for organizing files and tagging
    * @returns Promise<string> - Secure URL of uploaded file from Cloudinary CDN
@@ -23,7 +28,7 @@ export class CloudinaryService {
   async uploadLogoFile(file: Express.Multer.File, userId: string): Promise<string> {
     try {
       // Validate file exists and has buffer
-      if (!file || !file.buffer) {
+      if (!file?.buffer) {
         throw new BadRequestException('No file provided or file buffer is empty');
       }
 
@@ -38,9 +43,7 @@ export class CloudinaryService {
       // Validate file size (5MB limit - 5242880 bytes)
       const maxSize = 5 * 1024 * 1024; // 5MB
       if (file.size > maxSize) {
-        throw new BadRequestException(
-          'File size too large. Maximum allowed size is 5MB.',
-        );
+        throw new BadRequestException('File size too large. Maximum allowed size is 5MB.');
       }
 
       this.logger.debug(`Uploading logo for user: ${userId}, file: ${file.originalname}`);
@@ -110,7 +113,7 @@ export class CloudinaryService {
    * Delete logo file from Cloudinary
    * Extracts public ID from Cloudinary URL and removes the asset
    * Gracefully handles cases where file doesn't exist
-   * 
+   *
    * @param logoUrl - Cloudinary secure URL to delete
    * @param userId - User ID for logging/context
    * @returns Promise<void>
@@ -162,7 +165,7 @@ export class CloudinaryService {
   /**
    * Get optimized logo URL with transformations
    * Applies Cloudinary transformations for different contexts (thumbnail, responsive, etc.)
-   * 
+   *
    * @param logoUrl - Original Cloudinary URL
    * @param width - Optional width in pixels
    * @param height - Optional height in pixels
@@ -208,7 +211,7 @@ export class CloudinaryService {
   /**
    * Extract public ID from Cloudinary URL
    * Handles multiple URL formats
-   * 
+   *
    * @param url - Cloudinary URL
    * @returns string - Public ID or empty string if extraction fails
    */

@@ -4,7 +4,7 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
-import { CompanyProfile } from '@prisma/client';
+import { CompanyProfile, Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { BaseUserService } from '../common/services/base-user-service';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
@@ -40,24 +40,19 @@ export class CompanyService extends BaseUserService {
     // Additional business validation
     this.validateBusinessData(createCompanyProfileDto);
 
-    try {
-      // Create company profile
-      const companyProfile = await this.prisma.companyProfile.create({
-        data: {
-          userId,
-          ...createCompanyProfileDto,
-          // Normalize state to uppercase
-          state: createCompanyProfileDto.state.toUpperCase(),
-          // Normalize email to lowercase
-          email: createCompanyProfileDto.email.toLowerCase(),
-        },
-      });
+    // Create company profile
+    const companyProfile = await this.prisma.companyProfile.create({
+      data: {
+        userId,
+        ...createCompanyProfileDto,
+        // Normalize state to uppercase
+        state: createCompanyProfileDto.state.toUpperCase(),
+        // Normalize email to lowercase
+        email: createCompanyProfileDto.email.toLowerCase(),
+      },
+    });
 
-      return companyProfile;
-    } catch (error) {
-      // Let the global exception filter handle Prisma errors
-      throw error;
-    }
+    return companyProfile;
   }
 
   async findByUserId(userId: string): Promise<CompanyProfile | null> {
@@ -86,9 +81,7 @@ export class CompanyService extends BaseUserService {
   ): Promise<CompanyProfile> {
     // Validate that at least one field is being updated
     if (Object.keys(updateCompanyProfileDto).length === 0) {
-      throw new BadRequestException(
-        'At least one field must be provided for update',
-      );
+      throw new BadRequestException('At least one field must be provided for update');
     }
 
     // Validate company profile ownership
@@ -97,32 +90,27 @@ export class CompanyService extends BaseUserService {
     // Additional business validation for update data
     this.validateBusinessData(updateCompanyProfileDto);
 
-    try {
-      // Prepare update data with normalization
-      const updateData = { ...updateCompanyProfileDto };
-      if (updateData.state) {
-        updateData.state = updateData.state.toUpperCase();
-      }
-      if (updateData.email) {
-        updateData.email = updateData.email.toLowerCase();
-      }
-
-      // Update company profile with additional safety check
-      const updatedProfile = await this.prisma.companyProfile.updateMany({
-        where: { userId },
-        data: updateData,
-      });
-
-      if (updatedProfile.count === 0) {
-        throw new NotFoundException('Company profile not found or access denied');
-      }
-
-      // Return the updated profile
-      return await this.findByUserIdOrThrow(userId);
-    } catch (error) {
-      // Let the global exception filter handle Prisma errors
-      throw error;
+    // Prepare update data with normalization
+    const updateData: Record<string, unknown> = { ...updateCompanyProfileDto };
+    if (updateData.state) {
+      updateData.state = (updateData.state as string).toUpperCase();
     }
+    if (updateData.email) {
+      updateData.email = (updateData.email as string).toLowerCase();
+    }
+
+    // Update company profile with additional safety check
+    const updatedProfile = await this.prisma.companyProfile.updateMany({
+      where: { userId },
+      data: updateData as Prisma.CompanyProfileUpdateInput,
+    });
+
+    if (updatedProfile.count === 0) {
+      throw new NotFoundException('Company profile not found or access denied');
+    }
+
+    // Return the updated profile
+    return await this.findByUserIdOrThrow(userId);
   }
 
   async delete(userId: string): Promise<void> {
@@ -218,13 +206,13 @@ export class CompanyService extends BaseUserService {
         throw error;
       }
       // For other errors, wrap them
-      throw new BadRequestException(`Failed to delete logo: ${(error as any)?.message || 'Unknown error'}`);
+      throw new BadRequestException(
+        `Failed to delete logo: ${(error as any)?.message || 'Unknown error'}`,
+      );
     }
   }
 
-  private validateBusinessData(
-    data: CreateCompanyProfileDto | UpdateCompanyProfileDto,
-  ): void {
+  private validateBusinessData(data: CreateCompanyProfileDto | UpdateCompanyProfileDto): void {
     // Additional business logic validation
     if (data.defaultLaborRate !== undefined && data.defaultLaborRate < 0) {
       throw new BadRequestException('Default labor rate cannot be negative');
@@ -237,7 +225,12 @@ export class CompanyService extends BaseUserService {
     // Validate that business email is different from personal email if provided
     if (data.email && data.businessName) {
       const businessDomain = data.email.split('@')[1];
-      if (businessDomain && ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com'].includes(businessDomain.toLowerCase())) {
+      if (
+        businessDomain &&
+        ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com'].includes(
+          businessDomain.toLowerCase(),
+        )
+      ) {
         // This is just a warning, not an error - many small businesses use personal email providers
       }
     }

@@ -70,10 +70,7 @@ export class CompanyController {
     @CurrentUser('id') userId: string,
     @Body() createCompanyProfileDto: CreateCompanyProfileDto,
   ): Promise<CompanyProfileResponseDto> {
-    const companyProfile = await this.companyService.create(
-      userId,
-      createCompanyProfileDto,
-    );
+    const companyProfile = await this.companyService.create(userId, createCompanyProfileDto);
     return plainToClass(CompanyProfileResponseDto, companyProfile, {
       excludeExtraneousValues: true,
     });
@@ -90,15 +87,13 @@ export class CompanyController {
     status: 401,
     description: 'Unauthorized',
   })
-  async getProfile(
-    @CurrentUser('id') userId: string,
-  ): Promise<CompanyProfileResponseDto | null> {
+  async getProfile(@CurrentUser('id') userId: string): Promise<CompanyProfileResponseDto | null> {
     const companyProfile = await this.companyService.findByUserId(userId);
-    
+
     if (!companyProfile) {
       return null;
     }
-    
+
     return plainToClass(CompanyProfileResponseDto, companyProfile, {
       excludeExtraneousValues: true,
     });
@@ -128,10 +123,7 @@ export class CompanyController {
     @CurrentUser('id') userId: string,
     @Body() updateCompanyProfileDto: UpdateCompanyProfileDto,
   ): Promise<CompanyProfileResponseDto> {
-    const updatedProfile = await this.companyService.update(
-      userId,
-      updateCompanyProfileDto,
-    );
+    const updatedProfile = await this.companyService.update(userId, updateCompanyProfileDto);
     return plainToClass(CompanyProfileResponseDto, updatedProfile, {
       excludeExtraneousValues: true,
     });

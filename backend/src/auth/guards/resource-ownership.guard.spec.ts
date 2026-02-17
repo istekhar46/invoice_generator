@@ -56,7 +56,7 @@ describe('ResourceOwnershipGuard', () => {
   ): ExecutionContext => {
     const mockHandler = jest.fn();
     const mockClass = jest.fn();
-    
+
     return {
       switchToHttp: () => ({
         getRequest: () => ({
@@ -77,10 +77,10 @@ describe('ResourceOwnershipGuard', () => {
       const result = await guard.canActivate(context);
 
       expect(result).toBe(true);
-      expect(mockReflector.getAllAndOverride).toHaveBeenCalledWith(
-        RESOURCE_OWNERSHIP_KEY,
-        [expect.any(Function), expect.any(Function)],
-      );
+      expect(mockReflector.getAllAndOverride).toHaveBeenCalledWith(RESOURCE_OWNERSHIP_KEY, [
+        expect.any(Function),
+        expect.any(Function),
+      ]);
     });
 
     it('should return true when user or resourceId is missing', async () => {

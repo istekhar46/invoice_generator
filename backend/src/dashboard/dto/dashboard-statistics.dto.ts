@@ -11,7 +11,7 @@ export class DashboardStatisticsDto {
 
   @ApiProperty({
     description: 'Total revenue from paid invoices',
-    example: 45000.50,
+    example: 45000.5,
   })
   @Expose()
   totalRevenue!: number;
@@ -39,7 +39,7 @@ export class DashboardStatisticsDto {
 
   @ApiProperty({
     description: 'Average invoice value across all invoices',
-    example: 300.00,
+    example: 300.0,
   })
   @Expose()
   averageInvoiceValue!: number;

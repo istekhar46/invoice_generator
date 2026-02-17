@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NestInterceptor,
-  ExecutionContext,
-  CallHandler,
-} from '@nestjs/common';
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { SANITIZE_KEY } from '../decorators/sanitize.decorator';
@@ -38,17 +33,17 @@ export class SanitizationInterceptor implements NestInterceptor {
     if (typeof input === 'string') {
       return this.sanitizeString(input);
     }
-    
+
     if (Array.isArray(input)) {
-      return input.map(item => this.sanitizeInput(item));
+      return input.map((item) => this.sanitizeInput(item));
     }
-    
+
     if (typeof input === 'object' && input !== null) {
       // Don't sanitize Date objects, just return them as-is
       if (input instanceof Date) {
         return input;
       }
-      
+
       const sanitized: any = {};
       for (const key in input) {
         if (input.hasOwnProperty(key)) {
@@ -57,7 +52,7 @@ export class SanitizationInterceptor implements NestInterceptor {
       }
       return sanitized;
     }
-    
+
     return input;
   }
 

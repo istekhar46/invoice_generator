@@ -44,13 +44,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
-      
+
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
       } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
         message = (exceptionResponse as any).message ?? exception.message;
         details = (exceptionResponse as any).details;
-        
+
         // Handle validation errors from class-validator
         if (status === HttpStatus.BAD_REQUEST && Array.isArray(message)) {
           validationErrors = this.extractValidationErrors(message);
@@ -100,9 +100,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         exception instanceof Error ? exception.stack : JSON.stringify(exception),
       );
     } else {
-      this.logger.warn(
-        `${request.method} ${request.url} - ${status}: ${JSON.stringify(message)}`,
-      );
+      this.logger.warn(`${request.method} ${request.url} - ${status}: ${JSON.stringify(message)}`);
     }
 
     response.status(status).json(errorResponse);
@@ -173,7 +171,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
   private extractValidationErrors(messages: string[]): ValidationError[] {
     const validationErrors: ValidationError[] = [];
-    
+
     for (const msg of messages) {
       // Parse validation error messages from class-validator
       // Format is typically: "field message" or "nested.field message"
@@ -187,7 +185,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         validationErrors.push({ field: 'unknown', message: msg });
       }
     }
-    
+
     return validationErrors;
   }
 }

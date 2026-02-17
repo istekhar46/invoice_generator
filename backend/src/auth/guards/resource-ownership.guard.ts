@@ -7,7 +7,10 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../../database/prisma.service';
-import { RESOURCE_OWNERSHIP_KEY, ResourceOwnershipConfig } from '../decorators/resource-ownership.decorator';
+import {
+  RESOURCE_OWNERSHIP_KEY,
+  ResourceOwnershipConfig,
+} from '../decorators/resource-ownership.decorator';
 
 @Injectable()
 export class ResourceOwnershipGuard implements CanActivate {
@@ -38,7 +41,7 @@ export class ResourceOwnershipGuard implements CanActivate {
 
     try {
       const resource = await this.findResource(config.entity, resourceId);
-      
+
       if (!resource) {
         throw new NotFoundException(`${config.entity} not found`);
       }

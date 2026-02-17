@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Customer } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { BaseUserService } from '../common/services/base-user-service';
@@ -19,10 +15,7 @@ export class CustomerService extends BaseUserService {
     super(prisma);
   }
 
-  async create(
-    userId: string,
-    createCustomerDto: CreateCustomerDto,
-  ): Promise<Customer> {
+  async create(userId: string, createCustomerDto: CreateCustomerDto): Promise<Customer> {
     // Validate user exists
     await this.validateUserExists(userId);
 
@@ -49,10 +42,7 @@ export class CustomerService extends BaseUserService {
     }
   }
 
-  async findAll(
-    userId: string,
-    query: CustomerQueryDto,
-  ): Promise<PaginatedResponseDto<Customer>> {
+  async findAll(userId: string, query: CustomerQueryDto): Promise<PaginatedResponseDto<Customer>> {
     const { search, sortBy = 'name', sortOrder = 'asc', page = 1, limit = 10 } = query;
 
     // Build where clause with mandatory user isolation
@@ -105,12 +95,7 @@ export class CustomerService extends BaseUserService {
 
   async findById(userId: string, id: string): Promise<Customer> {
     // Use the base service method for validation
-    await this.validateResourceOwnership(
-      this.prisma.customer,
-      id,
-      userId,
-      'Customer',
-    );
+    await this.validateResourceOwnership(this.prisma.customer, id, userId, 'Customer');
 
     const customer = await this.prisma.customer.findFirst({
       where: this.buildUserIsolatedWhere(userId, { id }),
@@ -130,18 +115,11 @@ export class CustomerService extends BaseUserService {
   ): Promise<Customer> {
     // Validate that at least one field is being updated
     if (Object.keys(updateCustomerDto).length === 0) {
-      throw new BadRequestException(
-        'At least one field must be provided for update',
-      );
+      throw new BadRequestException('At least one field must be provided for update');
     }
 
     // Validate ownership using base service method
-    await this.validateResourceOwnership(
-      this.prisma.customer,
-      id,
-      userId,
-      'Customer',
-    );
+    await this.validateResourceOwnership(this.prisma.customer, id, userId, 'Customer');
 
     // Additional validation for update data
     this.validateCustomerData(updateCustomerDto);
@@ -176,12 +154,7 @@ export class CustomerService extends BaseUserService {
 
   async delete(userId: string, id: string): Promise<void> {
     // Validate ownership using base service method
-    await this.validateResourceOwnership(
-      this.prisma.customer,
-      id,
-      userId,
-      'Customer',
-    );
+    await this.validateResourceOwnership(this.prisma.customer, id, userId, 'Customer');
 
     // Check if customer has any invoices
     const invoiceCount = await this.prisma.invoice.count({
@@ -204,9 +177,7 @@ export class CustomerService extends BaseUserService {
     }
   }
 
-  private validateCustomerData(
-    data: CreateCustomerDto | UpdateCustomerDto,
-  ): void {
+  private validateCustomerData(data: CreateCustomerDto | UpdateCustomerDto): void {
     // Validate phone number format more strictly
     if (data.phone) {
       const phoneDigits = data.phone.replace(/\D/g, '');

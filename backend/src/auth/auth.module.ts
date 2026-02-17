@@ -18,11 +18,11 @@ import { DatabaseModule } from '../database/database.module';
       useFactory: (configService: ConfigService) => {
         const secret = configService.get<string>('JWT_SECRET') || 'fallback-secret';
         const expiresIn = configService.get<string>('JWT_EXPIRES_IN') || '15m';
-        
+
         return {
           secret,
-          signOptions: { 
-            expiresIn: expiresIn as any // Cast to avoid type issues with string vs StringValue
+          signOptions: {
+            expiresIn: expiresIn as any, // Cast to avoid type issues with string vs StringValue
           },
         };
       },
@@ -30,12 +30,7 @@ import { DatabaseModule } from '../database/database.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    JwtStrategy,
-    GoogleStrategy,
-    JwtAuthGuard,
-  ],
+  providers: [AuthService, JwtStrategy, GoogleStrategy, JwtAuthGuard],
   exports: [AuthService, JwtAuthGuard],
 })
 export class AuthModule {}

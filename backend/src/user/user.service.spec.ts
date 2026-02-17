@@ -142,7 +142,9 @@ describe('UserService', () => {
         newPassword: 'samePassword',
       };
 
-      await expect(service.changePassword('1', changePasswordDto)).rejects.toThrow(BadRequestException);
+      await expect(service.changePassword('1', changePasswordDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw UnauthorizedException for OAuth-only user', async () => {
@@ -164,7 +166,9 @@ describe('UserService', () => {
         newPassword: 'newPassword',
       };
 
-      await expect(service.changePassword('1', changePasswordDto)).rejects.toThrow(UnauthorizedException);
+      await expect(service.changePassword('1', changePasswordDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 

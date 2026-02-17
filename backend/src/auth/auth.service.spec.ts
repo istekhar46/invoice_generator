@@ -97,9 +97,8 @@ describe('AuthService', () => {
             // Mock JWT service to return predictable tokens
             const mockAccessToken = `access.token.${user.id}`;
             const mockRefreshToken = `refresh.token.${user.id}`;
-            
-            (jwtService.signAsync as jest.Mock)
-              .mockResolvedValueOnce(mockAccessToken);
+
+            (jwtService.signAsync as jest.Mock).mockResolvedValueOnce(mockAccessToken);
 
             // Mock refresh token creation in database
             (prismaService.refreshToken.create as jest.Mock).mockResolvedValue({
@@ -156,9 +155,9 @@ describe('AuthService', () => {
             expect(validatedUser?.id).toBe(user.id);
             expect(validatedUser?.email).toBe(user.email);
             expect(validatedUser?.displayName).toBe(user.displayName);
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -196,14 +195,15 @@ describe('AuthService', () => {
               user: user,
             };
 
-            (prismaService.refreshToken.findUnique as jest.Mock).mockResolvedValue(storedRefreshToken);
+            (prismaService.refreshToken.findUnique as jest.Mock).mockResolvedValue(
+              storedRefreshToken,
+            );
 
             // Mock refresh token deletion (old token invalidation)
             (prismaService.refreshToken.delete as jest.Mock).mockResolvedValue(storedRefreshToken);
 
             // Mock new token generation
-            (jwtService.signAsync as jest.Mock)
-              .mockResolvedValueOnce(mockNewAccessToken);
+            (jwtService.signAsync as jest.Mock).mockResolvedValueOnce(mockNewAccessToken);
 
             // Mock new refresh token creation
             (prismaService.refreshToken.create as jest.Mock).mockResolvedValue({
@@ -244,9 +244,9 @@ describe('AuthService', () => {
                 expiresAt: expect.any(Date),
               },
             });
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
   });
@@ -292,9 +292,8 @@ describe('AuthService', () => {
             // Mock token generation for registration
             const mockAccessToken = `access.token.${createdUser.id}`;
             const mockRefreshToken = `refresh.token.${createdUser.id}`;
-            
-            (jwtService.signAsync as jest.Mock)
-              .mockResolvedValueOnce(mockAccessToken);
+
+            (jwtService.signAsync as jest.Mock).mockResolvedValueOnce(mockAccessToken);
 
             // Mock refresh token creation
             (prismaService.refreshToken.create as jest.Mock).mockResolvedValue({
@@ -325,9 +324,8 @@ describe('AuthService', () => {
             // Mock token generation for login
             const mockLoginAccessToken = `login.access.token.${createdUser.id}`;
             const mockLoginRefreshToken = `login.refresh.token.${createdUser.id}`;
-            
-            (jwtService.signAsync as jest.Mock)
-              .mockResolvedValueOnce(mockLoginAccessToken);
+
+            (jwtService.signAsync as jest.Mock).mockResolvedValueOnce(mockLoginAccessToken);
 
             // Mock refresh token creation for login
             (prismaService.refreshToken.create as jest.Mock).mockResolvedValue({
@@ -352,9 +350,9 @@ describe('AuthService', () => {
 
             // Verify that the same user data is returned
             expect(loginResult.authResponse.user.id).toBe(registerResult.authResponse.user.id);
-          }
+          },
         ),
-        { numRuns: 50 } // Reduced runs for faster execution
+        { numRuns: 50 }, // Reduced runs for faster execution
       );
     }, 60000); // Increased timeout
 
@@ -389,11 +387,11 @@ describe('AuthService', () => {
                 email,
                 password,
                 displayName,
-              })
+              }),
             ).rejects.toThrow(ConflictException);
-          }
+          },
         ),
-        { numRuns: 50 } // Reduced runs for faster execution
+        { numRuns: 50 }, // Reduced runs for faster execution
       );
     }, 60000); // Increased timeout
 
@@ -435,11 +433,11 @@ describe('AuthService', () => {
               service.login({
                 email,
                 password: wrongPassword,
-              })
+              }),
             ).rejects.toThrow(UnauthorizedException);
-          }
+          },
         ),
-        { numRuns: 50 } // Reduced runs for faster execution
+        { numRuns: 50 }, // Reduced runs for faster execution
       );
     }, 60000); // Increased timeout
   });
@@ -488,8 +486,7 @@ describe('AuthService', () => {
             });
 
             // Mock token generation
-            (jwtService.signAsync as jest.Mock)
-              .mockResolvedValueOnce('access-token');
+            (jwtService.signAsync as jest.Mock).mockResolvedValueOnce('access-token');
 
             // Mock refresh token creation
             (prismaService.refreshToken.create as jest.Mock).mockResolvedValue({
@@ -521,9 +518,9 @@ describe('AuthService', () => {
             // Verify no plain text password is stored
             expect(createdUserData.password).toBeUndefined();
             expect(createdUserData).not.toHaveProperty('password');
-          }
+          },
         ),
-        { numRuns: 50 }
+        { numRuns: 50 },
       );
     }, 60000);
 
@@ -559,8 +556,7 @@ describe('AuthService', () => {
             (prismaService.user.findUnique as jest.Mock).mockResolvedValueOnce(user);
 
             // Mock token generation
-            (jwtService.signAsync as jest.Mock)
-              .mockResolvedValueOnce('access-token');
+            (jwtService.signAsync as jest.Mock).mockResolvedValueOnce('access-token');
 
             // Mock refresh token creation
             (prismaService.refreshToken.create as jest.Mock).mockResolvedValue({
@@ -584,9 +580,9 @@ describe('AuthService', () => {
             // Verify exactly one additional call was made during this iteration
             const finalCallCount = (bcrypt.compare as jest.Mock).mock.calls.length;
             expect(finalCallCount - initialCallCount).toBe(1);
-          }
+          },
         ),
-        { numRuns: 50 }
+        { numRuns: 50 },
       );
     }, 60000);
   });
@@ -630,7 +626,9 @@ describe('AuthService', () => {
             };
 
             // Mock refresh token lookup - should find the token
-            (prismaService.refreshToken.findUnique as jest.Mock).mockResolvedValue(storedRefreshToken);
+            (prismaService.refreshToken.findUnique as jest.Mock).mockResolvedValue(
+              storedRefreshToken,
+            );
 
             // Mock refresh token deletion (invalidation of old token)
             (prismaService.refreshToken.delete as jest.Mock).mockResolvedValue(storedRefreshToken);
@@ -688,9 +686,9 @@ describe('AuthService', () => {
 
             // Verify the new refresh token is different from the original
             expect(result.refreshToken).not.toBe(originalRefreshToken);
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -727,15 +725,17 @@ describe('AuthService', () => {
             };
 
             // Mock refresh token lookup - should find the expired token
-            (prismaService.refreshToken.findUnique as jest.Mock).mockResolvedValue(expiredStoredToken);
+            (prismaService.refreshToken.findUnique as jest.Mock).mockResolvedValue(
+              expiredStoredToken,
+            );
 
             // Mock refresh token deletion (cleanup of expired token)
             (prismaService.refreshToken.delete as jest.Mock).mockResolvedValue(expiredStoredToken);
 
             // Test that expired refresh token is rejected
-            await expect(
-              service.refreshToken(expiredRefreshToken)
-            ).rejects.toThrow(UnauthorizedException);
+            await expect(service.refreshToken(expiredRefreshToken)).rejects.toThrow(
+              UnauthorizedException,
+            );
 
             // Verify the expired token was looked up
             expect(prismaService.refreshToken.findUnique).toHaveBeenCalledWith({
@@ -751,9 +751,9 @@ describe('AuthService', () => {
             // Verify no new tokens were generated
             expect(jwtService.signAsync).not.toHaveBeenCalled();
             expect(prismaService.refreshToken.create).not.toHaveBeenCalled();
-          }
+          },
         ),
-        { numRuns: 50 }
+        { numRuns: 50 },
       );
     });
 
@@ -766,9 +766,9 @@ describe('AuthService', () => {
             (prismaService.refreshToken.findUnique as jest.Mock).mockResolvedValue(null);
 
             // Test that invalid refresh token is rejected
-            await expect(
-              service.refreshToken(invalidRefreshToken)
-            ).rejects.toThrow(UnauthorizedException);
+            await expect(service.refreshToken(invalidRefreshToken)).rejects.toThrow(
+              UnauthorizedException,
+            );
 
             // Verify the token was looked up
             expect(prismaService.refreshToken.findUnique).toHaveBeenCalledWith({
@@ -780,9 +780,9 @@ describe('AuthService', () => {
             expect(prismaService.refreshToken.delete).not.toHaveBeenCalled();
             expect(prismaService.refreshToken.create).not.toHaveBeenCalled();
             expect(jwtService.signAsync).not.toHaveBeenCalled();
-          }
+          },
         ),
-        { numRuns: 50 }
+        { numRuns: 50 },
       );
     });
   });
@@ -826,11 +826,11 @@ describe('AuthService', () => {
                 email, // Same email as existing user
                 password: password2, // Different password
                 displayName: displayName2, // Different display name
-              })
+              }),
             ).rejects.toThrow(ConflictException);
-          }
+          },
         ),
-        { numRuns: 50 }
+        { numRuns: 50 },
       );
     }, 60000);
   });

@@ -117,15 +117,14 @@ export class InvoiceController {
     @Query() query: InvoiceQueryDto,
   ): Promise<PaginatedResponseDto<InvoiceResponseDto>> {
     const result = await this.invoiceService.findAll(userId, query);
-    
-    return {
-      ...result,
-      data: result.data.map(invoice =>
+
+    return Object.assign(result, {
+      data: result.data.map((invoice) =>
         plainToClass(InvoiceResponseDto, invoice, {
           excludeExtraneousValues: true,
-        })
+        }),
       ),
-    };
+    });
   }
 
   @Get(':id')
@@ -190,11 +189,7 @@ export class InvoiceController {
     @Param('id') id: string,
     @Body() updateInvoiceDto: UpdateInvoiceDto,
   ): Promise<InvoiceResponseDto> {
-    const updatedInvoice = await this.invoiceService.update(
-      userId,
-      id,
-      updateInvoiceDto,
-    );
+    const updatedInvoice = await this.invoiceService.update(userId, id, updateInvoiceDto);
     return plainToClass(InvoiceResponseDto, updatedInvoice, {
       excludeExtraneousValues: true,
     });
@@ -231,11 +226,7 @@ export class InvoiceController {
     @Param('id') id: string,
     @Body() updateStatusDto: UpdateInvoiceStatusDto,
   ): Promise<InvoiceResponseDto> {
-    const updatedInvoice = await this.invoiceService.updateStatus(
-      userId,
-      id,
-      updateStatusDto,
-    );
+    const updatedInvoice = await this.invoiceService.updateStatus(userId, id, updateStatusDto);
     return plainToClass(InvoiceResponseDto, updatedInvoice, {
       excludeExtraneousValues: true,
     });
@@ -262,10 +253,7 @@ export class InvoiceController {
     status: 404,
     description: 'Invoice not found',
   })
-  async delete(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ): Promise<void> {
+  async delete(@CurrentUser('id') userId: string, @Param('id') id: string): Promise<void> {
     await this.invoiceService.delete(userId, id);
   }
 }

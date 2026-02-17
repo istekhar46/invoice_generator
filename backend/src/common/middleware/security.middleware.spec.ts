@@ -33,7 +33,7 @@ describe('Security Middleware Configuration', () => {
   describe('ThrottlerModule Configuration', () => {
     it('should be defined and configured', () => {
       expect(module).toBeDefined();
-      
+
       // Verify ThrottlerModule is properly imported
       const throttlerModule = module.get(ThrottlerModule);
       expect(throttlerModule).toBeDefined();
@@ -43,10 +43,10 @@ describe('Security Middleware Configuration', () => {
       // Test that the configuration uses environment variables
       const expectedTtl = parseInt(process.env.THROTTLE_TTL ?? '60', 10) * 1000; // TTL is converted to milliseconds
       const expectedLimit = parseInt(process.env.THROTTLE_LIMIT ?? '100', 10);
-      
+
       expect(expectedTtl).toBeGreaterThan(0);
       expect(expectedLimit).toBeGreaterThan(0);
-      
+
       // Verify the actual values match the configuration
       expect(expectedTtl).toBe(60000); // 60 seconds * 1000 = 60000 milliseconds
       // In test environment, THROTTLE_LIMIT is 1000, in dev it's 100
