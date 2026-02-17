@@ -111,7 +111,7 @@ export class DashboardStatisticsService {
     return this.getRecentInvoices(invoices, limit).map(invoice => ({
       id: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
-      customerName: customerLookup(invoice.customerId),
+      customerName: invoice.customerId ? customerLookup(invoice.customerId) : undefined,
       total: invoice.total,
       status: invoice.status,
       serviceDate: invoice.serviceDate,
@@ -166,10 +166,10 @@ export class DashboardStatisticsService {
     limit: number = 5
   ): Array<{ customerId: string; customerName?: string; revenue: number; invoiceCount: number }> {
     const customerStats = invoices
-      .filter(invoice => invoice.status === 'paid')
+      .filter(invoice => invoice.status === 'paid' && invoice.customerId)
       .reduce((stats, invoice) => {
-        const existing = stats.get(invoice.customerId) || { revenue: 0, invoiceCount: 0 }
-        stats.set(invoice.customerId, {
+        const existing = stats.get(invoice.customerId!) || { revenue: 0, invoiceCount: 0 }
+        stats.set(invoice.customerId!, {
           revenue: existing.revenue + invoice.total,
           invoiceCount: existing.invoiceCount + 1,
         })
