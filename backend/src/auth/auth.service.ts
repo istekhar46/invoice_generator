@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  ConflictException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { User } from '@prisma/client';
@@ -22,7 +17,10 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   // Cache for tracking recently deleted tokens to detect reuse
   // Maps token hash -> { userId, tokenId, deletedAt }
-  private readonly deletedTokensCache = new Map<string, { userId: string; tokenId: string; deletedAt: Date }>();
+  private readonly deletedTokensCache = new Map<
+    string,
+    { userId: string; tokenId: string; deletedAt: Date }
+  >();
   private readonly DELETED_TOKEN_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
   constructor(
@@ -31,10 +29,18 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {
     // Clean up expired cache entries periodically
-    setInterval(() => this.cleanupDeletedTokensCache(), 60 * 60 * 1000); // Every hour
+    setInterval(
+      () => {
+        this.cleanupDeletedTokensCache();
+      },
+      60 * 60 * 1000,
+    ); // Every hour
   }
 
-  async register(registerDto: RegisterDto, ipAddress?: string): Promise<{ authResponse: AuthResponseDto; refreshToken: string }> {
+  async register(
+    registerDto: RegisterDto,
+    ipAddress?: string,
+  ): Promise<{ authResponse: AuthResponseDto; refreshToken: string }> {
     const { email, password, displayName } = registerDto;
 
     // Check if user already exists
@@ -46,10 +52,10 @@ export class AuthService {
       // Log authentication failure
       this.logger.warn(
         `Registration failed - User already exists - ` +
-        `Email: ${email}, ` +
-        `Reason: Email already registered, ` +
-        `IP: ${ipAddress || 'unknown'}, ` +
-        `Timestamp: ${new Date().toISOString()}`
+          `Email: ${email}, ` +
+          `Reason: Email already registered, ` +
+          `IP: ${ipAddress || 'unknown'}, ` +
+          `Timestamp: ${new Date().toISOString()}`,
       );
       throw new ConflictException('User with this email already exists');
     }
@@ -73,10 +79,10 @@ export class AuthService {
     // Log successful registration (treated as a login event)
     this.logger.log(
       `User registered and logged in successfully - ` +
-      `User ID: ${user.id}, ` +
-      `Email: ${user.email}, ` +
-      `IP: ${ipAddress || 'unknown'}, ` +
-      `Timestamp: ${new Date().toISOString()}`
+        `User ID: ${user.id}, ` +
+        `Email: ${user.email}, ` +
+        `IP: ${ipAddress || 'unknown'}, ` +
+        `Timestamp: ${new Date().toISOString()}`,
     );
 
     return {
@@ -88,7 +94,10 @@ export class AuthService {
     };
   }
 
-  async login(loginDto: LoginDto, ipAddress?: string): Promise<{ authResponse: AuthResponseDto; refreshToken: string }> {
+  async login(
+    loginDto: LoginDto,
+    ipAddress?: string,
+  ): Promise<{ authResponse: AuthResponseDto; refreshToken: string }> {
     const { email, password } = loginDto;
 
     // Find user by email
@@ -96,14 +105,14 @@ export class AuthService {
       where: { email },
     });
 
-    if (!user || !user.passwordHash) {
+    if (!user?.passwordHash) {
       // Log authentication failure
       this.logger.warn(
         `Authentication failed - Invalid credentials - ` +
-        `Email: ${email}, ` +
-        `Reason: User not found or no password set, ` +
-        `IP: ${ipAddress || 'unknown'}, ` +
-        `Timestamp: ${new Date().toISOString()}`
+          `Email: ${email}, ` +
+          `Reason: User not found or no password set, ` +
+          `IP: ${ipAddress || 'unknown'}, ` +
+          `Timestamp: ${new Date().toISOString()}`,
       );
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -114,10 +123,10 @@ export class AuthService {
       // Log authentication failure
       this.logger.warn(
         `Authentication failed - Invalid credentials - ` +
-        `Email: ${email}, ` +
-        `Reason: Invalid password, ` +
-        `IP: ${ipAddress || 'unknown'}, ` +
-        `Timestamp: ${new Date().toISOString()}`
+          `Email: ${email}, ` +
+          `Reason: Invalid password, ` +
+          `IP: ${ipAddress || 'unknown'}, ` +
+          `Timestamp: ${new Date().toISOString()}`,
       );
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -128,10 +137,10 @@ export class AuthService {
     // Log successful login
     this.logger.log(
       `User logged in successfully - ` +
-      `User ID: ${user.id}, ` +
-      `Email: ${user.email}, ` +
-      `IP: ${ipAddress || 'unknown'}, ` +
-      `Timestamp: ${new Date().toISOString()}`
+        `User ID: ${user.id}, ` +
+        `Email: ${user.email}, ` +
+        `IP: ${ipAddress || 'unknown'}, ` +
+        `Timestamp: ${new Date().toISOString()}`,
     );
 
     return {
@@ -143,7 +152,9 @@ export class AuthService {
     };
   }
 
-  async googleLogin(googleUser: GoogleUser): Promise<{ authResponse: AuthResponseDto; refreshToken: string }> {
+  async googleLogin(
+    googleUser: GoogleUser,
+  ): Promise<{ authResponse: AuthResponseDto; refreshToken: string }> {
     let user = await this.prisma.user.findUnique({
       where: { googleId: googleUser.id },
     });
@@ -197,7 +208,9 @@ export class AuthService {
     };
   }
 
-  async refreshToken(refreshToken: string): Promise<{ authResponse: AuthResponseDto; refreshToken: string }> {
+  async refreshToken(
+    refreshToken: string,
+  ): Promise<{ authResponse: AuthResponseDto; refreshToken: string }> {
     try {
       // Check if the refresh token exists in the database and is not expired
       const storedToken = await this.prisma.refreshToken.findUnique({
@@ -217,15 +230,15 @@ export class AuthService {
         await this.prisma.refreshToken.delete({
           where: { id: storedToken.id },
         });
-        
+
         // Log authentication failure
         this.logger.warn(
           `Token refresh failed - Expired token - ` +
-          `User ID: ${storedToken.userId}, ` +
-          `Reason: Refresh token expired, ` +
-          `Timestamp: ${new Date().toISOString()}`
+            `User ID: ${storedToken.userId}, ` +
+            `Reason: Refresh token expired, ` +
+            `Timestamp: ${new Date().toISOString()}`,
         );
-        
+
         throw new UnauthorizedException('Refresh token expired');
       }
 
@@ -248,9 +261,9 @@ export class AuthService {
       // Log successful token refresh
       this.logger.log(
         `Token refreshed successfully - ` +
-        `User ID: ${storedToken.user.id}, ` +
-        `Email: ${storedToken.user.email}, ` +
-        `Timestamp: ${new Date().toISOString()}`
+          `User ID: ${storedToken.user.id}, ` +
+          `Email: ${storedToken.user.email}, ` +
+          `Timestamp: ${new Date().toISOString()}`,
       );
 
       return {
@@ -264,18 +277,18 @@ export class AuthService {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      
+
       // Log authentication failure for unexpected errors
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
-      
+
       this.logger.error(
         `Token refresh failed - Unexpected error - ` +
-        `Reason: ${errorMessage}, ` +
-        `Timestamp: ${new Date().toISOString()}`,
-        errorStack
+          `Reason: ${errorMessage}, ` +
+          `Timestamp: ${new Date().toISOString()}`,
+        errorStack,
       );
-      
+
       throw new UnauthorizedException('Invalid refresh token');
     }
   }
@@ -286,18 +299,18 @@ export class AuthService {
    */
   private async handleTokenReuse(token: string): Promise<void> {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    
+
     // Check if this token was recently deleted (indicating reuse)
     const deletedTokenInfo = this.deletedTokensCache.get(tokenHash);
-    
+
     if (deletedTokenInfo) {
       // Token reuse detected! This is a security incident
       this.logger.warn(
         `SECURITY: Refresh token reuse detected - ` +
-        `User ID: ${deletedTokenInfo.userId}, ` +
-        `Token ID: ${deletedTokenInfo.tokenId}, ` +
-        `Timestamp: ${new Date().toISOString()}, ` +
-        `Original deletion: ${deletedTokenInfo.deletedAt.toISOString()}`
+          `User ID: ${deletedTokenInfo.userId}, ` +
+          `Token ID: ${deletedTokenInfo.tokenId}, ` +
+          `Timestamp: ${new Date().toISOString()}, ` +
+          `Original deletion: ${deletedTokenInfo.deletedAt.toISOString()}`,
       );
 
       // Invalidate ALL refresh tokens for this user as a security measure
@@ -306,7 +319,7 @@ export class AuthService {
       });
 
       this.logger.warn(
-        `SECURITY: Invalidated ${result.count} refresh token(s) for user ${deletedTokenInfo.userId} due to token reuse`
+        `SECURITY: Invalidated ${result.count} refresh token(s) for user ${deletedTokenInfo.userId} due to token reuse`,
       );
 
       // Remove from cache after handling
@@ -315,7 +328,7 @@ export class AuthService {
       // Token not found in cache - could be invalid, expired long ago, or fake
       this.logger.warn(
         `Invalid refresh token attempt - Token hash: ${tokenHash.substring(0, 16)}..., ` +
-        `Timestamp: ${new Date().toISOString()}`
+          `Timestamp: ${new Date().toISOString()}`,
       );
     }
   }
@@ -355,14 +368,14 @@ export class AuthService {
 
     // Use the default JWT service for access token (configured in module)
     const accessToken = await this.jwtService.signAsync(payload);
-    
+
     // Generate a secure random refresh token
     const refreshTokenValue = crypto.randomBytes(64).toString('hex');
-    
+
     // Calculate expiration date
     const expiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d';
     const expiresAt = new Date();
-    
+
     // Parse expiration time (simple parsing for common formats)
     if (expiresIn.endsWith('d')) {
       const days = parseInt(expiresIn.slice(0, -1));
@@ -453,8 +466,8 @@ export class AuthService {
     // Log the cleanup operation
     this.logger.log(
       `Expired tokens cleanup completed - ` +
-      `Tokens removed: ${result.count}, ` +
-      `Timestamp: ${new Date().toISOString()}`
+        `Tokens removed: ${result.count}, ` +
+        `Timestamp: ${new Date().toISOString()}`,
     );
   }
 }

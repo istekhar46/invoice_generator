@@ -31,7 +31,7 @@ export class AuthController {
 
   /**
    * Initialize AuthController with configurable cookie settings
-   * 
+   *
    * Cookie configuration is read from environment variables:
    * - COOKIE_DOMAIN: Domain for the cookie (optional, defaults to current domain)
    * - COOKIE_PATH: Path for the cookie (default: /api/v1/auth/refresh)
@@ -45,14 +45,21 @@ export class AuthController {
   ) {
     // Configure refresh token cookie options from environment variables
     const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
-    
+
     // Get cookie configuration from environment with sensible defaults
     const cookieDomain = this.configService.get<string>('COOKIE_DOMAIN'); // undefined = current domain
     const cookiePath = this.configService.get<string>('COOKIE_PATH', '/api/v1/auth/refresh');
-    const cookieSecure = this.configService.get<string>('COOKIE_SECURE', isProduction ? 'true' : 'false') === 'true';
-    const cookieSameSite = this.configService.get<'strict' | 'lax' | 'none'>('COOKIE_SAME_SITE', 'strict');
-    const cookieMaxAge = parseInt(this.configService.get<string>('COOKIE_MAX_AGE', String(7 * 24 * 60 * 60 * 1000)), 10);
-    
+    const cookieSecure =
+      this.configService.get<string>('COOKIE_SECURE', isProduction ? 'true' : 'false') === 'true';
+    const cookieSameSite = this.configService.get<'strict' | 'lax' | 'none'>(
+      'COOKIE_SAME_SITE',
+      'strict',
+    );
+    const cookieMaxAge = parseInt(
+      this.configService.get<string>('COOKIE_MAX_AGE', String(7 * 24 * 60 * 60 * 1000)),
+      10,
+    );
+
     this.REFRESH_TOKEN_COOKIE_OPTIONS = {
       httpOnly: true, // Always true for security
       secure: cookieSecure,
@@ -84,15 +91,11 @@ export class AuthController {
   ): Promise<AuthResponseDto> {
     // Extract IP address from request
     const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
-    
+
     const { authResponse, refreshToken } = await this.authService.register(registerDto, ipAddress);
-    
+
     // Set refresh token as HttpOnly cookie
-    res.cookie(
-      this.REFRESH_TOKEN_COOKIE_NAME,
-      refreshToken,
-      this.REFRESH_TOKEN_COOKIE_OPTIONS,
-    );
+    res.cookie(this.REFRESH_TOKEN_COOKIE_NAME, refreshToken, this.REFRESH_TOKEN_COOKIE_OPTIONS);
 
     return authResponse;
   }
@@ -118,15 +121,11 @@ export class AuthController {
   ): Promise<AuthResponseDto> {
     // Extract IP address from request
     const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
-    
+
     const { authResponse, refreshToken } = await this.authService.login(loginDto, ipAddress);
-    
+
     // Set refresh token as HttpOnly cookie
-    res.cookie(
-      this.REFRESH_TOKEN_COOKIE_NAME,
-      refreshToken,
-      this.REFRESH_TOKEN_COOKIE_OPTIONS,
-    );
+    res.cookie(this.REFRESH_TOKEN_COOKIE_NAME, refreshToken, this.REFRESH_TOKEN_COOKIE_OPTIONS);
 
     return authResponse;
   }
@@ -154,7 +153,7 @@ export class AuthController {
   async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
     const { authResponse } = req.user as { authResponse: AuthResponseDto; refreshToken: string };
     const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:5173');
-    
+
     // Redirect to frontend with only access token as query parameter
     const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${authResponse.accessToken}`;
     res.redirect(redirectUrl);
@@ -180,20 +179,18 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponseDto> {
     // Try to get refresh token from cookie first, then fall back to body (backward compatibility)
-    const refreshToken = req.cookies?.[this.REFRESH_TOKEN_COOKIE_NAME] || refreshTokenDto.refreshToken;
-    
+    const refreshToken =
+      req.cookies?.[this.REFRESH_TOKEN_COOKIE_NAME] || refreshTokenDto.refreshToken;
+
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token not provided');
     }
 
-    const { authResponse, refreshToken: newRefreshToken } = await this.authService.refreshToken(refreshToken);
-    
+    const { authResponse, refreshToken: newRefreshToken } =
+      await this.authService.refreshToken(refreshToken);
+
     // Set new refresh token as HttpOnly cookie
-    res.cookie(
-      this.REFRESH_TOKEN_COOKIE_NAME,
-      newRefreshToken,
-      this.REFRESH_TOKEN_COOKIE_OPTIONS,
-    );
+    res.cookie(this.REFRESH_TOKEN_COOKIE_NAME, newRefreshToken, this.REFRESH_TOKEN_COOKIE_OPTIONS);
 
     return authResponse;
   }
@@ -228,19 +225,16 @@ export class AuthController {
     status: 200,
     description: 'User successfully logged out from all sessions',
   })
-  async logout(
-    @CurrentUser() user: User,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async logout(@CurrentUser() user: User, @Res({ passthrough: true }) res: Response) {
     // Invalidate all user refresh tokens in database
     await this.authService.logout(user.id);
-    
+
     // Clear refresh token cookie by setting Max-Age=0
     res.cookie(this.REFRESH_TOKEN_COOKIE_NAME, '', {
       ...this.REFRESH_TOKEN_COOKIE_OPTIONS,
       maxAge: 0,
     });
-    
+
     return { message: 'Successfully logged out' };
   }
 }

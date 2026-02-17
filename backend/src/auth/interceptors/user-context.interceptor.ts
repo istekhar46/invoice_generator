@@ -26,7 +26,7 @@ export class UserContextInterceptor implements NestInterceptor {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 
-    if (!user || !user.id) {
+    if (!user?.id) {
       throw new UnauthorizedException('User context is required for this operation');
     }
 

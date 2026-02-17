@@ -36,16 +36,13 @@ describe('UserContextInterceptor', () => {
     jest.clearAllMocks();
   });
 
-  const createMockExecutionContext = (
-    user: any = null,
-    isPublic: boolean = false,
-  ): ExecutionContext => {
+  const createMockExecutionContext = (user: any = null, isPublic = false): ExecutionContext => {
     mockReflector.getAllAndOverride.mockReturnValue(isPublic);
-    
+
     const mockRequest = { user };
     const mockHandler = jest.fn();
     const mockClass = jest.fn();
-    
+
     return {
       switchToHttp: () => ({
         getRequest: () => mockRequest,
@@ -64,10 +61,10 @@ describe('UserContextInterceptor', () => {
       expect(result).toBeDefined();
       result.subscribe(() => {
         expect(mockCallHandler.handle).toHaveBeenCalled();
-        expect(mockReflector.getAllAndOverride).toHaveBeenCalledWith(
-          IS_PUBLIC_KEY,
-          [expect.any(Function), expect.any(Function)],
-        );
+        expect(mockReflector.getAllAndOverride).toHaveBeenCalledWith(IS_PUBLIC_KEY, [
+          expect.any(Function),
+          expect.any(Function),
+        ]);
         done();
       });
     });

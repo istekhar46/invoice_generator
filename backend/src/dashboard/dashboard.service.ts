@@ -43,20 +43,19 @@ export class DashboardService {
     // Calculate statistics
     const totalInvoices = totalStats._count;
     const totalValue = totalStats._sum.total || 0;
-    const averageInvoiceValue = totalInvoices > 0 
-      ? Math.round((totalValue / totalInvoices) * 100) / 100 
-      : 0;
+    const averageInvoiceValue =
+      totalInvoices > 0 ? Math.round((totalValue / totalInvoices) * 100) / 100 : 0;
 
     // Revenue is only from paid invoices
-    const paidStats = statusMap['PAID'] || { count: 0, total: 0 };
+    const paidStats = statusMap.PAID || { count: 0, total: 0 };
     const totalRevenue = Math.round(paidStats.total * 100) / 100;
 
     return {
       totalInvoices,
       totalRevenue,
-      pendingInvoices: statusMap['SENT']?.count || 0,
-      paidInvoices: statusMap['PAID']?.count || 0,
-      draftInvoices: statusMap['DRAFT']?.count || 0,
+      pendingInvoices: statusMap.SENT?.count || 0,
+      paidInvoices: statusMap.PAID?.count || 0,
+      draftInvoices: statusMap.DRAFT?.count || 0,
       averageInvoiceValue,
     };
   }

@@ -43,7 +43,7 @@ export class InvoiceResponseDto {
 
   @ApiProperty({
     description: 'Subtotal before tax',
-    example: 500.00,
+    example: 500.0,
   })
   @Expose()
   subtotal!: number;
@@ -57,14 +57,14 @@ export class InvoiceResponseDto {
 
   @ApiProperty({
     description: 'Tax amount',
-    example: 40.00,
+    example: 40.0,
   })
   @Expose()
   taxAmount!: number;
 
   @ApiProperty({
     description: 'Total amount including tax',
-    example: 540.00,
+    example: 540.0,
   })
   @Expose()
   total!: number;

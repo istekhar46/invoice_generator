@@ -2,7 +2,6 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
-  ConflictException,
   BadRequestException,
 } from '@nestjs/common';
 import { User } from '@prisma/client';
@@ -13,10 +12,6 @@ import { UpdateUserDto, ChangePasswordDto } from './dto';
 
 @Injectable()
 export class UserService extends BaseUserService {
-  constructor(prisma: PrismaService) {
-    super(prisma);
-  }
-
   async findById(id: string): Promise<User> {
     const user = await this.prisma.user.findUnique({
       where: { id },
@@ -50,36 +45,26 @@ export class UserService extends BaseUserService {
     // Validate user exists
     await this.validateUserExists(id);
 
-    try {
-      // Update user with additional safety check
-      const updateResult = await this.prisma.user.updateMany({
-        where: { id },
-        data: updateUserDto,
-      });
+    // Update user with additional safety check
+    const updateResult = await this.prisma.user.updateMany({
+      where: { id },
+      data: updateUserDto,
+    });
 
-      if (updateResult.count === 0) {
-        throw new NotFoundException('User not found or access denied');
-      }
-
-      // Return updated user
-      return await this.findById(id);
-    } catch (error) {
-      // Let the global exception filter handle Prisma errors
-      throw error;
+    if (updateResult.count === 0) {
+      throw new NotFoundException('User not found or access denied');
     }
+
+    // Return updated user
+    return await this.findById(id);
   }
 
-  async changePassword(
-    id: string,
-    changePasswordDto: ChangePasswordDto,
-  ): Promise<void> {
+  async changePassword(id: string, changePasswordDto: ChangePasswordDto): Promise<void> {
     const { oldPassword, newPassword } = changePasswordDto;
 
     // Validate that new password is different from old password
     if (oldPassword === newPassword) {
-      throw new BadRequestException(
-        'New password must be different from current password',
-      );
+      throw new BadRequestException('New password must be different from current password');
     }
 
     // Validate user exists and get user data
@@ -99,10 +84,7 @@ export class UserService extends BaseUserService {
     }
 
     // Verify old password
-    const isOldPasswordValid = await bcrypt.compare(
-      oldPassword,
-      user.passwordHash,
-    );
+    const isOldPasswordValid = await bcrypt.compare(oldPassword, user.passwordHash);
 
     if (!isOldPasswordValid) {
       throw new UnauthorizedException('Current password is incorrect');

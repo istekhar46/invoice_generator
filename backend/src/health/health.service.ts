@@ -83,11 +83,11 @@ export class HealthService {
     error?: string;
   }> {
     const startTime = Date.now();
-    
+
     try {
       await this.prismaService.healthCheck();
       const responseTime = Date.now() - startTime;
-      
+
       return {
         status: 'healthy',
         responseTime,
@@ -95,7 +95,7 @@ export class HealthService {
     } catch (error) {
       const responseTime = Date.now() - startTime;
       this.logger.error('Database health check failed:', error);
-      
+
       return {
         status: 'unhealthy',
         responseTime,

@@ -31,34 +31,34 @@ import { initializeCloudinary } from './config/cloudinary.config';
       cache: true,
       expandVariables: true,
     }),
-    
+
     // Database module
     DatabaseModule,
-    
+
     // Authentication module
     AuthModule,
-    
+
     // User management module
     UserModule,
-    
+
     // Company profile module
     CompanyModule,
-    
+
     // Customer management module
     CustomerModule,
-    
+
     // Invoice management module
     InvoiceModule,
-    
+
     // Dashboard module
     DashboardModule,
-    
+
     // Health check module
     HealthModule,
-    
+
     // Cloudinary image storage module
     CloudinaryModule,
-    
+
     // Rate limiting module
     ThrottlerModule.forRootAsync({
       useFactory: () => ({
@@ -74,7 +74,7 @@ import { initializeCloudinary } from './config/cloudinary.config';
   controllers: [AppController],
   providers: [
     AppService,
-    
+
     // Global validation pipe
     {
       provide: APP_PIPE,
@@ -89,25 +89,25 @@ import { initializeCloudinary } from './config/cloudinary.config';
           disableErrorMessages: process.env.NODE_ENV === 'production',
         }),
     },
-    
+
     // Global exception filter
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
     },
-    
+
     // Global JWT authentication guard
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
-    
+
     // Global rate limiting guard
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
-    
+
     // Global interceptors
     {
       provide: APP_INTERCEPTOR,

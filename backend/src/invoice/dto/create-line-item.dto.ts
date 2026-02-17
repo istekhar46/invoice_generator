@@ -1,13 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsEnum,
-  IsString,
-  IsNotEmpty,
-  IsNumber,
-  Min,
-  Max,
-  MaxLength,
-} from 'class-validator';
+import { IsEnum, IsString, IsNotEmpty, IsNumber, Min, Max, MaxLength } from 'class-validator';
 import { LineItemType } from '@prisma/client';
 
 export class CreateLineItemDto {
@@ -42,7 +34,7 @@ export class CreateLineItemDto {
 
   @ApiProperty({
     description: 'Rate per unit',
-    example: 75.00,
+    example: 75.0,
     minimum: 0,
     maximum: 100000,
   })

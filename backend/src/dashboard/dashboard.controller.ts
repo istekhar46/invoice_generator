@@ -1,14 +1,5 @@
-import {
-  Controller,
-  Get,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { DashboardService } from './dashboard.service';
@@ -36,9 +27,7 @@ export class DashboardController {
     status: 404,
     description: 'User not found',
   })
-  async getStatistics(
-    @CurrentUser('id') userId: string,
-  ): Promise<DashboardStatisticsDto> {
+  async getStatistics(@CurrentUser('id') userId: string): Promise<DashboardStatisticsDto> {
     return this.dashboardService.getStatistics(userId);
   }
 }

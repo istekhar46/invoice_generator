@@ -88,13 +88,13 @@ export class CustomerController {
     @Query() query: CustomerQueryDto,
   ): Promise<PaginatedResponseDto<CustomerResponseDto>> {
     const result = await this.customerService.findAll(userId, query);
-    
+
     return {
       ...result,
-      data: result.data.map(customer =>
+      data: result.data.map((customer) =>
         plainToClass(CustomerResponseDto, customer, {
           excludeExtraneousValues: true,
-        })
+        }),
       ),
     };
   }
@@ -161,11 +161,7 @@ export class CustomerController {
     @Param('id') id: string,
     @Body() updateCustomerDto: UpdateCustomerDto,
   ): Promise<CustomerResponseDto> {
-    const updatedCustomer = await this.customerService.update(
-      userId,
-      id,
-      updateCustomerDto,
-    );
+    const updatedCustomer = await this.customerService.update(userId, id, updateCustomerDto);
     return plainToClass(CustomerResponseDto, updatedCustomer, {
       excludeExtraneousValues: true,
     });
@@ -196,10 +192,7 @@ export class CustomerController {
     status: 404,
     description: 'Customer not found',
   })
-  async delete(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ): Promise<void> {
+  async delete(@CurrentUser('id') userId: string, @Param('id') id: string): Promise<void> {
     await this.customerService.delete(userId, id);
   }
 }

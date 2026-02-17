@@ -70,8 +70,9 @@ describe('AuthService - Token Validation', () => {
 
   describe('JWT Signature Validation (Requirement 10.1)', () => {
     it('should reject tokens with invalid signatures', async () => {
-      const invalidToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLWlkIn0.invalid_signature';
-      
+      const invalidToken =
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLWlkIn0.invalid_signature';
+
       (jwtService.verify as jest.Mock).mockImplementation(() => {
         throw new Error('invalid signature');
       });
@@ -83,7 +84,7 @@ describe('AuthService - Token Validation', () => {
 
     it('should reject tokens with tampered payload', async () => {
       const tamperedToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.tampered_payload.signature';
-      
+
       (jwtService.verify as jest.Mock).mockImplementation(() => {
         throw new Error('invalid token');
       });
@@ -94,8 +95,9 @@ describe('AuthService - Token Validation', () => {
     });
 
     it('should reject tokens signed with wrong secret', async () => {
-      const tokenWithWrongSecret = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLWlkIn0.wrong_secret';
-      
+      const tokenWithWrongSecret =
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLWlkIn0.wrong_secret';
+
       (jwtService.verify as jest.Mock).mockImplementation(() => {
         throw new Error('invalid signature');
       });
@@ -111,7 +113,7 @@ describe('AuthService - Token Validation', () => {
         email: 'test@example.com',
         displayName: 'Test User',
       };
-      
+
       (jwtService.verify as jest.Mock).mockReturnValue(validPayload);
 
       const result = jwtService.verify('valid.jwt.token');
@@ -125,7 +127,7 @@ describe('AuthService - Token Validation', () => {
   describe('Token Expiration Validation (Requirement 10.2)', () => {
     it('should reject expired access tokens', async () => {
       const expiredToken = 'expired.jwt.token';
-      
+
       (jwtService.verify as jest.Mock).mockImplementation(() => {
         throw new Error('jwt expired');
       });
@@ -160,13 +162,13 @@ describe('AuthService - Token Validation', () => {
 
       (prismaService.refreshToken.delete as jest.Mock).mockResolvedValue({});
 
-      await expect(
-        service.refreshToken(expiredRefreshToken)
-      ).rejects.toThrow(UnauthorizedException);
-      
-      await expect(
-        service.refreshToken(expiredRefreshToken)
-      ).rejects.toThrow('Refresh token expired');
+      await expect(service.refreshToken(expiredRefreshToken)).rejects.toThrow(
+        UnauthorizedException,
+      );
+
+      await expect(service.refreshToken(expiredRefreshToken)).rejects.toThrow(
+        'Refresh token expired',
+      );
 
       expect(prismaService.refreshToken.delete).toHaveBeenCalled();
     });
@@ -177,7 +179,7 @@ describe('AuthService - Token Validation', () => {
         email: 'test@example.com',
         displayName: 'Test User',
       };
-      
+
       (jwtService.verify as jest.Mock).mockReturnValue(validPayload);
 
       const result = jwtService.verify('valid.jwt.token');
@@ -252,13 +254,13 @@ describe('AuthService - Token Validation', () => {
 
       (prismaService.refreshToken.findUnique as jest.Mock).mockResolvedValue(null);
 
-      await expect(
-        service.refreshToken(invalidRefreshToken)
-      ).rejects.toThrow(UnauthorizedException);
-      
-      await expect(
-        service.refreshToken(invalidRefreshToken)
-      ).rejects.toThrow('Invalid refresh token');
+      await expect(service.refreshToken(invalidRefreshToken)).rejects.toThrow(
+        UnauthorizedException,
+      );
+
+      await expect(service.refreshToken(invalidRefreshToken)).rejects.toThrow(
+        'Invalid refresh token',
+      );
     });
 
     it('should reject refresh tokens that were already used', async () => {
@@ -266,9 +268,7 @@ describe('AuthService - Token Validation', () => {
 
       (prismaService.refreshToken.findUnique as jest.Mock).mockResolvedValue(null);
 
-      await expect(
-        service.refreshToken(usedRefreshToken)
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(service.refreshToken(usedRefreshToken)).rejects.toThrow(UnauthorizedException);
     });
 
     it('should reject malformed refresh tokens', async () => {
@@ -276,16 +276,14 @@ describe('AuthService - Token Validation', () => {
 
       (prismaService.refreshToken.findUnique as jest.Mock).mockResolvedValue(null);
 
-      await expect(
-        service.refreshToken(malformedToken)
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(service.refreshToken(malformedToken)).rejects.toThrow(UnauthorizedException);
     });
   });
 
   describe('Validation Error Messages (Requirement 10.5)', () => {
     it('should return descriptive error for invalid signature', async () => {
       const invalidToken = 'invalid.signature.token';
-      
+
       (jwtService.verify as jest.Mock).mockImplementation(() => {
         throw new Error('invalid signature');
       });
@@ -301,7 +299,7 @@ describe('AuthService - Token Validation', () => {
 
     it('should return descriptive error for expired token', async () => {
       const expiredToken = 'expired.token';
-      
+
       (jwtService.verify as jest.Mock).mockImplementation(() => {
         throw new Error('jwt expired');
       });

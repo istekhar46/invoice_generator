@@ -69,9 +69,9 @@ describe('JwtAuthGuard', () => {
               mockContext.getHandler(),
               mockContext.getClass(),
             ]);
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -103,7 +103,9 @@ describe('JwtAuthGuard', () => {
             } as unknown as ExecutionContext;
 
             // Mock the parent canActivate method
-            const originalCanActivate = Object.getPrototypeOf(Object.getPrototypeOf(guard)).canActivate;
+            const originalCanActivate = Object.getPrototypeOf(
+              Object.getPrototypeOf(guard),
+            ).canActivate;
             const mockParentCanActivate = jest.fn().mockReturnValue(testData.hasValidUser);
             Object.getPrototypeOf(Object.getPrototypeOf(guard)).canActivate = mockParentCanActivate;
 
@@ -124,9 +126,9 @@ describe('JwtAuthGuard', () => {
               // Restore original method
               Object.getPrototypeOf(Object.getPrototypeOf(guard)).canActivate = originalCanActivate;
             }
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -167,9 +169,9 @@ describe('JwtAuthGuard', () => {
               const result = guard.handleRequest(error, user, null);
               expect(result).toEqual(testData.userInfo);
             }
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
   });

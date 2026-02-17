@@ -34,14 +34,14 @@ export class LineItemResponseDto {
 
   @ApiProperty({
     description: 'Rate per unit',
-    example: 75.00,
+    example: 75.0,
   })
   @Expose()
   rate!: number;
 
   @ApiProperty({
     description: 'Total amount for this line item (quantity * rate)',
-    example: 187.50,
+    example: 187.5,
   })
   @Expose()
   amount!: number;
