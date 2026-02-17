@@ -14,19 +14,46 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     }
 
     const sslEnabled: boolean = process.env.PG_SSL === 'true';
+    const sslRejectUnauthorized: boolean = process.env.PG_SSL_REJECT_UNAUTHORIZED !== 'false';
 
-    // If PG_CA_CERT is defined, parse it correctly
-    const caCert: string | undefined = process.env.PG_CA_CERT?.replace(/\\n/g, '\n');
+    // If PG_CA_CERT is defined, parse it correctly (handle both escaped and unescaped newlines)
+    const caCert: string | undefined = process.env.PG_CA_CERT
+      ?.replace(/\\n/g, '\n')
+      ?.replace(/\\"/g, '"')
+      ?.trim();
 
-    const poolConfig: PoolConfig = {
-      connectionString,
-      ssl: sslEnabled
+    let poolConfig: PoolConfig;
+
+    if (sslEnabled) {
+      // Build connection string with sslmode=require for Aiven compatibility
+      let connectionStringWithSsl = connectionString;
+      if (!connectionString.includes('sslmode=')) {
+        const separator = connectionString.includes('?') ? '&' : '?';
+        connectionStringWithSsl = `${connectionString}${separator}sslmode=require`;
+      }
+
+      // Configure SSL options
+      const sslConfig: PoolConfig['ssl'] = sslRejectUnauthorized && caCert
         ? {
-            rejectUnauthorized: true, // enable strict verification
+            rejectUnauthorized: true,
             ca: caCert,
           }
-        : false,
-    };
+        : {
+            rejectUnauthorized: false,
+          };
+
+      poolConfig = {
+        connectionString: connectionStringWithSsl,
+        ssl: sslConfig,
+      };
+
+      this.logger.debug(`SSL enabled with rejectUnauthorized: ${sslRejectUnauthorized && caCert ? 'true' : 'false'}`);
+    } else {
+      poolConfig = {
+        connectionString,
+        ssl: false,
+      };
+    }
 
     const pool: Pool = new Pool(poolConfig);
     const adapter: PrismaPg = new PrismaPg(pool);
