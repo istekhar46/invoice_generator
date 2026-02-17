@@ -17,6 +17,31 @@ export interface CreateInvoiceDto {
   taxRate: number
 }
 
+export interface CreateQuickInvoiceDto {
+  isQuickInvoice: true
+  customerId?: string
+  quickCompanyName?: string
+  quickCompanyAddress?: string
+  quickCompanyCity?: string
+  quickCompanyState?: string
+  quickCompanyZipCode?: string
+  quickCompanyPhone?: string
+  quickCompanyEmail?: string
+  quickCompanyTaxNumber?: string
+  quickCustomerName?: string
+  quickCustomerEmail?: string
+  quickCustomerPhone?: string
+  quickCustomerAddress?: string
+  quickCustomerCity?: string
+  quickCustomerState?: string
+  quickCustomerZipCode?: string
+  serviceDate: Date
+  dueDate: Date
+  lineItems: CreateLineItemDto[]
+  notes?: string
+  taxRate: number
+}
+
 export interface UpdateInvoiceDto {
   customerId?: string
   serviceDate?: string | Date  // Accept both for flexibility, but will be serialized to string
@@ -130,6 +155,14 @@ export class InvoiceApi {
    */
   async createInvoice(data: CreateInvoiceDto): Promise<InvoiceResponseDto> {
     return apiClient.post<InvoiceResponseDto>(this.basePath, data)
+  }
+
+  /**
+   * Create a quick invoice with inline company and customer details
+   * Allows creating invoices without saving company or customer details
+   */
+  async createQuickInvoice(data: CreateQuickInvoiceDto): Promise<InvoiceResponseDto> {
+    return apiClient.post<InvoiceResponseDto>(`${this.basePath}/quick`, data)
   }
 
   /**

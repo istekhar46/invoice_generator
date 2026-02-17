@@ -1,5 +1,6 @@
 export { CreateLineItemDto } from './create-line-item.dto';
 export { CreateInvoiceDto } from './create-invoice.dto';
+export { CreateQuickInvoiceDto } from './create-quick-invoice.dto';
 export { UpdateInvoiceDto } from './update-invoice.dto';
 export { UpdateInvoiceStatusDto } from './update-invoice-status.dto';
 export { LineItemResponseDto } from './line-item-response.dto';

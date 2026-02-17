@@ -9,6 +9,7 @@ import { PrismaService } from '../database/prisma.service';
 import { BaseUserService } from '../common/services/base-user-service';
 import {
   CreateInvoiceDto,
+  CreateQuickInvoiceDto,
   UpdateInvoiceDto,
   UpdateInvoiceStatusDto,
   InvoiceQueryDto,
@@ -87,6 +88,90 @@ export class InvoiceService extends BaseUserService {
 
         // Create line items
         const lineItemsData = createInvoiceDto.lineItems.map((item) => ({
+          invoiceId: newInvoice.id,
+          type: item.type,
+          description: item.description,
+          quantity: item.quantity,
+          rate: item.rate,
+          amount: item.quantity * item.rate,
+        }));
+
+        await tx.lineItem.createMany({
+          data: lineItemsData,
+        });
+
+        return newInvoice;
+      });
+
+      // Return invoice with relations
+      return await this.findById(userId, invoice.id);
+    } catch (error) {
+      // Let the global exception filter handle Prisma errors
+      throw error;
+    }
+  }
+
+  async createQuick(
+    userId: string,
+    createQuickInvoiceDto: CreateQuickInvoiceDto,
+  ): Promise<InvoiceWithRelations> {
+    // Validate user exists
+    await this.validateUserExists(userId);
+
+    // If customerId is provided, verify customer exists and belongs to user
+    if (createQuickInvoiceDto.customerId) {
+      await this.validateCustomerOwnership(createQuickInvoiceDto.customerId, userId);
+    }
+
+    // Validate dates
+    this.validateInvoiceDates(createQuickInvoiceDto.serviceDate, createQuickInvoiceDto.dueDate);
+
+    // Calculate totals
+    const totals = this.calculateTotals(createQuickInvoiceDto.lineItems, createQuickInvoiceDto.taxRate);
+
+    // Generate unique invoice number
+    const invoiceNumber = await this.generateInvoiceNumber();
+
+    try {
+      // Create invoice with line items in a transaction
+      const invoice = await this.prisma.$transaction(async (tx) => {
+        // Create the invoice with inline details
+        const newInvoice = await tx.invoice.create({
+          data: {
+            userId,
+            customerId: createQuickInvoiceDto.customerId || null,
+            invoiceNumber,
+            serviceDate: createQuickInvoiceDto.serviceDate,
+            dueDate: createQuickInvoiceDto.dueDate,
+            subtotal: totals.subtotal,
+            taxRate: createQuickInvoiceDto.taxRate,
+            taxAmount: totals.taxAmount,
+            total: totals.total,
+            notes: createQuickInvoiceDto.notes || null,
+            status: InvoiceStatus.DRAFT,
+            isQuickInvoice: true,
+            // Inline company details
+            quickCompanyName: createQuickInvoiceDto.quickCompanyName || null,
+            quickCompanyAddress: createQuickInvoiceDto.quickCompanyAddress || null,
+            quickCompanyCity: createQuickInvoiceDto.quickCompanyCity || null,
+            quickCompanyState: createQuickInvoiceDto.quickCompanyState || null,
+            quickCompanyZipCode: createQuickInvoiceDto.quickCompanyZipCode || null,
+            quickCompanyPhone: createQuickInvoiceDto.quickCompanyPhone || null,
+            quickCompanyEmail: createQuickInvoiceDto.quickCompanyEmail || null,
+            quickCompanyTaxNumber: createQuickInvoiceDto.quickCompanyTaxNumber || null,
+            // Inline customer details
+            quickCustomerName: createQuickInvoiceDto.quickCustomerName || null,
+            quickCustomerEmail: createQuickInvoiceDto.quickCustomerEmail || null,
+            quickCustomerPhone: createQuickInvoiceDto.quickCustomerPhone || null,
+            quickCustomerAddress: createQuickInvoiceDto.quickCustomerAddress || null,
+            quickCustomerCity: createQuickInvoiceDto.quickCustomerCity || null,
+            quickCustomerState: createQuickInvoiceDto.quickCustomerState || null,
+            quickCustomerZipCode: createQuickInvoiceDto.quickCustomerZipCode || null,
+          },
+        });
+
+        // Create line items
+        const lineItemsData = createQuickInvoiceDto.lineItems.map((item) => ({
           invoiceId: newInvoice.id,
           type: item.type,
           description: item.description,

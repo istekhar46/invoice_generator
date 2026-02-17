@@ -29,6 +29,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { InvoiceService } from './invoice.service';
 import {
   CreateInvoiceDto,
+  CreateQuickInvoiceDto,
   UpdateInvoiceDto,
   UpdateInvoiceStatusDto,
   InvoiceResponseDto,
@@ -68,6 +69,32 @@ export class InvoiceController {
     @Body() createInvoiceDto: CreateInvoiceDto,
   ): Promise<InvoiceResponseDto> {
     const invoice = await this.invoiceService.create(userId, createInvoiceDto);
+    return plainToClass(InvoiceResponseDto, invoice, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  @Post('quick')
+  @ApiOperation({ summary: 'Create a quick invoice with inline company and customer details' })
+  @ApiBody({ type: CreateQuickInvoiceDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Quick invoice created successfully',
+    type: InvoiceResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async createQuick(
+    @CurrentUser('id') userId: string,
+    @Body() createQuickInvoiceDto: CreateQuickInvoiceDto,
+  ): Promise<InvoiceResponseDto> {
+    const invoice = await this.invoiceService.createQuick(userId, createQuickInvoiceDto);
     return plainToClass(InvoiceResponseDto, invoice, {
       excludeExtraneousValues: true,
     });
