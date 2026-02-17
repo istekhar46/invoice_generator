@@ -46,8 +46,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         connectionString: connectionStringWithSsl,
         ssl: sslConfig,
       };
-
-      this.logger.debug(`SSL enabled with rejectUnauthorized: ${sslRejectUnauthorized && caCert ? 'true' : 'false'}`);
     } else {
       poolConfig = {
         connectionString,
@@ -62,6 +60,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       adapter,
       errorFormat: 'pretty',
     });
+
+    if (sslEnabled) {
+      this.logger.debug(`SSL enabled with rejectUnauthorized: ${sslRejectUnauthorized && caCert ? 'true' : 'false'}`);
+    }
   }
 
   async onModuleInit(): Promise<void> {
