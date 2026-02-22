@@ -23,7 +23,6 @@ const testCompany: CompanyProfile = {
   phone: '(555) 123-4567',
   email: 'test@electric.com',
   taxNumber: 'TAX123456',
-  defaultLaborRate: 100,
   defaultTaxRate: 0.08,
   createdAt: new Date(),
   updatedAt: new Date(),

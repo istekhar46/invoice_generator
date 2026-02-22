@@ -29,8 +29,7 @@ export interface CompanyProfile {
   zipCode: string
   phone: string
   email: string
-  taxNumber: string
-  defaultLaborRate: number
+  taxNumber?: string
   defaultTaxRate: number
   logoUrl?: string
   createdAt: Date
