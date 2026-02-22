@@ -25,14 +25,16 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     let poolConfig: PoolConfig;
 
     if (sslEnabled) {
-      // Build connection string with sslmode=require for Aiven compatibility
-      let connectionStringWithSsl = connectionString;
-      if (!connectionString.includes('sslmode=')) {
-        const separator = connectionString.includes('?') ? '&' : '?';
-        connectionStringWithSsl = `${connectionString}${separator}sslmode=require`;
-      }
+      // IMPORTANT: Do NOT add sslmode to connection string when using ssl object
+      // According to node-postgres documentation, ssl parameters in connection string
+      // will overwrite the ssl object configuration
+      const cleanConnectionString = connectionString
+        .replace(/[?&]sslmode=[^&]*/g, '')
+        .replace(/[?&]sslcert=[^&]*/g, '')
+        .replace(/[?&]sslkey=[^&]*/g, '')
+        .replace(/[?&]sslrootcert=[^&]*/g, '');
 
-      // Configure SSL options
+      // Configure SSL options according to node-postgres documentation
       const sslConfig: PoolConfig['ssl'] = sslRejectUnauthorized && caCert
         ? {
             rejectUnauthorized: true,
@@ -43,7 +45,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
           };
 
       poolConfig = {
-        connectionString: connectionStringWithSsl,
+        connectionString: cleanConnectionString,
         ssl: sslConfig,
       };
     } else {
