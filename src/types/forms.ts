@@ -6,9 +6,10 @@
 import { z } from 'zod'
 import type { LineItemType, InvoiceStatus } from './entities'
 
-// Validation regex patterns
-const PHONE_REGEX = /^\(?(\d{3})\)?[- ]?(\d{3})[- ]?(\d{4})$/
-const ZIP_CODE_REGEX = /^\d{5}(-\d{4})?$/
+// International phone: optional leading +, 7–15 digits, spaces/dashes/parens allowed
+const PHONE_REGEX = /^\+?[\d\s().\-]{7,20}$/
+// International postal code: 3–10 alphanumeric chars, optional space or dash in the middle
+const POSTAL_CODE_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9\s\-]{1,9}$/
 
 /**
  * Authentication form schemas and types
@@ -34,13 +35,12 @@ export const companyProfileSchema = z.object({
   businessName: z.string().min(1, 'Business name is required'),
   address: z.string().min(1, 'Address is required'),
   city: z.string().min(1, 'City is required'),
-  state: z.string().length(2, 'State must be 2 characters'),
-  zipCode: z.string().regex(ZIP_CODE_REGEX, 'Invalid zip code format'),
-  phone: z.string().regex(PHONE_REGEX, 'Invalid phone number format'),
+  state: z.string().min(1, 'State / Province / Region is required').max(50, 'Too long'),
+  zipCode: z.string().regex(POSTAL_CODE_REGEX, 'Invalid postal code'),
+  phone: z.string().regex(PHONE_REGEX, 'Invalid phone number (include country code for international, e.g. +44 20 7946 0958)'),
   email: z.string().email('Invalid email address'),
-  taxNumber: z.string().min(1, 'Tax number is required'),
-  defaultLaborRate: z.number().min(0, 'Labor rate must be positive'),
-  defaultTaxRate: z.number().min(0, 'Tax rate must be positive').max(1, 'Tax rate must be between 0 and 1'),
+  taxNumber: z.string().optional(),
+  defaultTaxRate: z.number().min(0, 'Tax rate must be 0 or more').max(100, 'Tax rate cannot exceed 100%'),
 })
 
 export type CompanyProfileFormData = z.infer<typeof companyProfileSchema>
@@ -51,11 +51,11 @@ export type CompanyProfileFormData = z.infer<typeof companyProfileSchema>
 export const customerSchema = z.object({
   name: z.string().min(1, 'Customer name is required'),
   email: z.string().email('Invalid email address'),
-  phone: z.string().regex(PHONE_REGEX, 'Invalid phone number format'),
+  phone: z.string().regex(PHONE_REGEX, 'Invalid phone number (include country code for international, e.g. +44 20 7946 0958)'),
   address: z.string().min(1, 'Address is required'),
   city: z.string().min(1, 'City is required'),
-  state: z.string().length(2, 'State must be 2 characters'),
-  zipCode: z.string().regex(ZIP_CODE_REGEX, 'Invalid zip code format'),
+  state: z.string().min(1, 'State / Province / Region is required').max(50, 'Too long'),
+  zipCode: z.string().regex(POSTAL_CODE_REGEX, 'Invalid postal code'),
 })
 
 export type CustomerFormData = z.infer<typeof customerSchema>
@@ -106,20 +106,20 @@ export const quickInvoiceSchema = z.object({
   quickCompanyName: z.string().optional(),
   quickCompanyAddress: z.string().optional(),
   quickCompanyCity: z.string().optional(),
-  quickCompanyState: z.string().length(2, 'State must be 2 characters').optional(),
-  quickCompanyZipCode: z.string().regex(ZIP_CODE_REGEX, 'Invalid zip code format').optional(),
-  quickCompanyPhone: z.string().regex(PHONE_REGEX, 'Invalid phone number format').optional(),
+  quickCompanyState: z.string().max(50, 'Too long').optional(),
+  quickCompanyZipCode: z.string().regex(POSTAL_CODE_REGEX, 'Invalid postal code').optional(),
+  quickCompanyPhone: z.string().regex(PHONE_REGEX, 'Invalid phone number').optional(),
   quickCompanyEmail: z.string().email('Invalid email address').optional(),
   quickCompanyTaxNumber: z.string().optional(),
 
   // Inline customer details (all optional)
   quickCustomerName: z.string().optional(),
   quickCustomerEmail: z.string().email('Invalid email address').optional(),
-  quickCustomerPhone: z.string().regex(PHONE_REGEX, 'Invalid phone number format').optional(),
+  quickCustomerPhone: z.string().regex(PHONE_REGEX, 'Invalid phone number').optional(),
   quickCustomerAddress: z.string().optional(),
   quickCustomerCity: z.string().optional(),
-  quickCustomerState: z.string().length(2, 'State must be 2 characters').optional(),
-  quickCustomerZipCode: z.string().regex(ZIP_CODE_REGEX, 'Invalid zip code format').optional(),
+  quickCustomerState: z.string().max(50, 'Too long').optional(),
+  quickCustomerZipCode: z.string().regex(POSTAL_CODE_REGEX, 'Invalid postal code').optional(),
 
   // Standard invoice fields
   serviceDate: z.date(),

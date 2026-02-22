@@ -50,10 +50,16 @@ describe('AuthController - Refresh Token Cookie Integration', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string) => {
-              if (key === 'NODE_ENV') return 'test';
-              if (key === 'FRONTEND_URL') return 'http://localhost:5173';
-              return undefined;
+            get: jest.fn((key: string, defaultValue?: unknown) => {
+              const config: Record<string, string> = {
+                NODE_ENV: 'test',
+                FRONTEND_URL: 'http://localhost:5173',
+                COOKIE_PATH: '/api/v1/auth/refresh',
+                COOKIE_SECURE: 'false',
+                COOKIE_SAME_SITE: 'lax',
+                COOKIE_MAX_AGE: String(7 * 24 * 60 * 60 * 1000), // 7 days in ms
+              };
+              return config[key] ?? defaultValue;
             }),
           },
         },

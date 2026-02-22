@@ -78,21 +78,34 @@
   /* Modern Typography System */
   --font-family-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-family-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
-  
+
   /* Responsive Font Sizes - Mobile First */
-  --font-size-xs: 0.75rem;     /* 12px */
-  --font-size-sm: 0.875rem;    /* 14px */
-  --font-size-base: 1rem;      /* 16px - responsive base */
-  --font-size-lg: 1.125rem;    /* 18px */
-  --font-size-xl: 1.25rem;     /* 20px */
-  --font-size-2xl: 1.5rem;     /* 24px */
-  --font-size-3xl: 1.875rem;   /* 30px */
-  --font-size-4xl: 2.25rem;    /* 36px */
-  --font-size-5xl: 3rem;       /* 48px */
-  --font-size-6xl: 3.75rem;    /* 60px */
-  --font-size-7xl: 4.5rem;     /* 72px */
-  --font-size-8xl: 6rem;       /* 96px */
-  --font-size-9xl: 8rem;       /* 128px */
+  --font-size-xs: 0.75rem;
+  /* 12px */
+  --font-size-sm: 0.875rem;
+  /* 14px */
+  --font-size-base: 1rem;
+  /* 16px - responsive base */
+  --font-size-lg: 1.125rem;
+  /* 18px */
+  --font-size-xl: 1.25rem;
+  /* 20px */
+  --font-size-2xl: 1.5rem;
+  /* 24px */
+  --font-size-3xl: 1.875rem;
+  /* 30px */
+  --font-size-4xl: 2.25rem;
+  /* 36px */
+  --font-size-5xl: 3rem;
+  /* 48px */
+  --font-size-6xl: 3.75rem;
+  /* 60px */
+  --font-size-7xl: 4.5rem;
+  /* 72px */
+  --font-size-8xl: 6rem;
+  /* 96px */
+  --font-size-9xl: 8rem;
+  /* 128px */
 
   /* Line Heights for Optimal Readability */
   --line-height-none: 1;
@@ -156,6 +169,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -167,6 +181,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -178,6 +193,7 @@
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -188,21 +204,31 @@
   0% {
     background-position: -200px 0;
   }
+
   100% {
     background-position: calc(200px + 100%) 0;
   }
 }
 
 @keyframes bounce-subtle {
-  0%, 20%, 53%, 80%, 100% {
+
+  0%,
+  20%,
+  53%,
+  80%,
+  100% {
     transform: translate3d(0, 0, 0);
   }
-  40%, 43% {
+
+  40%,
+  43% {
     transform: translate3d(0, -8px, 0);
   }
+
   70% {
     transform: translate3d(0, -4px, 0);
   }
+
   90% {
     transform: translate3d(0, -2px, 0);
   }
@@ -278,7 +304,8 @@
 
 /* Modern Responsive Typography System */
 html {
-  font-size: 14px; /* Mobile base - 14px */
+  font-size: 14px;
+  /* Mobile base - 14px */
   font-family: var(--font-family-sans);
   line-height: var(--line-height-normal);
   -webkit-font-smoothing: antialiased;
@@ -289,13 +316,15 @@ html {
 /* Responsive font scaling */
 @media (min-width: 640px) {
   html {
-    font-size: 15px; /* Tablet - 15px */
+    font-size: 15px;
+    /* Tablet - 15px */
   }
 }
 
 @media (min-width: 1024px) {
   html {
-    font-size: 16px; /* Desktop - 16px */
+    font-size: 16px;
+    /* Desktop - 16px */
   }
 }
 
@@ -557,4 +586,76 @@ html {
 
 .focus-ring-inset {
   @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-inset;
+}
+
+/* ─── Google Sign-In Button ────────────────────────────────────────────────── */
+/* Uses Authorization Code redirect flow — NOT the @react-oauth/google popup.  */
+.google-signin-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  background: #ffffff;
+  border: 1.5px solid #dadce0;
+  border-radius: 8px;
+  font-family: var(--font-family-sans);
+  font-size: 0.875rem;
+  /* 14px */
+  font-weight: 500;
+  color: #3c4043;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  min-height: 44px;
+  /* accessible touch target */
+  user-select: none;
+}
+
+.google-signin-btn:hover {
+  background: #f8f9fa;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.15), 0 1px 2px rgba(60, 64, 67, 0.1);
+  border-color: #c6c6c6;
+}
+
+.google-signin-btn:active {
+  background: #f1f3f4;
+  box-shadow: none;
+}
+
+.google-signin-btn:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* ─── Print / Download PDF ─────────────────────────────────────────────────── */
+/* When window.print() is called, only the #printable-invoice area is shown.   */
+@media print {
+
+  /* Hide everything on the page */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only the printable invoice and its children */
+  #printable-invoice,
+  #printable-invoice * {
+    visibility: visible;
+  }
+
+  /* Position the invoice at the top-left of the printed page */
+  #printable-invoice {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 2rem;
+    box-shadow: none !important;
+  }
+
+  /* Hide action buttons and modal chrome from print */
+  .no-print {
+    display: none !important;
+  }
 }

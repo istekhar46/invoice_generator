@@ -8,6 +8,7 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { ErrorAlert } from '../components/ui/ErrorAlert'
+import { GoogleSignInButton } from '../components/ui/GoogleSignInButton'
 import { useRegister } from '../hooks/useAuth'
 import { signupSchema } from '../types/forms'
 
@@ -150,6 +151,16 @@ export const SignupPage: React.FC = () => {
               )}
             </Button>
           </form>
+
+          {/* Google sign-up divider + button */}
+          <div className="mt-5 flex items-center gap-3">
+            <hr className="flex-1 border-gray-200" />
+            <span className="text-xs text-gray-400 font-medium">or</span>
+            <hr className="flex-1 border-gray-200" />
+          </div>
+          <div className="mt-4 mb-1">
+            <GoogleSignInButton label="Sign up with Google" />
+          </div>
 
           {/* Benefits Section */}
           <div className="mt-6 pt-6 border-t border-gray-200">

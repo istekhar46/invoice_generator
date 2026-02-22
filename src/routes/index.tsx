@@ -18,6 +18,7 @@ import {
   SettingsPage,
   NotFoundPage,
 } from '../pages'
+import { GoogleAuthCallbackPage } from '../pages/GoogleAuthCallbackPage'
 
 export const router = createBrowserRouter([
   {
@@ -110,6 +111,13 @@ export const router = createBrowserRouter([
         ),
       },
       
+      // OAuth callback route — must NOT be wrapped in PublicRoute or ProtectedRoute
+      // because the access token hasn't been stored in memory yet on first load
+      {
+        path: 'auth/callback',
+        element: <GoogleAuthCallbackPage />,
+      },
+
       // 404 page
       {
         path: '*',

@@ -7,6 +7,7 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { ErrorDisplay } from '../components/shared'
+import { GoogleSignInButton } from '../components/ui/GoogleSignInButton'
 import { useLogin } from '../hooks/useAuth'
 import { loginSchema, type LoginFormData } from '../types/forms'
 import logo from '../assets/logo_3.png'
@@ -119,6 +120,16 @@ export const LoginPage: React.FC = () => {
               )}
             </Button>
           </form>
+
+          {/* Google sign-in divider + button */}
+          <div className="mt-5 flex items-center gap-3">
+            <hr className="flex-1 border-gray-200" />
+            <span className="text-xs text-gray-400 font-medium">or</span>
+            <hr className="flex-1 border-gray-200" />
+          </div>
+          <div className="mt-4">
+            <GoogleSignInButton label="Continue with Google" />
+          </div>
 
           {/* Demo credentials helper with modern styling */}
 

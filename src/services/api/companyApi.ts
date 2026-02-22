@@ -9,8 +9,7 @@ export interface CreateCompanyProfileDto {
   zipCode: string
   phone: string
   email: string
-  taxNumber: string
-  defaultLaborRate: number
+  taxNumber?: string
   defaultTaxRate: number
 }
 
@@ -37,8 +36,7 @@ export interface CompanyProfileResponseDto {
   zipCode: string
   phone: string
   email: string
-  taxNumber: string
-  defaultLaborRate: number
+  taxNumber?: string
   defaultTaxRate: number
   logoUrl?: string
   createdAt: Date

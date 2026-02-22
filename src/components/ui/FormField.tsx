@@ -77,7 +77,7 @@ export const FormField: React.FC<FormFieldProps> = ({
 }
 
 export interface FormSectionProps {
-  title?: string
+  title?: React.ReactNode
   description?: string
   children: React.ReactNode
   className?: string

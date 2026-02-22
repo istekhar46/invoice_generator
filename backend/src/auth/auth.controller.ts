@@ -151,8 +151,11 @@ export class AuthController {
     description: 'Redirect to frontend with tokens',
   })
   async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
-    const { authResponse } = req.user as { authResponse: AuthResponseDto; refreshToken: string };
+    const { authResponse, refreshToken } = req.user as { authResponse: AuthResponseDto; refreshToken: string };
     const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:5173');
+
+    // Set refresh token as HttpOnly cookie before redirecting (same pattern as login/register)
+    res.cookie(this.REFRESH_TOKEN_COOKIE_NAME, refreshToken, this.REFRESH_TOKEN_COOKIE_OPTIONS);
 
     // Redirect to frontend with only access token as query parameter
     const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${authResponse.accessToken}`;

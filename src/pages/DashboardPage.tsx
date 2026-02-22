@@ -8,6 +8,7 @@ import {
   TrendingUp,
   ArrowRight,
   AlertCircle,
+  Zap,
 } from 'lucide-react'
 import {
   DashboardStats,
@@ -113,6 +114,10 @@ export const DashboardPage: React.FC = () => {
 
   const handleAddCustomer = () => {
     setShowCustomerForm(true)
+  }
+
+  const handleQuickInvoice = () => {
+    navigate('/quick-invoice')
   }
 
   const handleInvoiceSave = (_invoice: Invoice) => {
@@ -257,6 +262,14 @@ export const DashboardPage: React.FC = () => {
               </div>
 
               <ResponsiveStack spacing="sm">
+                <QuickActionButton
+                  icon={Zap}
+                  title="Quick Invoice"
+                  description="Invoice without saving details"
+                  gradient="from-amber-500 to-orange-500"
+                  onClick={handleQuickInvoice}
+                />
+
                 <QuickActionButton
                   icon={FileText}
                   title="Create Invoice"

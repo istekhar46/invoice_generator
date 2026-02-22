@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
   IsNotEmpty,
@@ -6,15 +6,11 @@ import {
   IsNumber,
   Min,
   Max,
-  Length,
-  Matches,
   MaxLength,
+  IsOptional,
+  Matches,
 } from 'class-validator';
-import {
-  IsValidTaxNumber,
-  IsValidBusinessName,
-  IsValidStateCode,
-} from '../validators/business-validation.decorator';
+import { IsValidBusinessName } from '../validators/business-validation.decorator';
 
 export class CreateCompanyProfileDto {
   @ApiProperty({
@@ -49,70 +45,61 @@ export class CreateCompanyProfileDto {
   city!: string;
 
   @ApiProperty({
-    description: 'State (2-letter code)',
-    example: 'NY',
-    minLength: 2,
-    maxLength: 2,
+    description: 'State, province, or region',
+    example: 'California',
+    maxLength: 100,
   })
   @IsString()
-  @Length(2, 2, { message: 'State must be exactly 2 characters' })
-  @IsValidStateCode()
+  @IsNotEmpty({ message: 'State / Province / Region is required' })
+  @MaxLength(100, { message: 'State / Province / Region cannot exceed 100 characters' })
   state!: string;
 
   @ApiProperty({
-    description: 'ZIP code (5 digits or 5+4 format)',
+    description: 'Postal / ZIP code (international formats accepted)',
     example: '10001',
-    pattern: '^\\d{5}(-\\d{4})?$',
+    maxLength: 20,
   })
   @IsString()
-  @Matches(/^\d{5}(-\d{4})?$/, {
-    message: 'ZIP code must be in format 12345 or 12345-6789',
+  @IsNotEmpty({ message: 'Postal code is required' })
+  @MaxLength(20, { message: 'Postal code cannot exceed 20 characters' })
+  @Matches(/^[a-zA-Z0-9][\w\s\-]{1,19}$/, {
+    message: 'Postal code must be a valid format (e.g. 10001, SW1A 1AA, 110001)',
   })
   zipCode!: string;
 
   @ApiProperty({
-    description: 'Phone number',
-    example: '(555) 123-4567',
-    pattern: '^\\(?\\d{3}\\)?[- ]?\\d{3}[- ]?\\d{4}$',
+    description: 'Phone number (international formats accepted)',
+    example: '+1 555 123 4567',
+    maxLength: 30,
   })
   @IsString()
-  @Matches(/^\(?\d{3}\)?[- ]?\d{3}[- ]?\d{4}$/, {
-    message: 'Phone number must be in format (555) 123-4567 or 555-123-4567',
+  @IsNotEmpty({ message: 'Phone number is required' })
+  @MaxLength(30, { message: 'Phone number cannot exceed 30 characters' })
+  @Matches(/^\+?[\d\s().\-]{7,30}$/, {
+    message: 'Phone number must be valid (e.g. +1 555 123 4567, +44 20 7946 0958)',
   })
   phone!: string;
 
   @ApiProperty({
     description: 'Business email address',
-    example: 'contact@abcelectrical.com',
+    example: 'contact@business.com',
   })
   @IsEmail({}, { message: 'Email must be a valid email address' })
   email!: string;
 
-  @ApiProperty({
-    description: 'Tax identification number',
+  @ApiPropertyOptional({
+    description: 'Tax / VAT / GST identification number (optional)',
     example: '12-3456789',
     maxLength: 50,
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty({ message: 'Tax number is required' })
   @MaxLength(50, { message: 'Tax number cannot exceed 50 characters' })
-  @IsValidTaxNumber()
-  taxNumber!: string;
+  taxNumber?: string;
 
   @ApiProperty({
-    description: 'Default labor rate per hour',
-    example: 75.0,
-    minimum: 0,
-    maximum: 10000,
-  })
-  @IsNumber({}, { message: 'Default labor rate must be a number' })
-  @Min(0, { message: 'Default labor rate cannot be negative' })
-  @Max(10000, { message: 'Default labor rate cannot exceed $10,000' })
-  defaultLaborRate!: number;
-
-  @ApiProperty({
-    description: 'Default tax rate (as decimal, e.g., 0.08 for 8%)',
-    example: 0.08,
+    description: 'Default tax / GST rate (as decimal, e.g., 0.18 for 18%)',
+    example: 0.18,
     minimum: 0,
     maximum: 1,
   })

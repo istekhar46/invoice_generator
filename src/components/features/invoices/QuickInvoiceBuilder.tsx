@@ -18,6 +18,7 @@ import { ErrorAlert } from '../../ui/ErrorAlert'
 import { FormSection, FormGrid, FormActions } from '../../ui/FormField'
 import { LoadingOverlay } from '../../ui/LoadingSpinner'
 import { LineItemsTable } from './LineItemsTable'
+import { InvoicePreview } from './InvoicePreview'
 import {
   User,
   Calendar,
@@ -28,6 +29,7 @@ import {
   ArrowRight,
   Check,
   Building2,
+  Download,
 } from 'lucide-react'
 import { formatCurrency } from '../../../utils/formatters'
 
@@ -421,9 +423,8 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
               control={control}
               render={({ field }) => (
                 <Input
-                  label="State"
-                  placeholder="IL"
-                  maxLength={2}
+                  label="State / Province"
+                  placeholder="e.g. California, Ontario"
                   error={errors.quickCompanyState?.message}
                   {...field}
                 />
@@ -434,8 +435,8 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
               control={control}
               render={({ field }) => (
                 <Input
-                  label="Zip Code"
-                  placeholder="62701"
+                  label="Postal Code"
+                  placeholder="e.g. 10001, SW1A 1AA"
                   error={errors.quickCompanyZipCode?.message}
                   {...field}
                 />
@@ -450,7 +451,7 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
               render={({ field }) => (
                 <Input
                   label="Phone"
-                  placeholder="(555) 123-4567"
+                  placeholder="+1 555 123 4567"
                   error={errors.quickCompanyPhone?.message}
                   {...field}
                 />
@@ -459,7 +460,7 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
             <Controller
               name="quickCompanyTaxNumber"
               control={control}
-              render={({ field }) => <Input label="Tax Number" placeholder="12-3456789" {...field} />}
+              render={({ field }) => <Input label="Tax / VAT Number" placeholder="e.g. EIN, VAT, GSTIN" {...field} />}
             />
           </FormGrid>
         </FormSection>
@@ -539,9 +540,8 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
               control={control}
               render={({ field }) => (
                 <Input
-                  label="State"
-                  placeholder="IL"
-                  maxLength={2}
+                  label="State / Province"
+                  placeholder="e.g. California, Ontario"
                   error={errors.quickCustomerState?.message}
                   {...field}
                 />
@@ -552,8 +552,8 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
               control={control}
               render={({ field }) => (
                 <Input
-                  label="Zip Code"
-                  placeholder="62702"
+                  label="Postal Code"
+                  placeholder="e.g. 10001, SW1A 1AA"
                   error={errors.quickCustomerZipCode?.message}
                   {...field}
                 />
@@ -712,24 +712,59 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
         return renderDetailsStep()
       case 'items':
         return renderItemsStep()
-      case 'review':
+      case 'review': {
+        // Build a partial invoice from current form data for live preview
+        const previewInvoice: Partial<Invoice> = {
+          invoiceNumber: 'PREVIEW',
+          serviceDate: watchedValues.serviceDate,
+          dueDate: watchedValues.dueDate,
+          lineItems: lineItems,
+          subtotal: totals.subtotal,
+          taxRate: watchedValues.taxRate || 0,
+          taxAmount: totals.taxAmount,
+          total: totals.total,
+          notes: watchedValues.notes || undefined,
+          status: 'draft',
+        }
+        const previewCompany = watchedValues.quickCompanyName
+          ? {
+              businessName: watchedValues.quickCompanyName,
+              address: watchedValues.quickCompanyAddress || '',
+              city: watchedValues.quickCompanyCity || '',
+              state: watchedValues.quickCompanyState || '',
+              zipCode: watchedValues.quickCompanyZipCode || '',
+              phone: watchedValues.quickCompanyPhone || '',
+              email: watchedValues.quickCompanyEmail || '',
+              taxNumber: watchedValues.quickCompanyTaxNumber || '',
+            } as any
+          : null
+        const previewCustomer = watchedValues.quickCustomerName
+          ? {
+              name: watchedValues.quickCustomerName,
+              email: watchedValues.quickCustomerEmail || '',
+              phone: watchedValues.quickCustomerPhone || '',
+              address: watchedValues.quickCustomerAddress || '',
+              city: watchedValues.quickCustomerCity || '',
+              state: watchedValues.quickCustomerState || '',
+              zipCode: watchedValues.quickCustomerZipCode || '',
+            } as any
+          : null
         return (
-          <Card padding="none">
-            <CardContent className="text-center py-8">
-              <Check className="h-16 w-16 text-green-600 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Ready to Create Quick Invoice</h3>
-              <p className="text-gray-600 mb-6">
-                Review your invoice details and click "Save Invoice" to create it.
-              </p>
-              <div className="text-left max-w-md mx-auto space-y-2 bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm font-medium">Invoice Summary:</p>
-                <p className="text-sm text-gray-600">Customer: {watchedValues.quickCustomerName || 'Selected customer'}</p>
-                <p className="text-sm text-gray-600">Line Items: {lineItems.length}</p>
-                <p className="text-sm text-gray-600">Total: {formatCurrency(totals.total)}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+              <Eye className="h-4 w-4 shrink-0" />
+              <span>This is a live preview. Click <strong>Save Invoice</strong> below to create it.</span>
+            </div>
+          <div id="printable-invoice">
+            <InvoicePreview
+              invoice={previewInvoice}
+              company={previewCompany}
+              customer={previewCustomer}
+            />
+          </div>
+        </div>
         )
+      }
       default:
         return null
     }
@@ -781,16 +816,28 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
           </Button>
 
           {currentStep === 'review' ? (
-            <Button
-              type="button"
-              loading={loading}
-              disabled={!validateReviewStep() || submitSuccess || loading}
-              onClick={handleSubmit(onSubmit)}
-              className="flex items-center space-x-2"
-            >
-              <Save className="h-4 w-4" />
-              <span>Save Invoice</span>
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => window.print()}
+                disabled={loading}
+                className="flex items-center space-x-2"
+              >
+                <Download className="h-4 w-4" />
+                <span>Download PDF</span>
+              </Button>
+              <Button
+                type="button"
+                loading={loading}
+                disabled={!validateReviewStep() || submitSuccess || loading}
+                onClick={handleSubmit(onSubmit)}
+                className="flex items-center space-x-2"
+              >
+                <Save className="h-4 w-4" />
+                <span>Save Invoice</span>
+              </Button>
+            </div>
           ) : (
             <Button
               type="button"

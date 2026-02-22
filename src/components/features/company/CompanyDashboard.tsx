@@ -1,4 +1,3 @@
-import React from 'react'
 import { 
   Building2, 
   Edit, 
@@ -6,11 +5,11 @@ import {
   Phone, 
   Mail, 
   FileText, 
-  DollarSign,
   Upload,
   Trash2,
   RefreshCw
 } from 'lucide-react'
+import { RiMoneyDollarCircleLine } from 'react-icons/ri'
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card'
 import { Button } from '../../ui/Button'
 import { ResponsiveContainer, ResponsiveGrid, ResponsiveStack } from '../../layout/ResponsiveLayout'
@@ -206,17 +205,13 @@ export const CompanyDashboard: React.FC<CompanyDashboardProps> = ({
             <Card padding='none' className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <DollarSign className="w-5 h-5" />
+                  <RiMoneyDollarCircleLine className="w-5 h-5 text-black" />
                   <span>Default Rates</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Labor Rate</span>
-                  <span className="text-gray-900 font-medium">${profile.defaultLaborRate}/hr</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Tax Rate</span>
+                  <span className="text-gray-600">Tax / GST Rate</span>
                   <span className="text-gray-900 font-medium">{(profile.defaultTaxRate * 100).toFixed(1)}%</span>
                 </div>
               </CardContent>

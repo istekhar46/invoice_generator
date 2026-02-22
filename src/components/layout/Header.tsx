@@ -9,7 +9,6 @@ import {
   FileText,
   Settings,
   Building2,
-  Zap,
 } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 import { Button } from '../ui/Button'
@@ -49,12 +48,7 @@ const navigation: NavigationItem[] = [
     icon: FileText,
     requiresAuth: true,
   },
-  {
-    name: 'Quick Invoice',
-    href: '/quick-invoice',
-    icon: Zap,
-    requiresAuth: true,
-  },
+
   {
     name: 'Customers',
     href: '/customers',

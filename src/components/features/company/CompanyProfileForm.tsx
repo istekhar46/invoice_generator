@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { CompanyProfileFormData } from '../../../types/forms'
 import { companyProfileSchema } from '../../../types/forms'
@@ -15,6 +15,7 @@ import { Input } from '../../ui/Input'
 import { Card, CardHeader, CardTitle, CardContent } from '../../ui/Card'
 import { FormSection, FormGrid, FormActions } from '../../ui/FormField'
 import { LogoUploader } from './LogoUploader'
+import { RiMoneyDollarCircleLine } from 'react-icons/ri'
 
 interface CompanyProfileFormProps {
   onSuccess?: () => void
@@ -38,6 +39,7 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isValid, isDirty },
     reset,
@@ -52,8 +54,7 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
       phone: profile.phone,
       email: profile.email,
       taxNumber: profile.taxNumber,
-      defaultLaborRate: profile.defaultLaborRate,
-      defaultTaxRate: profile.defaultTaxRate,
+      defaultTaxRate: profile.defaultTaxRate * 100,
     } : {
       businessName: '',
       address: '',
@@ -63,7 +64,6 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
       phone: '',
       email: '',
       taxNumber: '',
-      defaultLaborRate: 0,
       defaultTaxRate: 0,
     },
     mode: 'onChange',
@@ -74,11 +74,17 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
       if (!user?.id) {
         throw new Error('User must be logged in')
       }
-      
+
+      // Convert defaultTaxRate from percentage (e.g. 18) to decimal (e.g. 0.18) before sending
+      const payload = {
+        ...data,
+        defaultTaxRate: data.defaultTaxRate / 100,
+      }
+
       if (isEditing) {
-        await updateProfile.mutateAsync(data)
+        await updateProfile.mutateAsync(payload)
       } else {
-        await createProfile.mutateAsync(data)
+        await createProfile.mutateAsync(payload)
       }
       
       onSuccess?.()
@@ -117,8 +123,7 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
         phone: profile.phone,
         email: profile.email,
         taxNumber: profile.taxNumber,
-        defaultLaborRate: profile.defaultLaborRate,
-        defaultTaxRate: profile.defaultTaxRate,
+        defaultTaxRate: profile.defaultTaxRate * 100,
       })
     } else {
       reset()
@@ -189,7 +194,7 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
           {/* Business Information Section */}
           <FormSection
             title="Business Information"
-            description="Basic information about your electrical business"
+            description="Basic information about your business"
             variant="bordered"
           >
             <FormGrid columns={2} gap="lg">
@@ -219,25 +224,25 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
               />
 
               <Input
-                label="State *"
+                label="State / Province / Region *"
                 {...register('state')}
                 error={errors.state?.message}
-                placeholder="CA"
-                maxLength={2}
+                placeholder="e.g. California, Ontario, England"
               />
 
               <Input
-                label="Zip Code *"
+                label="Postal Code *"
                 {...register('zipCode')}
                 error={errors.zipCode?.message}
-                placeholder="12345"
+                placeholder="e.g. 10001, SW1A 1AA, 110001"
               />
 
               <Input
-                label="Tax Number *"
+                label="Tax / VAT / GST Number"
                 {...register('taxNumber')}
                 error={errors.taxNumber?.message}
-                placeholder="Tax ID or EIN"
+                placeholder="e.g. EIN, VAT, GSTIN, TIN"
+                helpText="Optional — leave blank if not applicable"
               />
             </FormGrid>
           </FormSection>
@@ -254,7 +259,8 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
                 type="tel"
                 {...register('phone')}
                 error={errors.phone?.message}
-                placeholder="(555) 123-4567"
+                placeholder="+1 555 123 4567"
+                helpText="Include country code for international numbers (e.g. +44 20 7946 0958)"
               />
 
               <Input
@@ -269,34 +275,37 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
 
           {/* Default Rates Section */}
           <FormSection
-            title="Default Rates"
-            description="Set your standard labor and tax rates for new invoices"
+            title={
+              <span className="flex items-center gap-2">
+                <RiMoneyDollarCircleLine className="h-5 w-5 text-primary-600" />
+                Default Rates
+              </span>
+            }
+            description="Set your standard tax rate for new invoices"
             variant="bordered"
           >
-            <FormGrid columns={2} gap="lg">
-              <Input
-                label="Default Labor Rate ($/hour) *"
-                type="number"
-                step="0.01"
-                min="0"
-                {...register('defaultLaborRate', { valueAsNumber: true })}
-                error={errors.defaultLaborRate?.message}
-                placeholder="75.00"
-              />
-
-              <Input
-                label="Default Tax Rate (%) *"
-                type="number"
-                step="0.01"
-                min="0"
-                max="100"
-                {...register('defaultTaxRate', { 
-                  valueAsNumber: true,
-                  setValueAs: (value) => value / 100 // Convert percentage to decimal
-                })}
-                error={errors.defaultTaxRate?.message}
-                placeholder="8.25"
-                helpText="Enter as percentage (e.g., 8.25 for 8.25%)"
+            <FormGrid columns={1} gap="lg">
+              <Controller
+                name="defaultTaxRate"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    label="Default Tax / GST Rate (%) *"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={field.value !== undefined && field.value !== null ? field.value : ''}
+                    onChange={(e) => {
+                      // User enters percentage (e.g. 18) → store as decimal (0.18) in form
+                      const pct = parseFloat(e.target.value)
+                      field.onChange(isNaN(pct) ? 0 : pct)
+                    }}
+                    error={errors.defaultTaxRate?.message}
+                    placeholder="e.g. 18 or 12.5"
+                    helpText="Enter as a percentage (e.g. 18 for 18%, 12.5 for 12.5%)"
+                  />
+                )}
               />
             </FormGrid>
           </FormSection>

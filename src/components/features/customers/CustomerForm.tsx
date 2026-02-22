@@ -131,7 +131,8 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
             type="tel"
             {...register('phone')}
             error={errors.phone?.message}
-            placeholder="(555) 123-4567"
+            placeholder="+1 555 123 4567"
+            helpText="Include country code for international numbers"
           />
         </FormGrid>
       </FormSection>
@@ -160,19 +161,18 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           />
 
           <Input
-            label="State *"
+            label="State / Province / Region *"
             {...register('state')}
             error={errors.state?.message}
-            placeholder="CA"
-            maxLength={2}
+            placeholder="e.g. California, Ontario, England"
           />
 
           <div className="sm:col-span-2">
             <Input
-              label="Zip Code *"
+              label="Postal Code *"
               {...register('zipCode')}
               error={errors.zipCode?.message}
-              placeholder="12345"
+              placeholder="e.g. 10001, SW1A 1AA, 110001"
             />
           </div>
         </FormGrid>

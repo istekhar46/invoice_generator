@@ -45,8 +45,10 @@ export class CompanyService extends BaseUserService {
       data: {
         userId,
         ...createCompanyProfileDto,
-        // Normalize state to uppercase
-        state: createCompanyProfileDto.state.toUpperCase(),
+        // taxNumber is optional — default to empty string to satisfy the non-null DB column
+        taxNumber: createCompanyProfileDto.taxNumber ?? '',
+        // defaultLaborRate removed from form; default to 0 to satisfy the non-null DB column
+        defaultLaborRate: 0,
         // Normalize email to lowercase
         email: createCompanyProfileDto.email.toLowerCase(),
       },
@@ -214,10 +216,6 @@ export class CompanyService extends BaseUserService {
 
   private validateBusinessData(data: CreateCompanyProfileDto | UpdateCompanyProfileDto): void {
     // Additional business logic validation
-    if (data.defaultLaborRate !== undefined && data.defaultLaborRate < 0) {
-      throw new BadRequestException('Default labor rate cannot be negative');
-    }
-
     if (data.defaultTaxRate !== undefined && (data.defaultTaxRate < 0 || data.defaultTaxRate > 1)) {
       throw new BadRequestException('Default tax rate must be between 0 and 1 (0% to 100%)');
     }
@@ -235,20 +233,10 @@ export class CompanyService extends BaseUserService {
       }
     }
 
-    // Validate phone number format more strictly
-    if (data.phone) {
-      const phoneDigits = data.phone.replace(/\D/g, '');
-      if (phoneDigits.length !== 10) {
-        throw new BadRequestException('Phone number must contain exactly 10 digits');
-      }
-    }
+    // Validate phone lightly — the regex on the DTO already enforces format
+    // No additional phone validation needed here
 
-    // Validate ZIP code format
-    if (data.zipCode) {
-      const zipPattern = /^\d{5}(-\d{4})?$/;
-      if (!zipPattern.test(data.zipCode)) {
-        throw new BadRequestException('ZIP code must be in format 12345 or 12345-6789');
-      }
-    }
+    // Validate postal code lightly — DTO regex already handles format
+    // No additional postal code validation needed here
   }
 }

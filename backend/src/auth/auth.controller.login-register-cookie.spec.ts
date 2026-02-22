@@ -51,10 +51,16 @@ describe('AuthController - Login and Register Cookie Integration', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string) => {
-              if (key === 'NODE_ENV') return 'test';
-              if (key === 'FRONTEND_URL') return 'http://localhost:5173';
-              return undefined;
+            get: jest.fn((key: string, defaultValue?: unknown) => {
+              const config: Record<string, string> = {
+                NODE_ENV: 'test',
+                FRONTEND_URL: 'http://localhost:5173',
+                COOKIE_PATH: '/api/v1/auth/refresh',
+                COOKIE_SECURE: 'false',
+                COOKIE_SAME_SITE: 'lax',
+                COOKIE_MAX_AGE: String(7 * 24 * 60 * 60 * 1000), // 7 days in ms
+              };
+              return config[key] ?? defaultValue;
             }),
           },
         },
@@ -97,7 +103,7 @@ describe('AuthController - Login and Register Cookie Integration', () => {
       expect(setCookieHeader).toBeDefined();
       expect(setCookieHeader[0]).toContain('refreshToken=test-refresh-token');
       expect(setCookieHeader[0]).toContain('HttpOnly');
-      expect(setCookieHeader[0]).toContain('SameSite=Strict');
+      expect(setCookieHeader[0]).toContain('SameSite=Lax');
       expect(setCookieHeader[0]).toContain('Path=/api/v1/auth/refresh');
     });
 
@@ -143,7 +149,7 @@ describe('AuthController - Login and Register Cookie Integration', () => {
       expect(setCookieHeader).toBeDefined();
       expect(setCookieHeader[0]).toContain('refreshToken=test-refresh-token');
       expect(setCookieHeader[0]).toContain('HttpOnly');
-      expect(setCookieHeader[0]).toContain('SameSite=Strict');
+      expect(setCookieHeader[0]).toContain('SameSite=Lax');
       expect(setCookieHeader[0]).toContain('Path=/api/v1/auth/refresh');
     });
 
