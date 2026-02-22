@@ -7,7 +7,7 @@ import React from 'react'
  * This is the correct approach for the Authorization Code (server-side redirect)
  * flow — NOT the @react-oauth/google popup/ID-token flow.
  */
-const BACKEND_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 const GOOGLE_AUTH_URL = `${BACKEND_URL}/api/v1/auth/google`
 
 interface GoogleSignInButtonProps {
