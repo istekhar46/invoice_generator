@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
+import { GuestInvoiceSection } from '../components/guest/GuestInvoiceSection';
 import heroImage from '../assets/hero_image.png';
 import { BsCloudDownload } from 'react-icons/bs';
 import { FaMedapps } from "react-icons/fa6";
@@ -81,6 +82,9 @@ export const HomePage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Guest Invoice Section */}
+      <GuestInvoiceSection className="animate-fade-in" />
 
       {/* Features Section */}
       <section className="bg-white py-20 px-6 animate-fade-in">
