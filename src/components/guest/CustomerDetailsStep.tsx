@@ -8,7 +8,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
-import { FormGrid, FormActions } from '../ui/FormField'
+import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card'
+import { FormSection, FormGrid, FormActions } from '../ui/FormField'
 import { guestCustomerDetailsSchema } from '../../types/guestSchemas'
 import type { GuestCustomerDetails } from '../../types/guest'
 import { User } from 'lucide-react'
@@ -47,88 +48,113 @@ export const CustomerDetailsStep: React.FC<CustomerDetailsStepProps> = ({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="text-center space-y-2">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
-          <User className="w-8 h-8 text-blue-600" />
+    <Card padding='none'>
+      <CardHeader>
+        <CardTitle className="flex items-center space-x-2">
+          <User className="h-5 w-5" />
+          <span>Customer Details</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-8">
+        <div className="text-center">
+          <p className="text-gray-600">
+            Who are you billing? <span className="text-red-600">*</span>
+          </p>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900">Customer Details</h2>
-        <p className="text-gray-600">
-          Who are you billing? <span className="text-red-600">*</span>
-        </p>
-      </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <Input
-          label="Customer Name"
-          placeholder="John Doe"
-          required
-          error={errors.name?.message}
-          {...register('name')}
-        />
-
-        <FormGrid columns={2}>
-          <Input
-            label="Email"
-            type="email"
-            placeholder="customer@example.com"
-            error={errors.email?.message}
-            {...register('email')}
-          />
-          <Input
-            label="Phone"
-            type="tel"
-            placeholder="+1 (555) 123-4567"
-            error={errors.phone?.message}
-            {...register('phone')}
-          />
-        </FormGrid>
-
-        <Input
-          label="Address"
-          placeholder="456 Customer Street"
-          error={errors.address?.message}
-          {...register('address')}
-        />
-
-        <FormGrid columns={3}>
-          <Input
-            label="City"
-            placeholder="Los Angeles"
-            error={errors.city?.message}
-            {...register('city')}
-          />
-          <Input
-            label="State/Province"
-            placeholder="CA"
-            error={errors.state?.message}
-            {...register('state')}
-          />
-          <Input
-            label="Postal Code"
-            placeholder="90001"
-            error={errors.zipCode?.message}
-            {...register('zipCode')}
-          />
-        </FormGrid>
-
-        <FormActions align="between" responsive>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onBack}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+          <FormSection
+            title="Customer Information"
+            description="Basic details about the customer receiving this invoice"
+            variant="bordered"
           >
-            Back
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={!isValid}
+            <FormGrid columns={1} gap="lg">
+              <Input
+                label="Customer Name"
+                placeholder="John Doe"
+                required
+                error={errors.name?.message}
+                {...register('name')}
+              />
+            </FormGrid>
+          </FormSection>
+
+          <FormSection
+            title="Contact Information"
+            description="How to reach the customer"
+            variant="bordered"
           >
-            Continue
-          </Button>
-        </FormActions>
-      </form>
-    </div>
+            <FormGrid columns={2} gap="lg">
+              <Input
+                label="Email"
+                type="email"
+                placeholder="customer@example.com"
+                error={errors.email?.message}
+                {...register('email')}
+              />
+              <Input
+                label="Phone"
+                type="tel"
+                placeholder="+1 (555) 123-4567"
+                error={errors.phone?.message}
+                {...register('phone')}
+              />
+            </FormGrid>
+          </FormSection>
+
+          <FormSection
+            title="Customer Address"
+            description="Billing address for the customer"
+            variant="bordered"
+          >
+            <FormGrid columns={1} gap="lg">
+              <Input
+                label="Address"
+                placeholder="456 Customer Street"
+                error={errors.address?.message}
+                {...register('address')}
+              />
+            </FormGrid>
+            <FormGrid columns={3} gap="lg">
+              <Input
+                label="City"
+                placeholder="Los Angeles"
+                error={errors.city?.message}
+                {...register('city')}
+              />
+              <Input
+                label="State/Province"
+                placeholder="CA"
+                error={errors.state?.message}
+                {...register('state')}
+              />
+              <Input
+                label="Postal Code"
+                placeholder="90001"
+                error={errors.zipCode?.message}
+                {...register('zipCode')}
+              />
+            </FormGrid>
+          </FormSection>
+
+          <FormActions align="between" responsive={false}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onBack}
+            >
+              Back
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={!isValid}
+            >
+              Continue
+            </Button>
+          </FormActions>
+        </form>
+      </CardContent>
+    </Card>
   )
 }

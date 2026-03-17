@@ -112,7 +112,7 @@ export const GuestInvoiceBuilder: React.FC<GuestInvoiceBuilderProps> = ({
 
   // Render current step
   const renderStep = () => {
-    if (!data) {
+    if (isLoadingData) {
       return (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
@@ -124,7 +124,7 @@ export const GuestInvoiceBuilder: React.FC<GuestInvoiceBuilderProps> = ({
       case 'company':
         return (
           <CompanyDetailsStep
-            data={data.company}
+            data={data?.company ?? null}
             onNext={handleCompanyNext}
             onSkip={handleCompanySkip}
           />
@@ -133,7 +133,7 @@ export const GuestInvoiceBuilder: React.FC<GuestInvoiceBuilderProps> = ({
       case 'customer':
         return (
           <CustomerDetailsStep
-            data={data.customer}
+            data={data?.customer ?? null}
             onNext={handleCustomerNext}
             onBack={goToPreviousStep}
           />
@@ -142,7 +142,7 @@ export const GuestInvoiceBuilder: React.FC<GuestInvoiceBuilderProps> = ({
       case 'details':
         return (
           <InvoiceDetailsStep
-            data={data.invoiceDetails}
+            data={data?.invoiceDetails ?? null}
             onNext={handleInvoiceDetailsNext}
             onBack={goToPreviousStep}
           />
@@ -151,8 +151,8 @@ export const GuestInvoiceBuilder: React.FC<GuestInvoiceBuilderProps> = ({
       case 'items':
         return (
           <LineItemsStep
-            data={data.lineItems}
-            taxRate={data.invoiceDetails.taxRate}
+            data={data?.lineItems ?? []}
+            taxRate={data?.invoiceDetails?.taxRate ?? 0}
             onNext={handleLineItemsNext}
             onBack={goToPreviousStep}
           />

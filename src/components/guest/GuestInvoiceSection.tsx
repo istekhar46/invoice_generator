@@ -20,11 +20,39 @@ export const GuestInvoiceSection: React.FC<GuestInvoiceSectionProps> = ({
 
   const handleOpenBuilder = () => {
     setIsBuilderOpen(true)
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden'
   }
 
   const handleCloseBuilder = () => {
     setIsBuilderOpen(false)
+    // Restore body scroll when modal is closed
+    document.body.style.overflow = 'unset'
   }
+
+  // Cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [])
+
+  // Handle ESC key to close modal
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isBuilderOpen) {
+        handleCloseBuilder()
+      }
+    }
+
+    if (isBuilderOpen) {
+      document.addEventListener('keydown', handleEscape)
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [isBuilderOpen])
 
   const features = [
     {
@@ -107,8 +135,16 @@ export const GuestInvoiceSection: React.FC<GuestInvoiceSectionProps> = ({
 
       {/* Modal Overlay */}
       {isBuilderOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="w-full max-w-4xl my-8">
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-start justify-center p-4 overflow-y-auto animate-fade-in"
+          onClick={(e) => {
+            // Close modal when clicking on backdrop
+            if (e.target === e.currentTarget) {
+              handleCloseBuilder()
+            }
+          }}
+        >
+          <div className="w-full max-w-4xl my-8 relative animate-slide-up">
             <GuestInvoiceBuilder onClose={handleCloseBuilder} />
           </div>
         </div>
