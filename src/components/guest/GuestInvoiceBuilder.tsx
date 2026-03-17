@@ -159,6 +159,7 @@ export const GuestInvoiceBuilder: React.FC<GuestInvoiceBuilderProps> = ({
         )
       
       case 'review':
+        if (!data) return null
         return (
           <ReviewStep
             data={data}

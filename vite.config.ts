@@ -10,6 +10,17 @@ import path from 'path'
 export default defineConfig({
   // plugins: [react(), tailwindcss(), cloudflare()],
   plugins: [react(), tailwindcss()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'pdf-vendor': ['@react-pdf/renderer'],
+          'ui-vendor': ['@headlessui/react', 'lucide-react', 'react-hook-form']
+        }
+      }
+    }
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

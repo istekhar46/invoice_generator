@@ -10,7 +10,7 @@ import { FormActions } from '../ui/FormField'
 import type { GuestInvoiceData } from '../../types/guest'
 import { InvoiceCalculationService } from '../../services/invoiceCalculation.service'
 import { generateAndDownloadPDF, generateAndPreviewPDF } from '../../utils/guestPDFGeneration'
-import { CheckCircle, Download, Eye, Edit, UserPlus, Package, Wrench } from 'lucide-react'
+import { Download, Eye, Edit, UserPlus, Package, Wrench } from 'lucide-react'
 
 interface ReviewStepProps {
   data: GuestInvoiceData

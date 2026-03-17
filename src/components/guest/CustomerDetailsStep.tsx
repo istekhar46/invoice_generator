@@ -15,7 +15,7 @@ import type { GuestCustomerDetails } from '../../types/guest'
 import { User } from 'lucide-react'
 
 interface CustomerDetailsStepProps {
-  data: GuestCustomerDetails
+  data: GuestCustomerDetails | null
   onNext: (data: GuestCustomerDetails) => void
   onBack: () => void
 }

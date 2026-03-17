@@ -4,6 +4,9 @@
  */
 
 import type { GuestInvoiceData } from '../types/guest'
+import React from 'react'
+import { pdf } from '@react-pdf/renderer'
+import { GuestInvoicePDFTemplate } from '../components/guest/GuestInvoicePDFTemplate'
 
 /**
  * Generates a unique invoice number based on timestamp
@@ -164,11 +167,6 @@ export async function generateInvoicePDF(
   try {
     // Validate data before generation
     validatePDFData(data)
-
-    // Dynamically import dependencies
-    const React = await import('react')
-    const { pdf } = await import('@react-pdf/renderer')
-    const { GuestInvoicePDFTemplate } = await import('../components/guest/GuestInvoicePDFTemplate')
 
     // Generate invoice number if not provided
     const invNumber = invoiceNumber || generateInvoiceNumber()

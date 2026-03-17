@@ -15,7 +15,7 @@ import type { GuestInvoiceDetails } from '../../types/guest'
 import { Calendar } from 'lucide-react'
 
 interface InvoiceDetailsStepProps {
-  data: GuestInvoiceDetails
+  data: GuestInvoiceDetails | null
   onNext: (data: GuestInvoiceDetails) => void
   onBack: () => void
 }
