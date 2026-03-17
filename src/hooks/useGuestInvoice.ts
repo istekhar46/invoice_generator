@@ -39,7 +39,7 @@ export function useGuestInvoice(): UseGuestInvoiceReturn {
   const [data, setData] = useState<GuestInvoiceData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Load data from localStorage on mount
   useEffect(() => {

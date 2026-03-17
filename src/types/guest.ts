@@ -3,7 +3,17 @@
  * Types for anonymous users creating invoices without authentication
  */
 
-import type { LineItem } from './entities'
+/**
+ * Line item type for guest invoices (without invoiceId)
+ */
+export interface GuestLineItem {
+  id: string
+  type: 'material' | 'labor'
+  description: string
+  quantity: number
+  rate: number
+  amount: number
+}
 
 /**
  * Company details for guest invoices (all optional)
@@ -48,7 +58,7 @@ export interface GuestInvoiceData {
   company: GuestCompanyDetails | null
   customer: GuestCustomerDetails
   invoiceDetails: GuestInvoiceDetails
-  lineItems: LineItem[]
+  lineItems: GuestLineItem[]
   notes?: string
   createdAt: Date
   lastModified: Date

@@ -180,7 +180,7 @@ export async function generateInvoicePDF(
     })
 
     // Generate PDF blob
-    const pdfBlob = await pdf(element).toBlob()
+    const pdfBlob = await pdf(element as any).toBlob()
 
     return pdfBlob
   } catch (error) {

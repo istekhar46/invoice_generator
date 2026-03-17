@@ -9,8 +9,8 @@ import {
   guestCompanyDetailsSchema,
   guestCustomerDetailsSchema,
   guestInvoiceDetailsSchema,
+  guestLineItemSchema,
 } from '../types/guestSchemas'
-import { lineItemSchema } from '../types/forms'
 import { z } from 'zod'
 
 /**
@@ -33,7 +33,7 @@ export function validateInvoiceData(data: Partial<GuestInvoiceData>): Validation
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errors = error.errors.map(err => {
+      const errors = error.issues.map((err) => {
         const path = err.path.join('.')
         return path ? `${path}: ${err.message}` : err.message
       })
@@ -86,7 +86,7 @@ export function validateStep(step: WizardStep, data: Partial<GuestInvoiceData>):
         }
         // Validate each line item
         for (const item of data.lineItems) {
-          lineItemSchema.parse(item)
+          guestLineItemSchema.parse(item)
         }
         return { isValid: true, errors: [] }
 
@@ -99,7 +99,7 @@ export function validateStep(step: WizardStep, data: Partial<GuestInvoiceData>):
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errors = error.errors.map(err => err.message)
+      const errors = error.issues.map((err) => err.message)
       return {
         isValid: false,
         errors,
@@ -191,7 +191,7 @@ export function getValidationErrors(data: Partial<GuestInvoiceData>): Validation
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errors: ValidationErrors = {}
-      for (const err of error.errors) {
+      for (const err of error.issues) {
         const field = err.path.join('.')
         if (!errors[field]) {
           errors[field] = []

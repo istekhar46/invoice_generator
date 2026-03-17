@@ -16,8 +16,7 @@ import { LineItemsStep } from './LineItemsStep'
 import { ReviewStep } from './ReviewStep'
 import { Button } from '../ui/Button'
 import { X, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
-import type { GuestCompanyDetails, GuestCustomerDetails, GuestInvoiceDetails } from '../../types/guest'
-import type { LineItem } from '../../types/entities'
+import type { GuestCompanyDetails, GuestCustomerDetails, GuestInvoiceDetails, GuestLineItem } from '../../types/guest'
 
 interface GuestInvoiceBuilderProps {
   onClose?: () => void
@@ -35,7 +34,7 @@ export const GuestInvoiceBuilder: React.FC<GuestInvoiceBuilderProps> = ({
   const [showDraftNotification, setShowDraftNotification] = useState(false)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+  const [isGeneratingPDF] = useState(false)
 
   // Show draft restoration notification on mount if data exists
   useEffect(() => {
@@ -70,7 +69,7 @@ export const GuestInvoiceBuilder: React.FC<GuestInvoiceBuilderProps> = ({
   }
 
   // Handle line items step
-  const handleLineItemsNext = (lineItems: LineItem[]) => {
+  const handleLineItemsNext = (lineItems: GuestLineItem[]) => {
     updateData({ lineItems })
     goToNextStep()
   }

@@ -7,6 +7,14 @@
 import type { LineItem, InvoiceTotals } from '../types/entities'
 
 /**
+ * Minimum line item interface for calculations
+ */
+interface CalculableLineItem {
+  id: string
+  amount: number
+}
+
+/**
  * Error thrown when calculation operations fail
  */
 export class CalculationError extends Error {
@@ -70,7 +78,7 @@ export class InvoiceCalculationService {
    * @returns The subtotal rounded to 2 decimal places
    * @throws CalculationError if line items are invalid
    */
-  static calculateSubtotal(lineItems: LineItem[]): number {
+  static calculateSubtotal(lineItems: CalculableLineItem[]): number {
     try {
       // Validate input
       if (!Array.isArray(lineItems)) {
@@ -185,7 +193,7 @@ export class InvoiceCalculationService {
    * @returns Object containing subtotal, taxAmount, and total
    * @throws CalculationError if inputs are invalid
    */
-  static calculateInvoiceTotals(lineItems: LineItem[], taxRate: number): InvoiceTotals {
+  static calculateInvoiceTotals(lineItems: CalculableLineItem[], taxRate: number): InvoiceTotals {
     try {
       // Calculate subtotal from line items
       const subtotal = InvoiceCalculationService.calculateSubtotal(lineItems)

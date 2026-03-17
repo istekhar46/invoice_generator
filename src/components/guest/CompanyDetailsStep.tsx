@@ -27,7 +27,7 @@ export const CompanyDetailsStep: React.FC<CompanyDetailsStepProps> = ({
   const {
     register,
     handleSubmit,
-    formState: { errors, isValid },
+    formState: { errors },
   } = useForm<GuestCompanyDetails>({
     resolver: zodResolver(guestCompanyDetailsSchema),
     mode: 'onBlur',

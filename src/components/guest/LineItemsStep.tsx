@@ -6,14 +6,14 @@
 import React, { useState } from 'react'
 import { Button } from '../ui/Button'
 import { FormActions } from '../ui/FormField'
-import type { LineItem } from '../../types/entities'
+import type { GuestLineItem } from '../../types/guest'
 import { InvoiceCalculationService } from '../../services/invoiceCalculation.service'
 import { Plus, Trash2, Edit2, Package, Wrench } from 'lucide-react'
 
 interface LineItemsStepProps {
-  data: LineItem[]
+  data: GuestLineItem[]
   taxRate: number
-  onNext: (data: LineItem[]) => void
+  onNext: (data: GuestLineItem[]) => void
   onBack: () => void
 }
 
@@ -30,7 +30,7 @@ export const LineItemsStep: React.FC<LineItemsStepProps> = ({
   onNext,
   onBack,
 }) => {
-  const [lineItems, setLineItems] = useState<LineItem[]>(data || [])
+  const [lineItems, setLineItems] = useState<GuestLineItem[]>(data || [])
   const [isAdding, setIsAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState<LineItemFormData>({
@@ -69,9 +69,8 @@ export const LineItemsStep: React.FC<LineItemsStepProps> = ({
     const rate = parseFloat(formData.rate)
     const amount = InvoiceCalculationService.calculateLineItemAmount(quantity, rate)
     
-    const newItem: LineItem = {
+    const newItem: GuestLineItem = {
       id: `item-${Date.now()}`,
-      invoiceId: 'guest',
       type: formData.type,
       description: formData.description.trim(),
       quantity,
@@ -103,7 +102,7 @@ export const LineItemsStep: React.FC<LineItemsStepProps> = ({
     setErrors({})
   }
 
-  const handleEditItem = (item: LineItem) => {
+  const handleEditItem = (item: GuestLineItem) => {
     setFormData({
       type: item.type,
       description: item.description,

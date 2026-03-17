@@ -3,11 +3,22 @@
  */
 
 import { z } from 'zod'
-import { lineItemSchema } from './forms'
 
 // Regex patterns from existing forms.ts
 const PHONE_REGEX = /^\+?[\d\s().\-]{7,20}$/
 const POSTAL_CODE_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9\s\-]{1,9}$/
+
+/**
+ * Guest line item schema (without invoiceId since it's not saved)
+ */
+export const guestLineItemSchema = z.object({
+  id: z.string(),
+  type: z.enum(['material', 'labor'] as const),
+  description: z.string().min(1, 'Description is required').max(500, 'Description must be less than 500 characters'),
+  quantity: z.number().min(0.01, 'Quantity must be greater than 0').max(10000, 'Quantity cannot exceed 10,000'),
+  rate: z.number().min(0, 'Rate must be positive').max(100000, 'Rate cannot exceed $100,000'),
+  amount: z.number(),
+})
 
 /**
  * Guest company details schema (all fields optional)
@@ -57,7 +68,7 @@ export const guestInvoiceDataSchema = z.object({
   company: guestCompanyDetailsSchema.nullable(),
   customer: guestCustomerDetailsSchema,
   invoiceDetails: guestInvoiceDetailsSchema,
-  lineItems: z.array(lineItemSchema).min(1, 'At least one line item is required'),
+  lineItems: z.array(guestLineItemSchema).min(1, 'At least one line item is required'),
   notes: z.string().max(1000, 'Notes must be less than 1000 characters').optional(),
   createdAt: z.date(),
   lastModified: z.date(),

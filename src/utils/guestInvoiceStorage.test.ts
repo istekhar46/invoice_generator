@@ -52,7 +52,6 @@ describe('guestInvoiceStorage', () => {
     lineItems: [
       {
         id: '1',
-        invoiceId: 'test',
         type: 'labor',
         description: 'Test service',
         quantity: 1,

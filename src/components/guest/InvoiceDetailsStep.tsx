@@ -29,7 +29,6 @@ export const InvoiceDetailsStep: React.FC<InvoiceDetailsStepProps> = ({
     handleSubmit,
     control,
     formState: { errors, isValid },
-    watch,
   } = useForm<GuestInvoiceDetails>({
     resolver: zodResolver(guestInvoiceDetailsSchema),
     mode: 'onBlur',
