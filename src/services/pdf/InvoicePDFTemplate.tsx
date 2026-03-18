@@ -397,7 +397,6 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
               <View key={item.id || `item-${index}`} style={styles.tableRow}>
                 <View style={styles.colDescription}>
                   <Text style={styles.tableCellBold}>
-                    {isMaterial ? '📦 ' : '🔧 '}
                     {item.description || 'No description'}
                   </Text>
                   <Text style={styles.tableCell}>
