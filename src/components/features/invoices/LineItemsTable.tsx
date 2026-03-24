@@ -27,7 +27,7 @@ interface LineItemFormData {
 }
 
 const emptyLineItem: LineItemFormData = {
-  type: 'labor',
+  type: 'material',
   description: '',
   quantity: '',
   rate: '',
@@ -181,10 +181,9 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
         <select
           value={formData.type}
           onChange={(e) => handleFormChange('type', e.target.value)}
-          className="w-full px-4 py-3 rounded-xl text-base border-2 border-gray-200 bg-gray-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white hover:border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed min-h-[44px]"
+          className="w-full px-4 py-3 rounded-xl text-base border-2 border-gray-200 bg-gray-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white hover:border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed min-h-11"
           disabled={disabled}
         >
-          <option value="labor">Labor</option>
           <option value="material">Material</option>
         </select>
       </div>
@@ -281,10 +280,9 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
         <select
           value={formData.type}
           onChange={(e) => handleFormChange('type', e.target.value)}
-          className="w-full px-4 py-3 rounded-xl text-base border-2 border-gray-200 bg-gray-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white hover:border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed min-h-[44px]"
+          className="w-full px-4 py-3 rounded-xl text-base border-2 border-gray-200 bg-gray-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white hover:border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed min-h-11"
           disabled={disabled}
         >
-          <option value="labor">Labor</option>
           <option value="material">Material</option>
         </select>
       </td>
@@ -326,7 +324,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
         />
       </td>
       <td className="px-4 py-3 text-right">
-        <div className="bg-gray-100 rounded-xl px-4 py-3 min-h-[44px] flex items-center justify-end">
+        <div className="bg-gray-100 rounded-xl px-4 py-3 min-h-11 flex items-center justify-end">
           <span className="text-sm font-medium text-gray-700">
             {formData.quantity && formData.rate && !errors.quantity && !errors.rate
               ? formatCurrency(
