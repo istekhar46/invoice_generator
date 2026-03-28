@@ -78,11 +78,11 @@ export const GuestInvoiceSection: React.FC<GuestInvoiceSectionProps> = ({
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 mb-6">
+            {/* <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 mb-6">
               <FileText className="w-8 h-8 text-white" />
-            </div>
+            </div> */}
             <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Try It Free - No Sign Up Required
+              Try It Free
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Create a professional invoice right now. No account needed. Just fill in the details and download your PDF.
@@ -127,7 +127,7 @@ export const GuestInvoiceSection: React.FC<GuestInvoiceSectionProps> = ({
               Create Free Invoice Now
             </Button>
             <p className="text-sm text-gray-500 mt-4">
-              No credit card required • Takes less than 5 minutes
+              No sign-up required • Takes less than 5 minutes
             </p>
           </div>
         </div>
