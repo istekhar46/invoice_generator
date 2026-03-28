@@ -82,7 +82,7 @@ export const GuestInvoiceSection: React.FC<GuestInvoiceSectionProps> = ({
               <FileText className="w-8 h-8 text-white" />
             </div> */}
             <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Try It Free
+              Try It For Free
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Create a professional invoice right now. No account needed. Just fill in the details and download your PDF.
