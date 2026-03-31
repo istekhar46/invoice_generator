@@ -296,37 +296,32 @@ export const GuestInvoicePDFTemplate: React.FC<GuestInvoicePDFTemplateProps> = (
         <View style={styles.table}>
           <View style={styles.tableHeader}>
             <Text style={[styles.tableHeaderCell, styles.colDescription]}>
-              Description
-            </Text>
-            <Text style={[styles.tableHeaderCell, styles.colQuantity]}>
-              Qty
+              Item Name
             </Text>
             <Text style={[styles.tableHeaderCell, styles.colRate]}>
               Rate
             </Text>
+            <Text style={[styles.tableHeaderCell, styles.colQuantity]}>
+              Qty
+            </Text>
             <Text style={[styles.tableHeaderCell, styles.colAmount]}>
-              Amount
+              Total Amount
             </Text>
           </View>
 
           {data.lineItems.map((item, index) => {
-            const isMaterial = item.type === 'material'
             return (
               <View key={item.id || `item-${index}`} style={styles.tableRow}>
                 <View style={styles.colDescription}>
                   <Text style={styles.tableCellBold}>
-                    {isMaterial ? '📦 ' : '🔧 '}
                     {item.description}
                   </Text>
-                  <Text style={styles.tableCell}>
-                    {isMaterial ? 'Material' : 'Labor'}
-                  </Text>
                 </View>
-                <Text style={[styles.tableCell, styles.colQuantity]}>
-                  {item.quantity}
-                </Text>
                 <Text style={[styles.tableCell, styles.colRate]}>
                   {formatCurrencyForPDF(item.rate)}
+                </Text>
+                <Text style={[styles.tableCell, styles.colQuantity]}>
+                  {item.quantity} {item.unit || ''}
                 </Text>
                 <Text style={[styles.tableCellBold, styles.colAmount]}>
                   {formatCurrencyForPDF(item.amount)}
@@ -372,7 +367,7 @@ export const GuestInvoicePDFTemplate: React.FC<GuestInvoicePDFTemplateProps> = (
 
         {/* Footer */}
         <Text style={styles.footer}>
-          Thank you for your business! • Generated on {formatDateForPDF(new Date())}
+          Thank you for your business! Generated on {formatDateForPDF(new Date())}
         </Text>
       </Page>
     </Document>

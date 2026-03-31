@@ -1,14 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsString, IsNotEmpty, IsNumber, Min, Max, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, Min, Max, MaxLength, Equals } from 'class-validator';
 import { LineItemType } from '@prisma/client';
 
 export class CreateLineItemDto {
   @ApiProperty({
     description: 'Type of line item',
-    example: 'LABOR',
-    enum: LineItemType,
+    example: 'MATERIAL',
+    enum: [LineItemType.MATERIAL],
   })
-  @IsEnum(LineItemType, { message: 'Type must be either MATERIAL or LABOR' })
+  @Equals(LineItemType.MATERIAL, { message: 'Only MATERIAL line items are supported' })
   type!: LineItemType;
 
   @ApiProperty({
@@ -20,6 +20,16 @@ export class CreateLineItemDto {
   @IsNotEmpty({ message: 'Description is required' })
   @MaxLength(500, { message: 'Description cannot exceed 500 characters' })
   description!: string;
+
+  @ApiProperty({
+    description: 'Unit label for quantity',
+    example: 'mtr',
+    maxLength: 50,
+  })
+  @IsString()
+  @IsNotEmpty({ message: 'Unit is required' })
+  @MaxLength(50, { message: 'Unit cannot exceed 50 characters' })
+  unit!: string;
 
   @ApiProperty({
     description: 'Quantity of the item',

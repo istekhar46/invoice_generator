@@ -131,19 +131,16 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
-                      Type
+                      Item Name
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
-                      Description
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                      Rate
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
                       Qty
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
-                      Rate
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
-                      Amount
+                      Total Amount
                     </th>
                   </tr>
                 </thead>
@@ -151,23 +148,14 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                   {invoice.lineItems && invoice.lineItems.length > 0 ? (
                     invoice.lineItems.map((item, index) => (
                       <tr key={item.id || index}>
-                        <td className="px-4 py-3 text-sm">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            item.type === 'labor' 
-                              ? 'bg-blue-100 text-blue-800' 
-                              : 'bg-green-100 text-green-800'
-                          }`}>
-                            {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
-                          </span>
-                        </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
                           {item.description}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-900 text-center">
-                          {item.quantity}
-                        </td>
                         <td className="px-4 py-3 text-sm text-gray-900 text-right">
                           {formatCurrency(item.rate)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 text-center">
+                          {item.quantity} {item.unit || ''}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
                           {formatCurrency(item.amount)}

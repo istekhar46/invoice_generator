@@ -144,6 +144,7 @@ describe('GuestInvoiceBuilder - Preservation Property Tests', () => {
                 id: '1',
                 type: 'material',
                 description: 'Test Item', 
+                unit: 'pcs',
                 quantity: 1, 
                 rate: 100,
                 amount: 100

@@ -373,41 +373,34 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
         {/* Table Header */}
         <View style={styles.tableHeader}>
           <Text style={[styles.tableHeaderCell, styles.colDescription]}>
-            Description
-          </Text>
-          <Text style={[styles.tableHeaderCell, styles.colQuantity]}>
-            Qty
+            Item Name
           </Text>
           <Text style={[styles.tableHeaderCell, styles.colRate]}>
             Rate
           </Text>
+          <Text style={[styles.tableHeaderCell, styles.colQuantity]}>
+            Qty
+          </Text>
           <Text style={[styles.tableHeaderCell, styles.colAmount]}>
-            Amount
+            Total Amount
           </Text>
         </View>
 
         {/* Table Rows */}
         {invoice.lineItems && invoice.lineItems.length > 0 ? (
           invoice.lineItems.map((item, index) => {
-            // Handle both uppercase (MATERIAL, LABOR) and lowercase (material, labor) type values
-            const itemType = (item.type || '').toLowerCase()
-            const isMaterial = itemType === 'material'
-            
             return (
               <View key={item.id || `item-${index}`} style={styles.tableRow}>
                 <View style={styles.colDescription}>
                   <Text style={styles.tableCellBold}>
                     {item.description || 'No description'}
                   </Text>
-                  <Text style={styles.tableCell}>
-                    {isMaterial ? 'Material' : 'Labor'}
-                  </Text>
                 </View>
-                <Text style={[styles.tableCell, styles.colQuantity]}>
-                  {item.quantity || 0}
-                </Text>
                 <Text style={[styles.tableCell, styles.colRate]}>
                   {formatCurrency(item.rate || 0)}
+                </Text>
+                <Text style={[styles.tableCell, styles.colQuantity]}>
+                  {item.quantity || 0} {item.unit || ''}
                 </Text>
                 <Text style={[styles.tableCellBold, styles.colAmount]}>
                   {formatCurrency(item.amount || 0)}
@@ -460,7 +453,7 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
 
       {/* Footer */}
       <Text style={styles.footer}>
-        Thank you for your business! • Generated on {formatDate(new Date())}
+        Thank you for your business! Generated on {formatDate(new Date())}
       </Text>
     </Page>
   </Document>

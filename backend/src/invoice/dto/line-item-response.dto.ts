@@ -26,6 +26,13 @@ export class LineItemResponseDto {
   description!: string;
 
   @ApiProperty({
+    description: 'Unit label for quantity',
+    example: 'bundle',
+  })
+  @Expose()
+  unit!: string;
+
+  @ApiProperty({
     description: 'Quantity of the item',
     example: 2.5,
   })

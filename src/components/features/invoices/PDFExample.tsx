@@ -22,8 +22,9 @@ const exampleInvoice: Invoice = {
     {
       id: 'item-1',
       invoiceId: 'example-invoice',
-      type: 'labor',
-      description: 'Electrical panel installation',
+      type: 'material',
+      description: 'Copper wire',
+      unit: 'mtr',
       quantity: 1,
       rate: 500,
       amount: 500
@@ -33,6 +34,7 @@ const exampleInvoice: Invoice = {
       invoiceId: 'example-invoice',
       type: 'material',
       description: 'Circuit breaker panel',
+      unit: 'bundle',
       quantity: 1,
       rate: 200,
       amount: 200

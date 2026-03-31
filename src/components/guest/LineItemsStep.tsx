@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card'
 import { FormSection, FormActions } from '../ui/FormField'
 import type { GuestLineItem } from '../../types/guest'
 import { InvoiceCalculationService } from '../../services/invoiceCalculation.service'
-import { Plus, Trash2, Edit2, Package, Wrench, Calculator } from 'lucide-react'
+import { Plus, Trash2, Edit2, Package, Calculator } from 'lucide-react'
 
 interface LineItemsStepProps {
   data: GuestLineItem[]
@@ -19,8 +19,8 @@ interface LineItemsStepProps {
 }
 
 interface LineItemFormData {
-  type: 'material' | 'labor'
   description: string
+  unit: string
   quantity: string
   rate: string
 }
@@ -35,8 +35,8 @@ export const LineItemsStep: React.FC<LineItemsStepProps> = ({
   const [isAdding, setIsAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState<LineItemFormData>({
-    type: 'labor',
     description: '',
+    unit: '',
     quantity: '1',
     rate: '0',
   })
@@ -47,6 +47,9 @@ export const LineItemsStep: React.FC<LineItemsStepProps> = ({
     
     if (!formData.description || formData.description.trim().length < 3) {
       newErrors.description = 'Description must be at least 3 characters'
+    }
+    if (!formData.unit || formData.unit.trim().length < 1) {
+      newErrors.unit = 'Unit is required'
     }
     
     const qty = parseFloat(formData.quantity)
@@ -72,15 +75,16 @@ export const LineItemsStep: React.FC<LineItemsStepProps> = ({
     
     const newItem: GuestLineItem = {
       id: `item-${Date.now()}`,
-      type: formData.type,
+      type: 'material',
       description: formData.description.trim(),
+      unit: formData.unit.trim(),
       quantity,
       rate,
       amount,
     }
     
     setLineItems([...lineItems, newItem])
-    setFormData({ type: 'labor', description: '', quantity: '1', rate: '0' })
+    setFormData({ description: '', unit: '', quantity: '1', rate: '0' })
     setIsAdding(false)
     setErrors({})
   }
@@ -94,19 +98,27 @@ export const LineItemsStep: React.FC<LineItemsStepProps> = ({
     
     setLineItems(lineItems.map(item =>
       item.id === editingId
-        ? { ...item, ...formData, quantity, rate, amount, description: formData.description.trim() }
+        ? {
+            ...item,
+            type: 'material',
+            description: formData.description.trim(),
+            unit: formData.unit.trim(),
+            quantity,
+            rate,
+            amount,
+          }
         : item
     ))
     
-    setFormData({ type: 'labor', description: '', quantity: '1', rate: '0' })
+    setFormData({ description: '', unit: '', quantity: '1', rate: '0' })
     setEditingId(null)
     setErrors({})
   }
 
   const handleEditItem = (item: GuestLineItem) => {
     setFormData({
-      type: item.type,
       description: item.description,
+      unit: item.unit || '',
       quantity: item.quantity.toString(),
       rate: item.rate.toString(),
     })
@@ -119,7 +131,7 @@ export const LineItemsStep: React.FC<LineItemsStepProps> = ({
   }
 
   const handleCancel = () => {
-    setFormData({ type: 'labor', description: '', quantity: '1', rate: '0' })
+    setFormData({ description: '', unit: '', quantity: '1', rate: '0' })
     setIsAdding(false)
     setEditingId(null)
     setErrors({})
@@ -143,7 +155,7 @@ export const LineItemsStep: React.FC<LineItemsStepProps> = ({
         <CardContent>
           <div className="text-center mb-6">
             <p className="text-gray-600">
-              Add items or services <span className="text-red-500">*</span> At least one required
+              Add material items <span className="text-red-500">*</span> At least one required
             </p>
           </div>
 
@@ -154,30 +166,19 @@ export const LineItemsStep: React.FC<LineItemsStepProps> = ({
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Type</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Description</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Qty</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Item Name</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Rate</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Amount</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Qty</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Total Amount</th>
                       <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {lineItems.map((item) => (
                       <tr key={item.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center space-x-2">
-                            {item.type === 'material' ? (
-                              <Package className="w-4 h-4 text-blue-600" />
-                            ) : (
-                              <Wrench className="w-4 h-4 text-green-600" />
-                            )}
-                            <span className="text-sm font-medium capitalize">{item.type}</span>
-                          </div>
-                        </td>
                         <td className="px-4 py-3 text-sm text-gray-900">{item.description}</td>
-                        <td className="px-4 py-3 text-center text-sm text-gray-900">{item.quantity}</td>
                         <td className="px-4 py-3 text-right text-sm text-gray-900">{formatCurrency(item.rate)}</td>
+                        <td className="px-4 py-3 text-center text-sm text-gray-900">{item.quantity} {item.unit}</td>
                         <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">{formatCurrency(item.amount)}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-center space-x-2">
@@ -220,38 +221,9 @@ export const LineItemsStep: React.FC<LineItemsStepProps> = ({
               variant="elevated"
             >
               <div className="space-y-4">
-                {/* Type Selection */}
+                {/* Item Name */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                  <div className="flex space-x-4">
-                    <label className="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        value="labor"
-                        checked={formData.type === 'labor'}
-                        onChange={(e) => setFormData({ ...formData, type: e.target.value as 'labor' })}
-                        className="w-4 h-4 text-blue-600"
-                      />
-                      <Wrench className="w-4 h-4 text-green-600" />
-                      <span className="text-sm">Labor</span>
-                    </label>
-                    <label className="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        value="material"
-                        checked={formData.type === 'material'}
-                        onChange={(e) => setFormData({ ...formData, type: e.target.value as 'material' })}
-                        className="w-4 h-4 text-blue-600"
-                      />
-                      <Package className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm">Material</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Item Name</label>
                   <input
                     type="text"
                     value={formData.description}
@@ -261,6 +233,21 @@ export const LineItemsStep: React.FC<LineItemsStepProps> = ({
                   />
                   {errors.description && (
                     <p className="mt-1 text-sm text-red-600">{errors.description}</p>
+                  )}
+                </div>
+
+                {/* Unit */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Unit</label>
+                  <input
+                    type="text"
+                    value={formData.unit}
+                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl text-base border-2 border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="mtr, bundle, box..."
+                  />
+                  {errors.unit && (
+                    <p className="mt-1 text-sm text-red-600">{errors.unit}</p>
                   )}
                 </div>
 

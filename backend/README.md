@@ -99,6 +99,9 @@ npm run db:generate
 # Create and apply migration
 npm run db:migrate
 
+# Push the current Prisma schema to a specific database URL
+npm run db:push:url -- "postgres://user:password@host:port/dbname"
+
 # Deploy migrations (production)
 npm run db:migrate:deploy
 

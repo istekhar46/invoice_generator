@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
-import { Invoice, LineItem, InvoiceStatus, Prisma } from '@prisma/client';
+import { Invoice, LineItem, InvoiceStatus, LineItemType, Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { BaseUserService } from '../common/services/base-user-service';
 import {
@@ -76,8 +76,9 @@ export class InvoiceService extends BaseUserService {
       // Create line items
       const lineItemsData = createInvoiceDto.lineItems.map((item) => ({
         invoiceId: newInvoice.id,
-        type: item.type,
+        type: LineItemType.MATERIAL,
         description: item.description,
+        unit: item.unit.trim(),
         quantity: item.quantity,
         rate: item.rate,
         amount: item.quantity * item.rate,
@@ -158,8 +159,9 @@ export class InvoiceService extends BaseUserService {
       // Create line items
       const lineItemsData = createQuickInvoiceDto.lineItems.map((item) => ({
         invoiceId: newInvoice.id,
-        type: item.type,
+        type: LineItemType.MATERIAL,
         description: item.description,
+        unit: item.unit.trim(),
         quantity: item.quantity,
         rate: item.rate,
         amount: item.quantity * item.rate,
@@ -384,8 +386,9 @@ export class InvoiceService extends BaseUserService {
         // Create new line items
         const lineItemsData = updateInvoiceDto.lineItems.map((item) => ({
           invoiceId: id,
-          type: item.type,
+          type: LineItemType.MATERIAL,
           description: item.description,
+          unit: item.unit.trim(),
           quantity: item.quantity,
           rate: item.rate,
           amount: item.quantity * item.rate,
@@ -411,6 +414,7 @@ export class InvoiceService extends BaseUserService {
         const lineItemDtos: CreateLineItemDto[] = existingLineItems.map((item) => ({
           type: item.type,
           description: item.description,
+          unit: item.unit,
           quantity: item.quantity,
           rate: item.rate,
         }));

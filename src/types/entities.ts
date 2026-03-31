@@ -56,7 +56,7 @@ export interface Customer {
 /**
  * Line item type for invoice entries
  */
-export type LineItemType = 'material' | 'labor'
+export type LineItemType = 'material'
 
 /**
  * Line item entity representing a single charge on an invoice
@@ -66,6 +66,7 @@ export interface LineItem {
   invoiceId: string
   type: LineItemType
   description: string
+  unit: string
   quantity: number
   rate: number
   amount: number

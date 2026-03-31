@@ -160,6 +160,7 @@ model LineItem {
   invoiceId   String
   type        LineItemType
   description String
+  unit        String       @default("")
   quantity    Float
   rate        Float
   amount      Float

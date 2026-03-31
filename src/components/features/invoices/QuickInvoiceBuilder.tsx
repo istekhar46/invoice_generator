@@ -8,6 +8,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { Invoice, LineItem } from '../../../types/entities'
 import type { QuickInvoiceFormData } from '../../../types/forms'
+import type { GuestInvoiceData } from '../../../types/guest'
 import type { CreateQuickInvoiceDto } from '../../../services/api'
 import { quickInvoiceSchema } from '../../../types/forms'
 import { useCreateQuickInvoice } from '../../../hooks/useInvoices'
@@ -54,7 +55,7 @@ const stepConfig = {
   items: {
     title: 'Line Items',
     icon: Calculator,
-    description: 'Add materials and labor charges',
+    description: 'Add material charges with units',
   },
   review: {
     title: 'Review & Save',
@@ -66,17 +67,20 @@ const stepConfig = {
 interface QuickInvoiceBuilderProps {
   invoice?: Invoice | null
   onSave?: (invoice: Invoice, company: any, customer: any) => void
+  initialGuestData?: GuestInvoiceData | null
   className?: string
 }
 
 export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
   onSave,
+  initialGuestData = null,
   className,
 }) => {
   const [currentStep, setCurrentStep] = useState<BuilderStep>('company')
   const [lineItems, setLineItems] = useState<LineItem[]>([])
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [hasImportedGuestData, setHasImportedGuestData] = useState(false)
 
   const createQuickInvoice = useCreateQuickInvoice()
 
@@ -113,6 +117,58 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
       shouldTouch: true,
     })
   }, [lineItems, setValue])
+
+  // If arriving from guest flow after signup, hydrate quick invoice with the same data
+  useEffect(() => {
+    if (!initialGuestData || hasImportedGuestData) {
+      return
+    }
+
+    const mappedLineItems: LineItem[] = initialGuestData.lineItems.map((item) => ({
+      id: item.id,
+      invoiceId: '',
+      type: 'material',
+      description: item.description,
+      unit: item.unit,
+      quantity: item.quantity,
+      rate: item.rate,
+      amount: item.amount,
+    }))
+
+    setLineItems(mappedLineItems)
+
+    setValue('quickCompanyName', initialGuestData.company?.businessName || '')
+    setValue('quickCompanyAddress', initialGuestData.company?.address || '')
+    setValue('quickCompanyCity', initialGuestData.company?.city || '')
+    setValue('quickCompanyState', initialGuestData.company?.state || '')
+    setValue('quickCompanyZipCode', initialGuestData.company?.zipCode || '')
+    setValue('quickCompanyPhone', initialGuestData.company?.phone || '')
+    setValue('quickCompanyEmail', initialGuestData.company?.email || '')
+    setValue('quickCompanyTaxNumber', initialGuestData.company?.taxNumber || '')
+
+    setValue('quickCustomerName', initialGuestData.customer.name || '')
+    setValue('quickCustomerEmail', initialGuestData.customer.email || '')
+    setValue('quickCustomerPhone', initialGuestData.customer.phone || '')
+    setValue('quickCustomerAddress', initialGuestData.customer.address || '')
+    setValue('quickCustomerCity', initialGuestData.customer.city || '')
+    setValue('quickCustomerState', initialGuestData.customer.state || '')
+    setValue('quickCustomerZipCode', initialGuestData.customer.zipCode || '')
+
+    setValue('serviceDate', new Date(initialGuestData.invoiceDetails.serviceDate))
+    setValue('dueDate', new Date(initialGuestData.invoiceDetails.dueDate))
+    setValue('taxRate', initialGuestData.invoiceDetails.taxRate)
+    setValue('notes', initialGuestData.notes || '')
+
+    if (!initialGuestData.customer.name) {
+      setCurrentStep('customer')
+    } else if (initialGuestData.lineItems.length === 0) {
+      setCurrentStep('items')
+    } else {
+      setCurrentStep('review')
+    }
+
+    setHasImportedGuestData(true)
+  }, [initialGuestData, hasImportedGuestData, setValue])
 
   // Calculate totals for real-time display
   const calculateTotals = () => {
@@ -175,7 +231,10 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
       if (typeof item.rate !== 'number' || item.rate < 0) {
         return false
       }
-      if (item.type !== 'material' && item.type !== 'labor') {
+      if (item.type !== 'material') {
+        return false
+      }
+      if (!item.unit || !item.unit.trim()) {
         return false
       }
       if (typeof item.amount !== 'number' || item.amount < 0) {
@@ -257,8 +316,9 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
         serviceDate: data.serviceDate,
         dueDate: data.dueDate,
         lineItems: lineItems.map((item) => ({
-          type: item.type.toUpperCase() as 'MATERIAL' | 'LABOR',
+          type: 'MATERIAL' as const,
           description: item.description,
+          unit: item.unit,
           quantity: item.quantity,
           rate: item.rate,
         })),
@@ -319,8 +379,9 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
             lineItems: newInvoice.lineItems.map(item => ({
               id: item.id,
               invoiceId: newInvoice.id,
-              type: item.type.toLowerCase() as 'material' | 'labor',
+              type: 'material',
               description: item.description,
+              unit: item.unit,
               quantity: item.quantity,
               rate: item.rate,
               amount: item.amount,

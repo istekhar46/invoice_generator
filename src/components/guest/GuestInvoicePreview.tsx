@@ -7,7 +7,7 @@
 import React from 'react'
 import type { GuestInvoiceData } from '../../types/guest'
 import { InvoiceCalculationService } from '../../services/invoiceCalculation.service'
-import { Package, Wrench } from 'lucide-react'
+import { Package } from 'lucide-react'
 
 interface GuestInvoicePreviewProps {
   data: GuestInvoiceData
@@ -141,45 +141,30 @@ export const GuestInvoicePreview: React.FC<GuestInvoicePreviewProps> = ({
               <thead>
                 <tr className="border-b-2 border-gray-300">
                   <th className="text-left py-3 px-2 text-sm font-semibold text-gray-700 uppercase">
-                    Type
-                  </th>
-                  <th className="text-left py-3 px-2 text-sm font-semibold text-gray-700 uppercase">
-                    Description
-                  </th>
-                  <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700 uppercase">
-                    Quantity
+                    Item Name
                   </th>
                   <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700 uppercase">
                     Rate
                   </th>
                   <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700 uppercase">
-                    Amount
+                    Qty
+                  </th>
+                  <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700 uppercase">
+                    Total Amount
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {data.lineItems.map((item, index) => (
                   <tr key={item.id || index} className="border-b border-gray-200">
-                    <td className="py-3 px-2">
-                      <div className="flex items-center">
-                        {item.type === 'material' ? (
-                          <Package className="w-4 h-4 text-blue-600" />
-                        ) : (
-                          <Wrench className="w-4 h-4 text-green-600" />
-                        )}
-                        <span className="ml-2 text-sm text-gray-600 capitalize">
-                          {item.type}
-                        </span>
-                      </div>
-                    </td>
                     <td className="py-3 px-2 text-sm text-gray-900">
                       {item.description}
                     </td>
                     <td className="py-3 px-2 text-sm text-gray-900 text-right">
-                      {item.quantity}
+                      {formatCurrency(item.rate)}
                     </td>
                     <td className="py-3 px-2 text-sm text-gray-900 text-right">
-                      {formatCurrency(item.rate)}
+                      {item.quantity} {item.unit}
                     </td>
                     <td className="py-3 px-2 text-sm font-semibold text-gray-900 text-right">
                       {formatCurrency(item.amount)}
@@ -199,14 +184,8 @@ export const GuestInvoicePreview: React.FC<GuestInvoicePreviewProps> = ({
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center">
-                    {item.type === 'material' ? (
-                      <Package className="w-4 h-4 text-blue-600" />
-                    ) : (
-                      <Wrench className="w-4 h-4 text-green-600" />
-                    )}
-                    <span className="ml-2 text-xs text-gray-600 capitalize">
-                      {item.type}
-                    </span>
+                    <Package className="w-4 h-4 text-blue-600" />
+                    <span className="ml-2 text-xs text-gray-600 capitalize">material</span>
                   </div>
                   <span className="text-lg font-semibold text-gray-900">
                     {formatCurrency(item.amount)}
@@ -216,7 +195,7 @@ export const GuestInvoicePreview: React.FC<GuestInvoicePreviewProps> = ({
                   {item.description}
                 </p>
                 <div className="flex justify-between text-xs text-gray-600">
-                  <span>Qty: {item.quantity}</span>
+                  <span>Qty: {item.quantity} {item.unit}</span>
                   <span>Rate: {formatCurrency(item.rate)}</span>
                 </div>
               </div>

@@ -28,7 +28,8 @@ export const transformCustomerResponse = (dto: CustomerResponseDto): Customer =>
 export const transformLineItemResponse = (dto: LineItemResponseDto, invoiceId: string): LineItem => ({
   ...dto,
   invoiceId,
-  type: dto.type.toLowerCase() as 'material' | 'labor',
+  type: 'material',
+  unit: dto.unit ?? '',
 })
 
 /**
@@ -74,11 +75,12 @@ export const extractCustomerFromInvoiceResponse = (dto: InvoiceResponseDto): Cus
 /**
  * Transform frontend LineItem to API CreateLineItemDto
  * Converts lowercase enum values to uppercase for API compatibility
- * Handles both 'material'/'labor' and 'MATERIAL'/'LABOR' inputs
+ * Normalizes all line items to MATERIAL for backend payloads
  */
-export const transformLineItemToDto = (lineItem: LineItem | { type: string; description: string; quantity: number; rate: number }): CreateLineItemDto => ({
-  type: lineItem.type.toUpperCase() as 'MATERIAL' | 'LABOR',
+export const transformLineItemToDto = (lineItem: LineItem | { type: string; description: string; unit?: string; quantity: number; rate: number }): CreateLineItemDto => ({
+  type: 'MATERIAL',
   description: lineItem.description,
+  unit: lineItem.unit?.trim() || '',
   quantity: lineItem.quantity,
   rate: lineItem.rate,
 })

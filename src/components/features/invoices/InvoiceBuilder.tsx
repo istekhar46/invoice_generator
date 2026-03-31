@@ -57,7 +57,7 @@ const stepConfig = {
   items: {
     title: 'Line Items',
     icon: Calculator,
-    description: 'Add materials and labor charges'
+    description: 'Add material charges with units'
   },
   review: {
     title: 'Review & Save',
@@ -164,7 +164,12 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       }
       
       // Check type is valid
-      if (item.type !== 'material' && item.type !== 'labor') {
+      if (item.type !== 'material') {
+        return false
+      }
+
+      // Unit is required
+      if (!item.unit || !item.unit.trim()) {
         return false
       }
       

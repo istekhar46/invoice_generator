@@ -108,6 +108,9 @@ export function validatePDFData(data: GuestInvoiceData): void {
     if (!item.description || item.description.trim() === '') {
       throw new Error('All line items must have a description.')
     }
+    if (!item.unit || item.unit.trim() === '') {
+      throw new Error('All line items must have a unit.')
+    }
     if (item.quantity <= 0) {
       throw new Error('All line items must have a quantity greater than 0.')
     }

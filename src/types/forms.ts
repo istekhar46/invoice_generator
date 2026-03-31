@@ -65,8 +65,9 @@ export type CustomerFormData = z.infer<typeof customerSchema>
  */
 export const lineItemSchema = z.object({
   id: z.string(),
-  type: z.enum(['material', 'labor'] as const),
+  type: z.literal('material'),
   description: z.string().min(1, 'Description is required').max(500, 'Description must be less than 500 characters'),
+  unit: z.string().min(1, 'Unit is required').max(50, 'Unit must be less than 50 characters'),
   quantity: z.number().min(0.01, 'Quantity must be greater than 0').max(10000, 'Quantity cannot exceed 10,000'),
   rate: z.number().min(0, 'Rate must be positive').max(100000, 'Rate cannot exceed $100,000'),
   amount: z.number(),
@@ -149,6 +150,7 @@ export type QuickInvoiceFormData = z.infer<typeof quickInvoiceSchema>
 export interface LineItemInput {
   type: LineItemType
   description: string
+  unit: string
   quantity: string // String for form input, converted to number during validation
   rate: string // String for form input, converted to number during validation
 }

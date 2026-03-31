@@ -14,13 +14,14 @@ describe('InvoiceCalculationService', () => {
     quantity: number,
     rate: number,
     amount: number = 0,
-    type: 'material' | 'labor' = 'labor',
+    type: 'material' = 'material',
     description: string = 'Test item'
   ): LineItem => ({
     id,
     invoiceId: 'test-invoice',
     type,
     description,
+    unit: 'pcs',
     quantity,
     rate,
     amount

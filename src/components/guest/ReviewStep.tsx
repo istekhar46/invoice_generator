@@ -10,7 +10,7 @@ import { FormActions } from '../ui/FormField'
 import type { GuestInvoiceData } from '../../types/guest'
 import { InvoiceCalculationService } from '../../services/invoiceCalculation.service'
 import { generateAndDownloadPDF, generateAndPreviewPDF } from '../../utils/guestPDFGeneration'
-import { Download, Eye, Edit, UserPlus, Package, Wrench } from 'lucide-react'
+import { Download, Eye, Edit, UserPlus, Package } from 'lucide-react'
 
 interface ReviewStepProps {
   data: GuestInvoiceData
@@ -172,16 +172,12 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
                 {data.lineItems.map((item, index) => (
                   <div key={item.id || index} className="flex justify-between items-start">
                     <div className="flex-1">
-                      <div className="flex items-center space-x-2">
-                        {item.type === 'material' ? (
-                          <Package className="w-4 h-4 text-blue-600" />
-                        ) : (
-                          <Wrench className="w-4 h-4 text-green-600" />
-                        )}
+                    <div className="flex items-center space-x-2">
+                        <Package className="w-4 h-4 text-blue-600" />
                         <span className="font-medium text-gray-900">{item.description}</span>
                       </div>
                       <p className="text-sm text-gray-600 ml-6">
-                        {item.quantity} × {formatCurrency(item.rate)}
+                        {item.quantity} {item.unit} x {formatCurrency(item.rate)}
                       </p>
                     </div>
                     <span className="font-semibold text-gray-900">{formatCurrency(item.amount)}</span>

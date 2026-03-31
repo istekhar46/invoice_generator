@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { QuickInvoiceBuilder } from '../components/features/invoices/QuickInvoiceBuilder'
 import { InvoicePreview } from '../components/features/invoices/InvoicePreview'
 import { Modal, ModalFooter } from '../components/ui/Modal'
@@ -6,17 +7,24 @@ import { Button } from '../components/ui/Button'
 import { ResponsiveContainer } from '../components/layout/ResponsiveLayout'
 import { Download, FilePlus } from 'lucide-react'
 import type { Invoice } from '../types/entities'
+import type { GuestInvoiceData } from '../types/guest'
+import { loadFromLocalStorage } from '../utils/guestInvoiceStorage'
 
 /**
  * QuickInvoicePage component for creating invoices without saving company or customer details
  */
 export const QuickInvoicePage: React.FC = () => {
+  const location = useLocation()
   const [showInvoicePreview, setShowInvoicePreview] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [previewCompany, setPreviewCompany] = useState<any>(null)
   const [previewCustomer, setPreviewCustomer] = useState<any>(null)
   const [builderKey, setBuilderKey] = useState(0) // forces QuickInvoiceBuilder remount on reset
   const printRef = useRef<HTMLDivElement>(null)
+  const [initialGuestData] = useState<GuestInvoiceData | null>(() => {
+    const shouldImportGuestDraft = Boolean((location.state as { importGuestDraft?: boolean } | null)?.importGuestDraft)
+    return shouldImportGuestDraft ? loadFromLocalStorage() : null
+  })
 
   const handleInvoiceSave = (invoice: Invoice, company: any, customer: any) => {
     setSelectedInvoice(invoice)
@@ -45,7 +53,11 @@ export const QuickInvoicePage: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50/30">
       <ResponsiveContainer maxWidth="xl" padding="md" className="py-6">
         <div className="animate-fade-in">
-          <QuickInvoiceBuilder key={builderKey} onSave={handleInvoiceSave} />
+          <QuickInvoiceBuilder
+            key={builderKey}
+            onSave={handleInvoiceSave}
+            initialGuestData={initialGuestData}
+          />
         </div>
 
         {/* Invoice Preview Modal */}

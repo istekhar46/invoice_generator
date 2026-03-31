@@ -24,8 +24,9 @@ const mockLineItems: LineItem[] = [
   {
     id: 'item1',
     invoiceId: 'invoice1',
-    type: 'labor',
+    type: 'material',
     description: 'Electrical work',
+    unit: 'mtr',
     quantity: 2,
     rate: 50,
     amount: 100,
@@ -35,6 +36,7 @@ const mockLineItems: LineItem[] = [
     invoiceId: 'invoice1',
     type: 'material',
     description: 'Wire and outlets',
+    unit: 'bundle',
     quantity: 1,
     rate: 75,
     amount: 75,
@@ -85,7 +87,6 @@ describe('LineItemsTable', () => {
     const addButton = screen.getByText('Add Item')
     fireEvent.click(addButton)
 
-    expect(screen.getByDisplayValue('labor')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('Description')).toBeInTheDocument()
   })
 

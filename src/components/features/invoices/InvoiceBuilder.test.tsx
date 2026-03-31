@@ -119,6 +119,7 @@ vi.mock('./LineItemsTable', () => ({
         id: 'new-item',
         type: 'material',
         description: 'New Item',
+        unit: 'pcs',
         quantity: 1,
         rate: 10,
         amount: 10,
@@ -139,6 +140,7 @@ vi.mock('../../../utils/apiTransformers', () => ({
   transformLineItemToDto: (item: any) => ({
     type: item.type.toUpperCase(),
     description: item.description,
+    unit: item.unit,
     quantity: item.quantity,
     rate: item.rate,
   }),
@@ -189,6 +191,7 @@ const mockInvoice: Invoice = {
       invoiceId: 'test-invoice-id',
       type: 'material',
       description: 'Test Material',
+      unit: 'bundle',
       quantity: 5,
       rate: 20,
       amount: 100,

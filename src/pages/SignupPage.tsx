@@ -11,6 +11,7 @@ import { ErrorAlert } from '../components/ui/ErrorAlert'
 import { GoogleSignInButton } from '../components/ui/GoogleSignInButton'
 import { useRegister } from '../hooks/useAuth'
 import { signupSchema } from '../types/forms'
+import { hasStoredDraft } from '../utils/guestInvoiceStorage'
 
 // Extended signup schema with password confirmation
 const signupWithConfirmSchema = signupSchema.extend({
@@ -44,8 +45,18 @@ export const SignupPage: React.FC = () => {
       // Extract the data needed for signup (without confirmPassword)
       const { confirmPassword, ...signupData } = data
       await registerMutation.mutateAsync(signupData)
-      
-      // Redirect to dashboard after successful signup
+
+      // If user signed up after creating a guest invoice draft, continue in quick invoice flow
+      const shouldImportGuestDraft = hasStoredDraft()
+      if (shouldImportGuestDraft) {
+        navigate('/quick-invoice', {
+          replace: true,
+          state: { importGuestDraft: true },
+        })
+        return
+      }
+
+      // Default redirect
       navigate('/dashboard', { replace: true })
     } catch (error) {
       // Error is handled by the mutation hook

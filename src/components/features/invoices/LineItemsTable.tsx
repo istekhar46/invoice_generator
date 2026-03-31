@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react'
-import type { LineItem, LineItemType } from '../../../types/entities'
+import type { LineItem } from '../../../types/entities'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { Card, CardHeader, CardTitle, CardContent } from '../../ui/Card'
@@ -20,15 +20,15 @@ interface LineItemsTableProps {
 }
 
 interface LineItemFormData {
-  type: LineItemType
   description: string
+  unit: string
   quantity: string
   rate: string
 }
 
 const emptyLineItem: LineItemFormData = {
-  type: 'material',
   description: '',
+  unit: '',
   quantity: '',
   rate: '',
 }
@@ -53,6 +53,9 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
 
     if (!data.description.trim()) {
       newErrors.description = 'Description is required'
+    }
+    if (!data.unit.trim()) {
+      newErrors.unit = 'Unit is required'
     }
 
     const quantity = parseFloat(data.quantity)
@@ -79,8 +82,9 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
     const newLineItem: LineItem = {
       id: generateId(),
       invoiceId: '', // Will be set when invoice is saved
-      type: formData.type,
+      type: 'material',
       description: formData.description.trim(),
+      unit: formData.unit.trim(),
       quantity,
       rate,
       amount,
@@ -97,8 +101,8 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
     const item = lineItems.find(item => item.id === id)
     if (item) {
       setFormData({
-        type: item.type,
         description: item.description,
+        unit: item.unit || '',
         quantity: item.quantity.toString(),
         rate: item.rate.toString(),
       })
@@ -119,8 +123,9 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
       item.id === editingId
         ? {
             ...item,
-            type: formData.type,
+            type: 'material' as const,
             description: formData.description.trim(),
+            unit: formData.unit.trim(),
             quantity,
             rate,
             amount,
@@ -176,21 +181,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
     <div className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Type *
-        </label>
-        <select
-          value={formData.type}
-          onChange={(e) => handleFormChange('type', e.target.value)}
-          className="w-full px-4 py-3 rounded-xl text-base border-2 border-gray-200 bg-gray-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white hover:border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed min-h-11"
-          disabled={disabled}
-        >
-          <option value="material">Material</option>
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Description *
+          Item Name *
         </label>
         <Input
           type="text"
@@ -198,6 +189,20 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
           onChange={(e) => handleFormChange('description', e.target.value)}
           placeholder="Enter description"
           error={errors.description}
+          disabled={disabled}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Unit *
+        </label>
+        <Input
+          type="text"
+          value={formData.unit}
+          onChange={(e) => handleFormChange('unit', e.target.value)}
+          placeholder="mtr, bundle, box..."
+          error={errors.unit}
           disabled={disabled}
         />
       </div>
@@ -236,7 +241,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
 
       <div className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-gray-700">Amount:</span>
+          <span className="text-sm font-medium text-gray-700">Total Amount:</span>
           <span className="text-lg font-bold text-gray-900">
             {formData.quantity && formData.rate && !errors.quantity && !errors.rate
               ? formatCurrency(
@@ -277,35 +282,12 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
   const renderFormRow = (isEditing: boolean = false, key?: string) => (
     <tr key={key} className="bg-gray-50/50">
       <td className="px-4 py-3">
-        <select
-          value={formData.type}
-          onChange={(e) => handleFormChange('type', e.target.value)}
-          className="w-full px-4 py-3 rounded-xl text-base border-2 border-gray-200 bg-gray-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white hover:border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed min-h-11"
-          disabled={disabled}
-        >
-          <option value="material">Material</option>
-        </select>
-      </td>
-      <td className="px-4 py-3">
         <Input
           type="text"
           value={formData.description}
           onChange={(e) => handleFormChange('description', e.target.value)}
-          placeholder="Description"
+          placeholder="Item name"
           error={errors.description}
-          disabled={disabled}
-          variant="filled"
-        />
-      </td>
-      <td className="px-4 py-3">
-        <Input
-          type="number"
-          value={formData.quantity}
-          onChange={(e) => handleFormChange('quantity', e.target.value)}
-          placeholder="0"
-          min="0"
-          step="0.01"
-          error={errors.quantity}
           disabled={disabled}
           variant="filled"
         />
@@ -322,6 +304,30 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
           disabled={disabled}
           variant="filled"
         />
+      </td>
+      <td className="px-4 py-3">
+        <Input
+          type="number"
+          value={formData.quantity}
+          onChange={(e) => handleFormChange('quantity', e.target.value)}
+          placeholder="0"
+          min="0"
+          step="0.01"
+          error={errors.quantity}
+          disabled={disabled}
+          variant="filled"
+        />
+        <div className="mt-2">
+          <Input
+            type="text"
+            value={formData.unit}
+            onChange={(e) => handleFormChange('unit', e.target.value)}
+            placeholder="unit"
+            error={errors.unit}
+            disabled={disabled}
+            variant="filled"
+          />
+        </div>
       </td>
       <td className="px-4 py-3 text-right">
         <div className="bg-gray-100 rounded-xl px-4 py-3 min-h-11 flex items-center justify-end">
@@ -405,7 +411,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No line items yet</h3>
               <p className="text-gray-600 mb-6 max-w-sm mx-auto">
-                Add materials and labor charges to build your invoice.
+                Add material charges to build your invoice.
               </p>
               <Button
                 variant="primary"
@@ -427,19 +433,16 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
                 <thead>
                   <tr className="border-b border-gray-200">
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Description
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Quantity
+                      Item Name
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Rate
                     </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Qty
+                    </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
+                      Total Amount
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
@@ -453,23 +456,14 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
                       renderFormRow(true, item.id)
                     ) : (
                       <tr key={item.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            item.type === 'labor' 
-                              ? 'bg-blue-100 text-blue-800' 
-                              : 'bg-green-100 text-green-800'
-                          }`}>
-                            {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
-                          </span>
-                        </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
                           {item.description}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          {item.quantity}
+                          {formatCurrency(item.rate)}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          {formatCurrency(item.rate)}
+                          {item.quantity} {item.unit}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
                           {formatCurrency(item.amount)}
@@ -515,7 +509,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
                   {/* Subtotal Row */}
                   {lineItems.length > 0 && (
                     <tr className="border-t-2 border-gray-300 bg-gray-50">
-                      <td colSpan={4} className="px-4 py-3 text-right text-sm font-medium text-gray-900">
+                      <td colSpan={3} className="px-4 py-3 text-right text-sm font-medium text-gray-900">
                         Subtotal:
                       </td>
                       <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">

@@ -336,8 +336,12 @@ export class InvoiceCalculationService {
         throw new CalculationError('Line item must have a description')
       }
 
-      if (!lineItem.type || !['material', 'labor'].includes(lineItem.type)) {
-        throw new CalculationError('Line item must have a valid type (material or labor)')
+      if (!lineItem.unit || lineItem.unit.trim() === '') {
+        throw new CalculationError('Line item must have a unit')
+      }
+
+      if (!lineItem.type || lineItem.type !== 'material') {
+        throw new CalculationError('Line item type must be material')
       }
 
       return true

@@ -8,8 +8,9 @@
  */
 export interface GuestLineItem {
   id: string
-  type: 'material' | 'labor'
+  type: 'material'
   description: string
+  unit: string
   quantity: number
   rate: number
   amount: number
