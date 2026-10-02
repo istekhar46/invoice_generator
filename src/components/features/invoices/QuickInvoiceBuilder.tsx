@@ -32,12 +32,37 @@ import {
   Building2,
   Download,
   UserPlus,
+  Trash2,
 } from 'lucide-react'
 import { formatCurrency } from '../../../utils/formatters'
 import { generateAndDownloadPDF } from '../../../utils/guestPDFGeneration'
 import { clearLocalStorage, saveToLocalStorage } from '../../../utils/guestInvoiceStorage'
 
 type BuilderStep = 'company' | 'customer' | 'details' | 'items' | 'review'
+
+const createQuickInvoiceDefaultValues = (): QuickInvoiceFormData => ({
+  customerId: '',
+  quickCompanyName: '',
+  quickCompanyAddress: '',
+  quickCompanyCity: '',
+  quickCompanyState: '',
+  quickCompanyZipCode: '',
+  quickCompanyPhone: '',
+  quickCompanyEmail: '',
+  quickCompanyTaxNumber: '',
+  quickCustomerName: '',
+  quickCustomerEmail: '',
+  quickCustomerPhone: '',
+  quickCustomerAddress: '',
+  quickCustomerCity: '',
+  quickCustomerState: '',
+  quickCustomerZipCode: '',
+  serviceDate: new Date(),
+  dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  lineItems: [],
+  notes: '',
+  taxRate: 0.08,
+})
 
 const stepConfig = {
   company: {
@@ -140,8 +165,11 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [hasImportedGuestData, setHasImportedGuestData] = useState(false)
   const [isGeneratingGuestPDF, setIsGeneratingGuestPDF] = useState(false)
-  const [guestDraftCreatedAt] = useState(() => initialGuestData?.createdAt || new Date())
-  const [clientRequestId] = useState(() =>
+  const [draftCleared, setDraftCleared] = useState(false)
+  const [guestDraftCreatedAt, setGuestDraftCreatedAt] = useState(
+    () => initialGuestData?.createdAt || new Date()
+  )
+  const [clientRequestId, setClientRequestId] = useState(() =>
     initialGuestData?.draftId ||
     (initialGuestData
       ? `guest-${new Date(initialGuestData.createdAt).toISOString()}`
@@ -166,17 +194,11 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<QuickInvoiceFormData>({
     resolver: zodResolver(quickInvoiceSchema),
-    defaultValues: {
-      customerId: '',
-      serviceDate: new Date(),
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-      lineItems: [],
-      notes: '',
-      taxRate: 0.08, // Default 8% tax rate
-    },
+    defaultValues: createQuickInvoiceDefaultValues(),
     mode: 'onChange',
   })
 
@@ -246,6 +268,7 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
 
   useEffect(() => {
     if (!isGuest || (initialGuestData && !hasImportedGuestData)) return
+    if (draftCleared) return
 
     const timeout = window.setTimeout(() => {
       try {
@@ -266,6 +289,7 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
   }, [
     guestDraftCreatedAt,
     clientRequestId,
+    draftCleared,
     hasImportedGuestData,
     initialGuestData,
     isGuest,
@@ -571,6 +595,32 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
       )
     )
     onSignUp?.()
+  }
+
+  const handleClearGuestDraft = () => {
+    try {
+      clearLocalStorage()
+    } catch (clearError) {
+      setSubmitError(
+        clearError instanceof Error
+          ? clearError.message
+          : 'Failed to clear the saved draft. Please try again.'
+      )
+      return
+    }
+
+    const defaultValues = createQuickInvoiceDefaultValues()
+    reset(defaultValues)
+    setLineItems([])
+    setTaxRateInput((defaultValues.taxRate * 100).toString())
+    setCurrentStep('company')
+    setSubmitError(null)
+    setSubmitSuccess(false)
+    setHasImportedGuestData(true)
+    setGuestDraftCreatedAt(new Date())
+    setClientRequestId(crypto.randomUUID())
+    setDraftCleared(true)
+    autoSaveAttempted.current = false
   }
 
   const renderStepIndicator = () => {
@@ -906,7 +956,14 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
 
   const renderItemsStep = () => (
     <div className="space-y-6">
-      <LineItemsTable lineItems={lineItems} onChange={setLineItems} disabled={loading} />
+      <LineItemsTable
+        lineItems={lineItems}
+        onChange={(items) => {
+          if (draftCleared) setDraftCleared(false)
+          setLineItems(items)
+        }}
+        disabled={loading}
+      />
 
       {/* Real-time totals display */}
       <Card padding="none">
@@ -1011,7 +1068,28 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
   }
 
   return (
-    <div className={className}>
+    <div
+      className={className}
+      onChangeCapture={() => {
+        if (isGuest && draftCleared) setDraftCleared(false)
+      }}
+    >
+      {isGuest && (
+        <div className="mb-4 flex justify-end">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleClearGuestDraft}
+            disabled={loading}
+            className="gap-2 text-red-600 hover:bg-red-50"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span>Clear Draft</span>
+          </Button>
+        </div>
+      )}
+
       {/* Step Indicator */}
       <div className="mb-8">{renderStepIndicator()}</div>
 

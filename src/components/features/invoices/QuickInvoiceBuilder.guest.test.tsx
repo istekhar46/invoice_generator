@@ -120,4 +120,29 @@ describe('QuickInvoiceBuilder guest mode', () => {
     )
     expect(clearLocalStorage).toHaveBeenCalledOnce()
   })
+
+  it('clears the saved draft and resets the complete guest form', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <QuickInvoiceBuilder
+        mode="guest"
+        initialGuestData={guestDraft}
+      />
+    )
+
+    expect(await screen.findByText('Guest Customer')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Clear Draft' }))
+
+    expect(clearLocalStorage).toHaveBeenCalledOnce()
+    expect(screen.queryByText('Guest Customer')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Your Company Information' })).toBeInTheDocument()
+
+    saveToLocalStorage.mockClear()
+    await new Promise((resolve) => setTimeout(resolve, 600))
+    expect(saveToLocalStorage).not.toHaveBeenCalled()
+
+    await user.type(screen.getByRole('textbox', { name: 'Business Name' }), 'New Company')
+    await waitFor(() => expect(saveToLocalStorage).toHaveBeenCalledOnce(), { timeout: 1000 })
+  })
 })
