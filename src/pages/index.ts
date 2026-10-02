@@ -11,6 +11,6 @@ export { CustomersPage } from './CustomersPage'
 export { InvoicesPage } from './InvoicesPage'
 export { QuickInvoicePage } from './QuickInvoicePage'
 export { CompanyProfilePage } from './CompanyProfilePage'
-export { SettingsPage } from './SettingsPage'
+// SettingsPage is temporarily disabled. Restore this export with its route and navigation.
 export { NotFoundPage } from './NotFoundPage'
 export { GoogleAuthCallbackPage } from './GoogleAuthCallbackPage'

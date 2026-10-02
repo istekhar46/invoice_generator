@@ -15,7 +15,6 @@ import {
   InvoicesPage,
   QuickInvoicePage,
   CompanyProfilePage,
-  SettingsPage,
   NotFoundPage,
 } from '../pages'
 import { GoogleAuthCallbackPage } from '../pages/GoogleAuthCallbackPage'
@@ -102,14 +101,8 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      {
-        path: 'settings',
-        element: (
-          <ProtectedRoute>
-            <SettingsPage />
-          </ProtectedRoute>
-        ),
-      },
+      // Settings route is temporarily disabled. SettingsPage remains available in
+      // src/pages/SettingsPage.tsx and can be restored here when it is ready.
       
       // OAuth callback route — must NOT be wrapped in PublicRoute or ProtectedRoute
       // because the access token hasn't been stored in memory yet on first load
@@ -153,10 +146,7 @@ export const routeMetadata = {
     title: 'Company Profile',
     breadcrumb: 'Company Profile',
   },
-  '/settings': {
-    title: 'Settings',
-    breadcrumb: 'Settings',
-  },
+  // Settings metadata is temporarily disabled with the route.
   '/login': {
     title: 'Login',
     breadcrumb: 'Login',

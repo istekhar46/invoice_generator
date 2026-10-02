@@ -30,7 +30,6 @@ describe('Routing Configuration', () => {
       expect(routeMetadata['/customers']).toBeDefined()
       expect(routeMetadata['/invoices']).toBeDefined()
       expect(routeMetadata['/company']).toBeDefined()
-      expect(routeMetadata['/settings']).toBeDefined()
       expect(routeMetadata['/login']).toBeDefined()
       expect(routeMetadata['/signup']).toBeDefined()
     })
@@ -40,7 +39,6 @@ describe('Routing Configuration', () => {
       expect(routeMetadata['/customers'].breadcrumb).toBe('Customers')
       expect(routeMetadata['/invoices'].breadcrumb).toBe('Invoices')
       expect(routeMetadata['/company'].breadcrumb).toBe('Company Profile')
-      expect(routeMetadata['/settings'].breadcrumb).toBe('Settings')
     })
 
     it('should have proper page titles', () => {
@@ -48,7 +46,6 @@ describe('Routing Configuration', () => {
       expect(routeMetadata['/customers'].title).toBe('Customers')
       expect(routeMetadata['/invoices'].title).toBe('Invoices')
       expect(routeMetadata['/company'].title).toBe('Company Profile')
-      expect(routeMetadata['/settings'].title).toBe('Settings')
     })
   })
 
@@ -99,11 +96,15 @@ describe('Routing Configuration', () => {
 
   describe('Route Structure', () => {
     it('should have all required protected routes', () => {
-      const protectedRoutes = ['/dashboard', '/customers', '/invoices', '/company', '/settings']
+      const protectedRoutes = ['/dashboard', '/customers', '/invoices', '/company']
       
       protectedRoutes.forEach(route => {
         expect(routeMetadata[route as keyof typeof routeMetadata]).toBeDefined()
       })
+    })
+
+    it('should keep the temporarily disabled settings route unavailable', () => {
+      expect('/settings' in routeMetadata).toBe(false)
     })
 
     it('should have all required public routes', () => {

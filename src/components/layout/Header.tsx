@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Users,
   FileText,
-  Settings,
   Building2,
 } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
@@ -61,12 +60,8 @@ const navigation: NavigationItem[] = [
     icon: Building2,
     requiresAuth: true,
   },
-  {
-    name: 'Settings',
-    href: '/settings',
-    icon: Settings,
-    requiresAuth: true,
-  },
+  // Settings navigation is temporarily disabled.
+  // Restore the Settings icon import and navigation item when the page is re-enabled.
 ]
 
 const Header: React.FC<HeaderProps> = ({
