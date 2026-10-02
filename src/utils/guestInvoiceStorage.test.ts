@@ -122,6 +122,17 @@ describe('guestInvoiceStorage', () => {
       expect(LocalStorageService.get).toHaveBeenCalledWith(GUEST_INVOICE_STORAGE_KEY)
     })
 
+    it('should restore a structurally valid in-progress draft', () => {
+      const draft: GuestInvoiceData = {
+        ...mockGuestInvoiceData,
+        customer: { name: '' },
+        lineItems: [],
+      }
+      vi.mocked(LocalStorageService.get).mockReturnValue(draft)
+
+      expect(loadFromLocalStorage()).toEqual(draft)
+    })
+
     it('should return null if no data exists', () => {
       vi.mocked(LocalStorageService.get).mockReturnValue(null)
 

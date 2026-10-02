@@ -9,6 +9,7 @@ import { Download, FilePlus } from 'lucide-react'
 import type { Invoice } from '../types/entities'
 import type { GuestInvoiceData } from '../types/guest'
 import { loadFromLocalStorage } from '../utils/guestInvoiceStorage'
+import { usePDFGeneration } from '../hooks/usePDFGeneration'
 
 /**
  * QuickInvoicePage component for creating invoices without saving company or customer details
@@ -21,12 +22,17 @@ export const QuickInvoicePage: React.FC = () => {
   const [previewCustomer, setPreviewCustomer] = useState<any>(null)
   const [builderKey, setBuilderKey] = useState(0) // forces QuickInvoiceBuilder remount on reset
   const printRef = useRef<HTMLDivElement>(null)
-  const [initialGuestData] = useState<GuestInvoiceData | null>(() => {
+  const [initialGuestData, setInitialGuestData] = useState<GuestInvoiceData | null>(() => {
     const shouldImportGuestDraft = Boolean((location.state as { importGuestDraft?: boolean } | null)?.importGuestDraft)
     return shouldImportGuestDraft ? loadFromLocalStorage() : null
   })
+  const [autoSaveImportedDraft, setAutoSaveImportedDraft] = useState(
+    initialGuestData !== null
+  )
 
   const handleInvoiceSave = (invoice: Invoice, company: any, customer: any) => {
+    setAutoSaveImportedDraft(false)
+    setInitialGuestData(null)
     setSelectedInvoice(invoice)
     setPreviewCompany(company)
     setPreviewCustomer(customer)
@@ -45,8 +51,15 @@ export const QuickInvoicePage: React.FC = () => {
     setBuilderKey((k) => k + 1) // remount builder to reset all form state
   }
 
-  const handleDownloadPdf = () => {
-    window.print()
+  const { downloadInvoicePDFDirect, isGenerating } = usePDFGeneration()
+
+  const handleDownloadPdf = async () => {
+    if (!selectedInvoice) return
+    try {
+      await downloadInvoicePDFDirect(selectedInvoice, previewCustomer, previewCompany)
+    } catch {
+      window.print()
+    }
   }
 
   return (
@@ -57,6 +70,7 @@ export const QuickInvoicePage: React.FC = () => {
             key={builderKey}
             onSave={handleInvoiceSave}
             initialGuestData={initialGuestData}
+            autoSaveImportedDraft={autoSaveImportedDraft}
           />
         </div>
 
@@ -92,10 +106,11 @@ export const QuickInvoicePage: React.FC = () => {
                 <Button
                   type="button"
                   onClick={handleDownloadPdf}
+                  disabled={isGenerating}
                   className="flex items-center gap-2"
                 >
                   <Download className="h-4 w-4" />
-                  Download PDF
+                  {isGenerating ? 'Generating PDF...' : 'Download PDF'}
                 </Button>
               </ModalFooter>
             </>

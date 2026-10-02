@@ -43,21 +43,9 @@ export type {
   GuestCustomerDetails,
   GuestInvoiceDetails,
   GuestInvoiceData,
-  ValidationResult,
-  ValidationErrors,
 } from './guest'
 
 // Guest invoice schemas
 export {
-  guestCompanyDetailsSchema,
-  guestCustomerDetailsSchema,
-  guestInvoiceDetailsSchema,
-  guestInvoiceDataSchema,
-} from './guestSchemas'
-
-export type {
-  GuestCompanyDetailsFormData,
-  GuestCustomerDetailsFormData,
-  GuestInvoiceDetailsFormData,
-  GuestInvoiceDataFormData,
+  guestInvoiceDraftSchema,
 } from './guestSchemas'

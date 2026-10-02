@@ -5,19 +5,33 @@
 
 import React, { useState, useMemo, useEffect } from 'react'
 import type { Customer } from '../../../types/entities'
-import { usePaginatedCustomers, useDeleteCustomer } from '../../../hooks/useCustomers'
+import {
+  usePaginatedCustomers,
+  useDeleteCustomer,
+} from '../../../hooks/useCustomers'
 import { useAutoPrefetch } from '../../../hooks/usePrefetch'
 import { CustomerCard } from './CustomerCard'
-import { CustomerForm } from './CustomerForm'
+import { CustomerFormModal } from './CustomerFormModal'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { Modal } from '../../ui/Modal'
 import { Card } from '../../ui/Card'
 import { Pagination } from '../../ui/Pagination'
-import { CustomerListSkeleton, CustomerCardSkeleton, SkeletonGrid } from '../../ui/SkeletonLoading'
+import {
+  CustomerListSkeleton,
+  CustomerCardSkeleton,
+  SkeletonGrid,
+} from '../../ui/SkeletonLoading'
 import { ErrorDisplay } from '../../shared/ErrorDisplay'
 import { ResponsiveGrid, ResponsiveStack } from '../../layout/ResponsiveLayout'
-import { Plus, Search, SortAsc, SortDesc, Users, ArrowRight } from 'lucide-react'
+import {
+  Plus,
+  Search,
+  SortAsc,
+  SortDesc,
+  Users,
+  ArrowRight,
+} from 'lucide-react'
 import type { CustomerQueryParams } from '../../../services/api'
 
 interface CustomerListProps {
@@ -40,22 +54,27 @@ export const CustomerList: React.FC<CustomerListProps> = ({
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(null)
+  const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(
+    null
+  )
 
   // Build query parameters
-  const queryParams: Omit<CustomerQueryParams, 'page' | 'limit'> = useMemo(() => ({
-    search: searchQuery || undefined,
-    sortBy,
-    sortOrder,
-  }), [searchQuery, sortBy, sortOrder])
+  const queryParams: Omit<CustomerQueryParams, 'page' | 'limit'> = useMemo(
+    () => ({
+      search: searchQuery || undefined,
+      sortBy,
+      sortOrder,
+    }),
+    [searchQuery, sortBy, sortOrder]
+  )
 
   // Use paginated customers hook
-  const { 
-    data: customersResponse, 
-    isLoading, 
+  const {
+    data: customersResponse,
+    isLoading,
     error,
     refetch,
-    pagination
+    pagination,
   } = usePaginatedCustomers(currentPage, 20, queryParams)
 
   const deleteCustomerMutation = useDeleteCustomer()
@@ -75,7 +94,8 @@ export const CustomerList: React.FC<CustomerListProps> = ({
   }
 
   const handleSort = (newSortBy: 'name' | 'createdAt') => {
-    const newSortOrder = sortBy === newSortBy && sortOrder === 'asc' ? 'desc' : 'asc'
+    const newSortOrder =
+      sortBy === newSortBy && sortOrder === 'asc' ? 'desc' : 'asc'
     setSortBy(newSortBy)
     setSortOrder(newSortOrder)
     setCurrentPage(1) // Reset to first page when sorting
@@ -134,7 +154,11 @@ export const CustomerList: React.FC<CustomerListProps> = ({
 
   const getSortIcon = (column: 'name' | 'createdAt') => {
     if (sortBy !== column) return null
-    return sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />
+    return sortOrder === 'asc' ? (
+      <SortAsc className="h-4 w-4" />
+    ) : (
+      <SortDesc className="h-4 w-4" />
+    )
   }
 
   if (isLoading && customers.length === 0) {
@@ -154,14 +178,15 @@ export const CustomerList: React.FC<CustomerListProps> = ({
               {selectable ? 'Select Customer' : 'Customers'}
             </h1>
             <p className="text-body-sm text-gray-600">
-              {pagination.total} {pagination.total === 1 ? 'customer' : 'customers'}
+              {pagination.total}{' '}
+              {pagination.total === 1 ? 'customer' : 'customers'}
             </p>
           </div>
         </div>
-        
+
         {!selectable && (
-          <Button 
-            onClick={handleAddCustomer} 
+          <Button
+            onClick={handleAddCustomer}
             variant="primary"
             size="lg"
             className="group shadow-glow"
@@ -193,7 +218,9 @@ export const CustomerList: React.FC<CustomerListProps> = ({
 
           {/* Sort Controls */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <span className="text-sm font-semibold text-gray-700">Sort by:</span>
+            <span className="text-sm font-semibold text-gray-700">
+              Sort by:
+            </span>
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="secondary"
@@ -204,7 +231,7 @@ export const CustomerList: React.FC<CustomerListProps> = ({
                 <span>Name</span>
                 {getSortIcon('name')}
               </Button>
-              
+
               <Button
                 variant="secondary"
                 size="sm"
@@ -221,8 +248,8 @@ export const CustomerList: React.FC<CustomerListProps> = ({
 
       {/* Error Display */}
       {error && (
-        <ErrorDisplay 
-          error={error} 
+        <ErrorDisplay
+          error={error}
           onRetry={() => refetch()}
           title="Failed to load customers"
         />
@@ -230,7 +257,10 @@ export const CustomerList: React.FC<CustomerListProps> = ({
 
       {/* Customer Grid */}
       {customers.length === 0 ? (
-        <Card padding="lg" className="text-center bg-gradient-to-br from-white to-gray-50/50">
+        <Card
+          padding="lg"
+          className="text-center bg-gradient-to-br from-white to-gray-50/50"
+        >
           <div className="py-12">
             <div className="p-4 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl w-fit mx-auto mb-6">
               <Users className="h-12 w-12 text-gray-400" />
@@ -239,13 +269,17 @@ export const CustomerList: React.FC<CustomerListProps> = ({
               {searchQuery ? 'No customers found' : 'No customers yet'}
             </h3>
             <p className="text-body text-gray-600 mb-6 max-w-md mx-auto">
-              {searchQuery 
+              {searchQuery
                 ? 'Try adjusting your search terms or clear the search to see all customers.'
-                : 'Get started by adding your first customer to manage your business relationships.'
-              }
+                : 'Get started by adding your first customer to manage your business relationships.'}
             </p>
             {!selectable && !searchQuery && (
-              <Button onClick={handleAddCustomer} variant="primary" size="lg" className="group">
+              <Button
+                onClick={handleAddCustomer}
+                variant="primary"
+                size="lg"
+                className="group"
+              >
                 <Plus className="w-5 h-5 mr-2" />
                 Add Your First Customer
                 <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
@@ -256,33 +290,94 @@ export const CustomerList: React.FC<CustomerListProps> = ({
       ) : (
         <>
           {/* Show skeleton overlay when refetching */}
-          {isLoading && customers.length > 0 && (
+          {!selectable && isLoading && customers.length > 0 && (
             <div className="relative">
               <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 rounded-lg">
                 <SkeletonGrid CardSkeleton={CustomerCardSkeleton} count={6} />
               </div>
             </div>
           )}
-          
-          <ResponsiveGrid columns={{ mobile: 1, tablet: 2, desktop: 3 }} gap="lg">
-            {customers.map((customer, index) => (
-              <div
-                key={customer.id}
-                className="animate-slide-up"
-                style={{ animationDelay: `${index * 100}ms` } as React.CSSProperties}
-              >
-                <CustomerCard
-                  customer={customer as any}
-                  onEdit={handleEditCustomer}
-                  onDelete={handleDeleteCustomer}
-                  onSelect={handleCustomerSelect}
-                  showActions={!selectable}
-                  selectable={selectable}
-                  selected={selectedCustomerId === customer.id}
-                />
+
+          {selectable ? (
+            <Card padding="none" className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px] text-left">
+                  <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <tr>
+                      <th scope="col" className="px-5 py-3">Customer</th>
+                      <th scope="col" className="px-5 py-3">Contact</th>
+                      <th scope="col" className="px-5 py-3">Location</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {customers.map(customer => {
+                      const selected = selectedCustomerId === customer.id
+                      return (
+                        <tr
+                          key={customer.id}
+                          tabIndex={0}
+                          aria-selected={selected}
+                          aria-label={`Select ${customer.name}`}
+                          onClick={() => handleCustomerSelect(customer)}
+                          onKeyDown={event => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              handleCustomerSelect(customer)
+                            }
+                          }}
+                          className={`cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 ${
+                            selected ? 'bg-primary-50' : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <td className="px-5 py-4">
+                            <div className="font-semibold text-gray-900">{customer.name}</div>
+                            <div className="mt-1 text-xs text-gray-500">
+                              Added {new Intl.DateTimeFormat('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                              }).format(customer.createdAt)}
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 text-sm text-gray-600">
+                            <div>{customer.email}</div>
+                            <div className="mt-1">{customer.phone}</div>
+                          </td>
+                          <td className="px-5 py-4 text-sm text-gray-600">
+                            <div>{customer.address}</div>
+                            <div className="mt-1">
+                              {customer.city}, {customer.state} {customer.zipCode}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               </div>
-            ))}
-          </ResponsiveGrid>
+            </Card>
+          ) : (
+            <ResponsiveGrid
+              columns={{ mobile: 1, tablet: 2, desktop: 3 }}
+              gap="lg"
+            >
+              {customers.map((customer, index) => (
+                <div
+                  key={customer.id}
+                  className="animate-slide-up"
+                  style={
+                    { animationDelay: `${index * 100}ms` } as React.CSSProperties
+                  }
+                >
+                  <CustomerCard
+                    customer={customer}
+                    onEdit={handleEditCustomer}
+                    onDelete={handleDeleteCustomer}
+                  />
+                </div>
+              ))}
+            </ResponsiveGrid>
+          )}
         </>
       )}
 
@@ -300,32 +395,18 @@ export const CustomerList: React.FC<CustomerListProps> = ({
         />
       )}
 
-      {/* Add Customer Modal */}
-      <Modal
+      <CustomerFormModal
         open={showAddModal}
         onClose={handleFormCancel}
-        title="Add New Customer"
-        size="large"
-      >
-        <CustomerForm
-          onSuccess={handleFormSuccess}
-          onCancel={handleFormCancel}
-        />
-      </Modal>
+        onSuccess={handleFormSuccess}
+      />
 
-      {/* Edit Customer Modal */}
-      <Modal
+      <CustomerFormModal
         open={showEditModal}
         onClose={handleFormCancel}
-        title="Edit Customer"
-        size="large"
-      >
-        <CustomerForm
-          customer={editingCustomer}
-          onSuccess={handleFormSuccess}
-          onCancel={handleFormCancel}
-        />
-      </Modal>
+        onSuccess={handleFormSuccess}
+        customer={editingCustomer}
+      />
 
       {/* Delete Confirmation Modal */}
       <Modal
@@ -336,10 +417,11 @@ export const CustomerList: React.FC<CustomerListProps> = ({
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            Are you sure you want to delete <strong>{deletingCustomer?.name}</strong>? 
-            This action cannot be undone.
+            Are you sure you want to delete{' '}
+            <strong>{deletingCustomer?.name}</strong>? This action cannot be
+            undone.
           </p>
-          
+
           <div className="flex justify-end space-x-2">
             <Button
               variant="secondary"

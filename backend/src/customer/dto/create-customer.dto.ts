@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsEmail, Length, Matches, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsEmail, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class CreateCustomerDto {
   @ApiProperty({
@@ -20,13 +20,15 @@ export class CreateCustomerDto {
   email!: string;
 
   @ApiProperty({
-    description: 'Phone number',
-    example: '(555) 123-4567',
-    pattern: '^\\(?\\d{3}\\)?[- ]?\\d{3}[- ]?\\d{4}$',
+    description: 'Phone number (international formats accepted)',
+    example: '+919794883638',
+    maxLength: 30,
   })
   @IsString()
-  @Matches(/^\(?\d{3}\)?[- ]?\d{3}[- ]?\d{4}$/, {
-    message: 'Phone number must be in format (555) 123-4567 or 555-123-4567',
+  @IsNotEmpty({ message: 'Phone number is required' })
+  @MaxLength(30, { message: 'Phone number cannot exceed 30 characters' })
+  @Matches(/^\+?[\d\s().-]{7,30}$/, {
+    message: 'Phone number must be valid (e.g. +1 555 123 4567, +91 97948 83638)',
   })
   phone!: string;
 
@@ -51,23 +53,26 @@ export class CreateCustomerDto {
   city!: string;
 
   @ApiProperty({
-    description: 'State (2-letter code)',
-    example: 'CA',
-    minLength: 2,
-    maxLength: 2,
+    description: 'State, province, or region',
+    example: 'Maharashtra',
+    maxLength: 100,
   })
   @IsString()
-  @Length(2, 2, { message: 'State must be exactly 2 characters' })
+  @IsNotEmpty({ message: 'State / Province / Region is required' })
+  @MinLength(2, { message: 'State / Province / Region must be at least 2 characters' })
+  @MaxLength(100, { message: 'State / Province / Region cannot exceed 100 characters' })
   state!: string;
 
   @ApiProperty({
-    description: 'ZIP code (5 digits or 5+4 format)',
-    example: '90210',
-    pattern: '^\\d{5}(-\\d{4})?$',
+    description: 'Postal / ZIP code (international formats accepted)',
+    example: '412308',
+    maxLength: 20,
   })
   @IsString()
-  @Matches(/^\d{5}(-\d{4})?$/, {
-    message: 'ZIP code must be in format 12345 or 12345-6789',
+  @IsNotEmpty({ message: 'Postal code is required' })
+  @MaxLength(20, { message: 'Postal code cannot exceed 20 characters' })
+  @Matches(/^[a-zA-Z0-9][\w\s-]{1,19}$/, {
+    message: 'Postal code must be a valid format (e.g. 10001, 412308, SW1A 1AA)',
   })
   zipCode!: string;
 }

@@ -9,7 +9,9 @@ const mockPrismaService = {
   user: {
     findUnique: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
     delete: jest.fn(),
+    deleteMany: jest.fn(),
   },
 };
 
@@ -82,13 +84,15 @@ describe('UserService', () => {
       const updateDto = { displayName: 'Updated Name' };
       const updatedUser = { ...mockUser, displayName: 'Updated Name' };
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(mockUser)
+        .mockResolvedValueOnce(updatedUser);
+      mockPrismaService.user.updateMany.mockResolvedValue({ count: 1 });
 
       const result = await service.update('1', updateDto);
 
       expect(result).toEqual(updatedUser);
-      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
+      expect(mockPrismaService.user.updateMany).toHaveBeenCalledWith({
         where: { id: '1' },
         data: updateDto,
       });
@@ -119,7 +123,7 @@ describe('UserService', () => {
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.user.update.mockResolvedValue(mockUser);
+      mockPrismaService.user.updateMany.mockResolvedValue({ count: 1 });
 
       const changePasswordDto = {
         oldPassword: 'oldPassword',
@@ -128,7 +132,7 @@ describe('UserService', () => {
 
       await service.changePassword('1', changePasswordDto);
 
-      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
+      expect(mockPrismaService.user.updateMany).toHaveBeenCalledWith({
         where: { id: '1' },
         data: {
           passwordHash: expect.any(String),
@@ -186,11 +190,11 @@ describe('UserService', () => {
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.user.delete.mockResolvedValue(mockUser);
+      mockPrismaService.user.deleteMany.mockResolvedValue({ count: 1 });
 
       await service.delete('1');
 
-      expect(mockPrismaService.user.delete).toHaveBeenCalledWith({
+      expect(mockPrismaService.user.deleteMany).toHaveBeenCalledWith({
         where: { id: '1' },
       });
     });

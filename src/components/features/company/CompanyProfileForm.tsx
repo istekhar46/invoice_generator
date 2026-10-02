@@ -291,11 +291,9 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
                 render={({ field }) => (
                   <Input
                     label="Default Tax / GST Rate (%) *"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={field.value !== undefined && field.value !== null ? field.value : ''}
+                    type="text"
+                    inputMode="decimal"
+                    value={field.value || ''}
                     onChange={(e) => {
                       // User enters percentage (e.g. 18) → store as decimal (0.18) in form
                       const pct = parseFloat(e.target.value)

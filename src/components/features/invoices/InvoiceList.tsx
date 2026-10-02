@@ -60,7 +60,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
 
   // Build query parameters
   const queryParams: Omit<InvoiceQueryParams, 'page' | 'limit'> = useMemo(() => ({
-    status: selectedStatus !== 'all' ? selectedStatus.toUpperCase() as 'DRAFT' | 'SENT' | 'PAID' : undefined,
+    status: selectedStatus !== 'all' ? (selectedStatus.toUpperCase() as 'DRAFT' | 'SENT' | 'PAID') : undefined,
   }), [selectedStatus])
 
   // Use paginated invoices hook
@@ -655,7 +655,6 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
               invoice={invoice}
               variant="compact"
               onError={onPdfError}
-              className="opacity-75 hover:opacity-100"
             />
           </div>
            
@@ -735,7 +734,6 @@ const InvoiceListRow: React.FC<InvoiceListRowProps> = ({
             invoice={invoice}
             variant="compact"
             onError={onPdfError}
-            className="opacity-75 hover:opacity-100"
           />
           
           <div className="relative">

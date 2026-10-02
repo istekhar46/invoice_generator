@@ -1,6 +1,6 @@
 /**
  * Core entity type definitions for the Electrician Invoice Generation Web App
- * These types represent the domain models stored in local storage
+ * These types match the backend Prisma schema and API response shapes.
  */
 
 /**
@@ -31,6 +31,8 @@ export interface CompanyProfile {
   email: string
   taxNumber?: string
   defaultTaxRate: number
+  /** Default labor rate used as a starting rate for labor line items */
+  defaultLaborRate?: number
   logoUrl?: string
   createdAt: Date
   updatedAt: Date

@@ -30,8 +30,8 @@ export interface CustomerResponseDto {
   city: string
   state: string
   zipCode: string
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string // ISO 8601
+  updatedAt: string // ISO 8601
 }
 
 export interface CustomerQueryParams {
@@ -62,16 +62,18 @@ export class CustomerApi {
   /**
    * Get paginated list of customers with optional search and sorting
    */
-  async getCustomers(params: CustomerQueryParams = {}): Promise<PaginatedCustomerResponse> {
+  async getCustomers(
+    params: CustomerQueryParams = {}
+  ): Promise<PaginatedCustomerResponse> {
     const queryParams = new URLSearchParams()
-    
+
     if (params.search) queryParams.append('search', params.search)
     if (params.sortBy) queryParams.append('sortBy', params.sortBy)
     if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder)
     if (params.page) queryParams.append('page', params.page.toString())
     if (params.limit) queryParams.append('limit', params.limit.toString())
 
-    const url = queryParams.toString() 
+    const url = queryParams.toString()
       ? `${this.basePath}?${queryParams.toString()}`
       : this.basePath
 
@@ -95,7 +97,10 @@ export class CustomerApi {
   /**
    * Update an existing customer
    */
-  async updateCustomer(id: string, data: UpdateCustomerDto): Promise<CustomerResponseDto> {
+  async updateCustomer(
+    id: string,
+    data: UpdateCustomerDto
+  ): Promise<CustomerResponseDto> {
     return apiClient.put<CustomerResponseDto>(`${this.basePath}/${id}`, data)
   }
 
@@ -110,7 +115,10 @@ export class CustomerApi {
    * Search customers by query string
    * Convenience method for search-only operations
    */
-  async searchCustomers(query: string, params: Omit<CustomerQueryParams, 'search'> = {}): Promise<PaginatedCustomerResponse> {
+  async searchCustomers(
+    query: string,
+    params: Omit<CustomerQueryParams, 'search'> = {}
+  ): Promise<PaginatedCustomerResponse> {
     return this.getCustomers({ ...params, search: query })
   }
 }

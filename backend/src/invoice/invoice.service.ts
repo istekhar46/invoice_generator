@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
-import { Invoice, LineItem, InvoiceStatus, LineItemType, Prisma } from '@prisma/client';
-import { PrismaService } from '../database/prisma.service';
+import { Invoice, LineItem, InvoiceStatus, Prisma } from '@prisma/client';
 import { BaseUserService } from '../common/services/base-user-service';
 import {
   CreateInvoiceDto,
@@ -76,7 +75,7 @@ export class InvoiceService extends BaseUserService {
       // Create line items
       const lineItemsData = createInvoiceDto.lineItems.map((item) => ({
         invoiceId: newInvoice.id,
-        type: LineItemType.MATERIAL,
+        type: item.type,
         description: item.description,
         unit: item.unit.trim(),
         quantity: item.quantity,
@@ -102,6 +101,18 @@ export class InvoiceService extends BaseUserService {
     // Validate user exists
     await this.validateUserExists(userId);
 
+    const clientRequestId = createQuickInvoiceDto.clientRequestId;
+    if (clientRequestId) {
+      const existingInvoice = await this.prisma.invoice.findFirst({
+        where: { userId, clientRequestId },
+        select: { id: true },
+      });
+
+      if (existingInvoice) {
+        return this.findById(userId, existingInvoice.id);
+      }
+    }
+
     // If customerId is provided, verify customer exists and belongs to user
     if (createQuickInvoiceDto.customerId) {
       await this.validateCustomerOwnership(createQuickInvoiceDto.customerId, userId);
@@ -120,59 +131,80 @@ export class InvoiceService extends BaseUserService {
     const invoiceNumber = await this.generateInvoiceNumber();
 
     // Create invoice with line items in a transaction
-    const invoice = await this.prisma.$transaction(async (tx) => {
-      // Create the invoice with inline details
-      const newInvoice = await tx.invoice.create({
-        data: {
-          userId,
-          customerId: createQuickInvoiceDto.customerId ?? null,
-          invoiceNumber,
-          serviceDate: createQuickInvoiceDto.serviceDate,
-          dueDate: createQuickInvoiceDto.dueDate,
-          subtotal: totals.subtotal,
-          taxRate: createQuickInvoiceDto.taxRate,
-          taxAmount: totals.taxAmount,
-          total: totals.total,
-          notes: createQuickInvoiceDto.notes ?? null,
-          status: InvoiceStatus.DRAFT,
-          isQuickInvoice: true,
-          // Inline company details
-          quickCompanyName: createQuickInvoiceDto.quickCompanyName ?? null,
-          quickCompanyAddress: createQuickInvoiceDto.quickCompanyAddress ?? null,
-          quickCompanyCity: createQuickInvoiceDto.quickCompanyCity ?? null,
-          quickCompanyState: createQuickInvoiceDto.quickCompanyState ?? null,
-          quickCompanyZipCode: createQuickInvoiceDto.quickCompanyZipCode ?? null,
-          quickCompanyPhone: createQuickInvoiceDto.quickCompanyPhone ?? null,
-          quickCompanyEmail: createQuickInvoiceDto.quickCompanyEmail ?? null,
-          quickCompanyTaxNumber: createQuickInvoiceDto.quickCompanyTaxNumber ?? null,
-          // Inline customer details
-          quickCustomerName: createQuickInvoiceDto.quickCustomerName ?? null,
-          quickCustomerEmail: createQuickInvoiceDto.quickCustomerEmail ?? null,
-          quickCustomerPhone: createQuickInvoiceDto.quickCustomerPhone ?? null,
-          quickCustomerAddress: createQuickInvoiceDto.quickCustomerAddress ?? null,
-          quickCustomerCity: createQuickInvoiceDto.quickCustomerCity ?? null,
-          quickCustomerState: createQuickInvoiceDto.quickCustomerState ?? null,
-          quickCustomerZipCode: createQuickInvoiceDto.quickCustomerZipCode ?? null,
-        },
+    let invoice: Invoice;
+    try {
+      invoice = await this.prisma.$transaction(async (tx) => {
+        // Create the invoice with inline details
+        const newInvoice = await tx.invoice.create({
+          data: {
+            userId,
+            customerId: createQuickInvoiceDto.customerId ?? null,
+            clientRequestId: clientRequestId ?? null,
+            invoiceNumber,
+            serviceDate: createQuickInvoiceDto.serviceDate,
+            dueDate: createQuickInvoiceDto.dueDate,
+            subtotal: totals.subtotal,
+            taxRate: createQuickInvoiceDto.taxRate,
+            taxAmount: totals.taxAmount,
+            total: totals.total,
+            notes: createQuickInvoiceDto.notes ?? null,
+            status: InvoiceStatus.DRAFT,
+            isQuickInvoice: true,
+            // Inline company details
+            quickCompanyName: createQuickInvoiceDto.quickCompanyName ?? null,
+            quickCompanyAddress: createQuickInvoiceDto.quickCompanyAddress ?? null,
+            quickCompanyCity: createQuickInvoiceDto.quickCompanyCity ?? null,
+            quickCompanyState: createQuickInvoiceDto.quickCompanyState ?? null,
+            quickCompanyZipCode: createQuickInvoiceDto.quickCompanyZipCode ?? null,
+            quickCompanyPhone: createQuickInvoiceDto.quickCompanyPhone ?? null,
+            quickCompanyEmail: createQuickInvoiceDto.quickCompanyEmail ?? null,
+            quickCompanyTaxNumber: createQuickInvoiceDto.quickCompanyTaxNumber ?? null,
+            // Inline customer details
+            quickCustomerName: createQuickInvoiceDto.quickCustomerName ?? null,
+            quickCustomerEmail: createQuickInvoiceDto.quickCustomerEmail ?? null,
+            quickCustomerPhone: createQuickInvoiceDto.quickCustomerPhone ?? null,
+            quickCustomerAddress: createQuickInvoiceDto.quickCustomerAddress ?? null,
+            quickCustomerCity: createQuickInvoiceDto.quickCustomerCity ?? null,
+            quickCustomerState: createQuickInvoiceDto.quickCustomerState ?? null,
+            quickCustomerZipCode: createQuickInvoiceDto.quickCustomerZipCode ?? null,
+          },
+        });
+
+        // Create line items
+        const lineItemsData = createQuickInvoiceDto.lineItems.map((item) => ({
+          invoiceId: newInvoice.id,
+          type: item.type,
+          description: item.description,
+          unit: item.unit.trim(),
+          quantity: item.quantity,
+          rate: item.rate,
+          amount: item.quantity * item.rate,
+        }));
+
+        await tx.lineItem.createMany({
+          data: lineItemsData,
+        });
+
+        return newInvoice;
       });
+    } catch (error) {
+      if (
+        clientRequestId &&
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const existingInvoice = await this.prisma.invoice.findFirst({
+          where: { userId, clientRequestId },
+          select: { id: true },
+        });
 
-      // Create line items
-      const lineItemsData = createQuickInvoiceDto.lineItems.map((item) => ({
-        invoiceId: newInvoice.id,
-        type: LineItemType.MATERIAL,
-        description: item.description,
-        unit: item.unit.trim(),
-        quantity: item.quantity,
-        rate: item.rate,
-        amount: item.quantity * item.rate,
-      }));
+        if (existingInvoice) {
+          return this.findById(userId, existingInvoice.id);
+        }
+      }
 
-      await tx.lineItem.createMany({
-        data: lineItemsData,
-      });
-
-      return newInvoice;
-    });
+      throw error;
+    }
 
     // Return invoice with relations
     return await this.findById(userId, invoice.id);
@@ -386,7 +418,7 @@ export class InvoiceService extends BaseUserService {
         // Create new line items
         const lineItemsData = updateInvoiceDto.lineItems.map((item) => ({
           invoiceId: id,
-          type: LineItemType.MATERIAL,
+          type: item.type,
           description: item.description,
           unit: item.unit.trim(),
           quantity: item.quantity,
@@ -517,7 +549,7 @@ export class InvoiceService extends BaseUserService {
     const currentYear = new Date().getFullYear();
     const prefix = `INV-${currentYear}-`;
 
-    // Find the highest invoice number for the current year
+    // Find the most recent invoice for the current year to determine next number
     const lastInvoice = await this.prisma.invoice.findFirst({
       where: {
         invoiceNumber: {
@@ -525,7 +557,7 @@ export class InvoiceService extends BaseUserService {
         },
       },
       orderBy: {
-        invoiceNumber: 'desc',
+        createdAt: 'desc',
       },
     });
 
@@ -533,10 +565,13 @@ export class InvoiceService extends BaseUserService {
     if (lastInvoice) {
       // Extract the number part and increment
       const numberPart = lastInvoice.invoiceNumber.replace(prefix, '');
-      nextNumber = parseInt(numberPart, 10) + 1;
+      const parsed = parseInt(numberPart, 10);
+      if (!isNaN(parsed)) {
+        nextNumber = parsed + 1;
+      }
     }
 
-    // Format with leading zeros (3 digits)
+    // Format with leading zeros (at least 3 digits)
     const formattedNumber = nextNumber.toString().padStart(3, '0');
     return `${prefix}${formattedNumber}`;
   }

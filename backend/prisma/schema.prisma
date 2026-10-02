@@ -103,6 +103,7 @@ model Invoice {
   id            String        @id @default(cuid())
   userId        String
   customerId    String?
+  clientRequestId String?
   invoiceNumber String        @unique
   serviceDate   DateTime
   dueDate       DateTime
@@ -150,6 +151,7 @@ model Invoice {
   @@index([createdAt])
   @@index([userId, status])
   @@index([userId, customerId])
+  @@unique([userId, clientRequestId])
   @@index([isQuickInvoice])
   @@map("invoices")
 }

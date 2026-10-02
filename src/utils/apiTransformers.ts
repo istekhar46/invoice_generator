@@ -4,28 +4,35 @@
  */
 
 import type { Customer, Invoice, LineItem } from '../types/entities'
-import type { 
-  CustomerResponseDto, 
-  InvoiceResponseDto, 
+import type {
+  CustomerResponseDto,
+  InvoiceResponseDto,
   LineItemResponseDto,
-  CreateLineItemDto
+  CreateLineItemDto,
 } from '../services/api'
 import type { InvoiceFormData } from '../types/forms'
 
 /**
  * Transform CustomerResponseDto to Customer entity
- * Adds missing userId field (will be empty string as it's not provided by API)
+ * Adds the missing userId field and converts API timestamps to Date objects.
  */
-export const transformCustomerResponse = (dto: CustomerResponseDto): Customer => ({
+export const transformCustomerResponse = (
+  dto: CustomerResponseDto
+): Customer => ({
   ...dto,
   userId: '', // API doesn't provide userId, but frontend expects it
+  createdAt: new Date(dto.createdAt),
+  updatedAt: new Date(dto.updatedAt),
 })
 
 /**
  * Transform LineItemResponseDto to LineItem entity
  * Converts uppercase enum values to lowercase for frontend compatibility
  */
-export const transformLineItemResponse = (dto: LineItemResponseDto, invoiceId: string): LineItem => ({
+export const transformLineItemResponse = (
+  dto: LineItemResponseDto,
+  invoiceId: string
+): LineItem => ({
   ...dto,
   invoiceId,
   type: 'material',
@@ -39,7 +46,7 @@ export const transformLineItemResponse = (dto: LineItemResponseDto, invoiceId: s
 export const transformInvoiceResponse = (dto: InvoiceResponseDto): Invoice => ({
   id: dto.id,
   userId: '', // API doesn't provide userId, but frontend expects it
-  customerId: dto.customer.id,
+  customerId: dto.customer?.id ?? null,
   invoiceNumber: dto.invoiceNumber,
   serviceDate: new Date(dto.serviceDate),
   dueDate: new Date(dto.dueDate),
@@ -58,26 +65,41 @@ export const transformInvoiceResponse = (dto: InvoiceResponseDto): Invoice => ({
  * Extract and transform nested customer data from InvoiceResponseDto
  * Converts the nested customer object to a standalone Customer entity
  */
-export const extractCustomerFromInvoiceResponse = (dto: InvoiceResponseDto): Customer => ({
-  id: dto.customer.id,
-  userId: '', // API doesn't provide userId, but frontend expects it
-  name: dto.customer.name,
-  email: dto.customer.email,
-  phone: dto.customer.phone,
-  address: dto.customer.address,
-  city: dto.customer.city,
-  state: dto.customer.state,
-  zipCode: dto.customer.zipCode,
-  createdAt: new Date(), // Not provided in nested customer object
-  updatedAt: new Date(), // Not provided in nested customer object
-})
+export const extractCustomerFromInvoiceResponse = (
+  dto: InvoiceResponseDto
+): Customer | null =>
+  dto.customer
+    ? {
+        id: dto.customer.id,
+        userId: '', // API doesn't provide userId, but frontend expects it
+        name: dto.customer.name,
+        email: dto.customer.email,
+        phone: dto.customer.phone,
+        address: dto.customer.address,
+        city: dto.customer.city,
+        state: dto.customer.state,
+        zipCode: dto.customer.zipCode,
+        createdAt: new Date(), // Not provided in nested customer object
+        updatedAt: new Date(), // Not provided in nested customer object
+      }
+    : null
 
 /**
  * Transform frontend LineItem to API CreateLineItemDto
  * Converts lowercase enum values to uppercase for API compatibility
  * Normalizes all line items to MATERIAL for backend payloads
  */
-export const transformLineItemToDto = (lineItem: LineItem | { type: string; description: string; unit?: string; quantity: number; rate: number }): CreateLineItemDto => ({
+export const transformLineItemToDto = (
+  lineItem:
+    | LineItem
+    | {
+        type: string
+        description: string
+        unit?: string
+        quantity: number
+        rate: number
+      }
+): CreateLineItemDto => ({
   type: 'MATERIAL',
   description: lineItem.description,
   unit: lineItem.unit?.trim() || '',
@@ -103,15 +125,17 @@ export const transformInvoiceToUpdateDto = (
 
   // Serialize dates to ISO 8601 format (maintains millisecond precision)
   if (invoice.serviceDate !== undefined) {
-    dto.serviceDate = invoice.serviceDate instanceof Date 
-      ? invoice.serviceDate.toISOString()
-      : new Date(invoice.serviceDate).toISOString()
+    dto.serviceDate =
+      invoice.serviceDate instanceof Date
+        ? invoice.serviceDate.toISOString()
+        : new Date(invoice.serviceDate).toISOString()
   }
 
   if (invoice.dueDate !== undefined) {
-    dto.dueDate = invoice.dueDate instanceof Date 
-      ? invoice.dueDate.toISOString()
-      : new Date(invoice.dueDate).toISOString()
+    dto.dueDate =
+      invoice.dueDate instanceof Date
+        ? invoice.dueDate.toISOString()
+        : new Date(invoice.dueDate).toISOString()
   }
 
   // Transform line items if provided

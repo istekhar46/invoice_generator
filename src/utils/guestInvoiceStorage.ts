@@ -5,7 +5,7 @@
 
 import { LocalStorageService, LocalStorageError } from '../services/localStorage.service'
 import type { GuestInvoiceData } from '../types/guest'
-import { guestInvoiceDataSchema } from '../types/guestSchemas'
+import { guestInvoiceDraftSchema } from '../types/guestSchemas'
 
 /**
  * Storage key for guest invoice drafts
@@ -69,7 +69,7 @@ export function loadFromLocalStorage(): GuestInvoiceData | null {
     }
 
     // Validate data structure using Zod schema
-    const validationResult = guestInvoiceDataSchema.safeParse(data)
+    const validationResult = guestInvoiceDraftSchema.safeParse(data)
     
     if (!validationResult.success) {
       console.warn('Invalid guest invoice data in localStorage, clearing:', validationResult.error)

@@ -42,8 +42,11 @@ export const SignupPage: React.FC = () => {
 
   const onSubmit = async (data: SignupWithConfirmFormData) => {
     try {
-      // Extract the data needed for signup (without confirmPassword)
-      const { confirmPassword, ...signupData } = data
+      const signupData = {
+        displayName: data.displayName,
+        email: data.email,
+        password: data.password,
+      }
       await registerMutation.mutateAsync(signupData)
 
       // If user signed up after creating a guest invoice draft, continue in quick invoice flow

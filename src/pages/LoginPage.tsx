@@ -11,6 +11,7 @@ import { GoogleSignInButton } from '../components/ui/GoogleSignInButton'
 import { useLogin } from '../hooks/useAuth'
 import { loginSchema, type LoginFormData } from '../types/forms'
 import logo from '../assets/logo_3.png'
+import { hasStoredDraft } from '../utils/guestInvoiceStorage'
 
 /**
  * LoginPage component for user authentication.
@@ -34,6 +35,14 @@ export const LoginPage: React.FC = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       await login.mutateAsync(data)
+      if (hasStoredDraft()) {
+        navigate('/quick-invoice', {
+          replace: true,
+          state: { importGuestDraft: true },
+        })
+        return
+      }
+
       // Redirect to the originally requested page or dashboard
       const from = (location.state as any)?.from?.pathname || '/dashboard'
       navigate(from, { replace: true })

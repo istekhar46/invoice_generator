@@ -2,7 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsString,
-  IsNotEmpty,
   IsDate,
   IsArray,
   ValidateNested,
@@ -23,6 +22,16 @@ export class CreateQuickInvoiceDto {
   })
   @IsBoolean()
   isQuickInvoice!: true;
+
+  @ApiProperty({
+    description: 'Client-generated key used to make invoice creation idempotent',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+    required: false,
+  })
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  clientRequestId?: string;
 
   // Optional customer ID - if provided, uses saved customer
   @ApiProperty({

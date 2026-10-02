@@ -30,6 +30,7 @@ describe('UserContextInterceptor', () => {
 
     interceptor = module.get<UserContextInterceptor>(UserContextInterceptor);
     reflector = module.get<Reflector>(Reflector);
+    (mockCallHandler.handle as jest.Mock).mockReturnValue(of('test'));
   });
 
   afterEach(() => {

@@ -25,7 +25,7 @@ const Modal: React.FC<ModalProps> = ({
   const sizeClasses = {
     small: 'max-w-md',
     medium: 'max-w-lg',
-    large: 'max -w-2xl',
+    large: 'max-w-2xl',
   }
 
   return (
@@ -40,7 +40,7 @@ const Modal: React.FC<ModalProps> = ({
       <div className="fixed inset-0 flex w-screen items-center justify-center p-4">
         <DialogPanel
           className={cn(
-            'w-full rounded-lg bg-white p-6 shadow-xl h-[90vh] overflow-y-auto',
+            'w-full max-h-[90vh] overflow-y-auto rounded-lg bg-white p-6 shadow-xl',
             sizeClasses[size],
             className
           )}
@@ -83,11 +83,7 @@ export interface ModalHeaderProps {
 }
 
 const ModalHeader: React.FC<ModalHeaderProps> = ({ children, className }) => {
-  return (
-    <div className={cn('mb-4', className)}>
-      {children}
-    </div>
-  )
+  return <div className={cn('mb-4', className)}>{children}</div>
 }
 
 export interface ModalBodyProps {
@@ -96,11 +92,7 @@ export interface ModalBodyProps {
 }
 
 const ModalBody: React.FC<ModalBodyProps> = ({ children, className }) => {
-  return (
-    <div className={cn('mb-4', className)}>
-      {children}
-    </div>
-  )
+  return <div className={cn('mb-4', className)}>{children}</div>
 }
 
 export interface ModalFooterProps {

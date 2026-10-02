@@ -5,7 +5,14 @@ import { queryKeys } from '../lib'
 import { useToast } from './useToast'
 import { useOnlineStatus } from './useOnlineStatus'
 import { useAutoRetryOnReconnect } from './useRetry'
-import type { CustomerQueryParams, CustomerResponseDto, PaginatedCustomerResponse, CreateCustomerDto, UpdateCustomerDto } from '../services/api'
+import { transformCustomerResponse } from '../utils/apiTransformers'
+import type {
+  CustomerQueryParams,
+  CustomerResponseDto,
+  PaginatedCustomerResponse,
+  CreateCustomerDto,
+  UpdateCustomerDto,
+} from '../services/api'
 
 // Query key factory for customers (legacy - use queryKeys from lib instead)
 export const customerKeys = {
@@ -23,18 +30,18 @@ export const customerKeys = {
  */
 export function useCustomers(params: CustomerQueryParams = {}) {
   const { isOnline } = useOnlineStatus()
-  
+
   // Set default pagination parameters
   const paginatedParams = {
     page: 1,
     limit: 20,
     ...params,
   }
-  
+
   const query = useQuery({
     queryKey: queryKeys.customersList(paginatedParams),
     queryFn: () => customerApi.getCustomers(paginatedParams),
-    placeholderData: (previousData) => previousData, // For smooth pagination (keepPreviousData replacement)
+    placeholderData: previousData => previousData, // For smooth pagination (keepPreviousData replacement)
     staleTime: 5 * 60 * 1000, // 5 minutes
     // Enhanced retry logic for offline support
     retry: (failureCount, error: any) => {
@@ -46,15 +53,10 @@ export function useCustomers(params: CustomerQueryParams = {}) {
       return failureCount < 3
     },
     // Retry delay with exponential backoff
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
     select: (data: PaginatedCustomerResponse) => ({
       ...data,
-      // Transform dates from strings to Date objects
-      data: data.data.map(customer => ({
-        ...customer,
-        createdAt: new Date(customer.createdAt),
-        updatedAt: new Date(customer.updatedAt),
-      }))
+      data: data.data.map(transformCustomerResponse),
     }),
   })
 
@@ -71,7 +73,7 @@ export function useCustomers(params: CustomerQueryParams = {}) {
  */
 export function useCustomer(id: string) {
   const { isOnline } = useOnlineStatus()
-  
+
   const query = useQuery({
     queryKey: queryKeys.customer(id),
     queryFn: () => customerApi.getCustomer(id),
@@ -89,13 +91,8 @@ export function useCustomer(id: string) {
       return failureCount < 3
     },
     // Retry delay with exponential backoff
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    select: (data: CustomerResponseDto) => ({
-      ...data,
-      // Transform dates from strings to Date objects
-      createdAt: new Date(data.createdAt),
-      updatedAt: new Date(data.updatedAt),
-    }),
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+    select: (data: CustomerResponseDto) => transformCustomerResponse(data),
   })
 
   // Auto-retry when coming back online
@@ -125,10 +122,10 @@ export function useCustomerSearch(
  * Useful for dropdowns and selects
  */
 export function useAllCustomers() {
-  return useCustomers({ 
+  return useCustomers({
     limit: 100, // Large limit to get all customers
     sortBy: 'name',
-    sortOrder: 'asc'
+    sortOrder: 'asc',
   })
 }
 
@@ -158,7 +155,7 @@ export function usePaginatedCustomers(
       hasPrev: query.data?.hasPrev || false,
       total: query.data?.total || 0,
       limit: query.data?.limit || limit,
-    }
+    },
   }
 }
 
@@ -187,28 +184,36 @@ export function useCreateCustomer() {
     },
     // Retry delay
     retryDelay: 2000,
-    onSuccess: (newCustomer) => {
+    onSuccess: newCustomer => {
       // Use centralized cache invalidation service
       const cacheService = getCacheInvalidationService(queryClient)
-      cacheService.customers.addCustomer({
-        ...newCustomer,
-        createdAt: new Date(newCustomer.createdAt),
-        updatedAt: new Date(newCustomer.updatedAt),
-      })
-      
+      cacheService.customers.addCustomer(transformCustomerResponse(newCustomer))
+
       // Show success notification
-      success('Customer created', `${newCustomer.name} has been added successfully`)
+      success(
+        'Customer created',
+        `${newCustomer.name} has been added successfully`
+      )
     },
     onError: (err: any) => {
       console.error('Failed to create customer:', err)
-      
+
       // Show different error messages based on network status
       if (!isOnline) {
-        error('Cannot create customer while offline', 'Please check your internet connection and try again')
+        error(
+          'Cannot create customer while offline',
+          'Please check your internet connection and try again'
+        )
       } else if (err?.status === 400 || err?.status === 422) {
-        error('Invalid customer data', err?.data?.message || 'Please check your input and try again')
+        error(
+          'Invalid customer data',
+          err?.data?.message || 'Please check your input and try again'
+        )
       } else {
-        error('Failed to create customer', 'Please check your input and try again')
+        error(
+          'Failed to create customer',
+          'Please check your input and try again'
+        )
       }
     },
   })
@@ -264,23 +269,38 @@ export function useUpdateCustomer() {
     onError: (err: any, { id }, context) => {
       // Rollback on error
       if (context?.previousCustomer) {
-        queryClient.setQueryData(queryKeys.customer(id), context.previousCustomer)
+        queryClient.setQueryData(
+          queryKeys.customer(id),
+          context.previousCustomer
+        )
       }
       console.error('Failed to update customer:', err)
-      
+
       // Show different error messages based on network status
       if (!isOnline) {
-        error('Cannot update customer while offline', 'Please check your internet connection and try again')
+        error(
+          'Cannot update customer while offline',
+          'Please check your internet connection and try again'
+        )
       } else if (err?.status === 400 || err?.status === 422) {
-        error('Invalid customer data', err?.data?.message || 'Please check your input and try again')
+        error(
+          'Invalid customer data',
+          err?.data?.message || 'Please check your input and try again'
+        )
       } else if (err?.status === 404) {
         error('Customer not found', 'The customer may have been deleted')
       } else {
-        error('Failed to update customer', 'Please check your input and try again')
+        error(
+          'Failed to update customer',
+          'Please check your input and try again'
+        )
       }
     },
-    onSuccess: (updatedCustomer) => {
-      success('Customer updated', `${updatedCustomer.name} has been updated successfully`)
+    onSuccess: updatedCustomer => {
+      success(
+        'Customer updated',
+        `${updatedCustomer.name} has been updated successfully`
+      )
     },
     onSettled: (_, __, { id }) => {
       // Always refetch after error or success
@@ -315,23 +335,27 @@ export function useDeleteCustomer() {
     },
     // Retry delay
     retryDelay: 2000,
-    onMutate: async (customerId) => {
+    onMutate: async customerId => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: queryKeys.customer(customerId) })
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.customer(customerId),
+      })
       await queryClient.cancelQueries({ queryKey: queryKeys.customers })
 
       // Snapshot the previous customer lists
-      const previousLists = queryClient.getQueriesData({ queryKey: queryKeys.customers })
+      const previousLists = queryClient.getQueriesData({
+        queryKey: customerKeys.lists(),
+      })
 
       // Optimistically remove the customer from all lists
       queryClient.setQueriesData(
-        { queryKey: queryKeys.customers },
+        { queryKey: customerKeys.lists() },
         (old: PaginatedCustomerResponse | undefined) => {
-          if (!old) return old
+          if (!old?.data) return old
           return {
             ...old,
             data: old.data.filter(customer => customer.id !== customerId),
-            total: old.total - 1,
+            total: Math.max(0, old.total - 1),
           }
         }
       )
@@ -346,12 +370,20 @@ export function useDeleteCustomer() {
         })
       }
       console.error('Failed to delete customer:', err)
-      
+
       // Show different error messages based on network status
       if (!isOnline) {
-        error('Cannot delete customer while offline', 'Please check your internet connection and try again')
+        error(
+          'Cannot delete customer while offline',
+          'Please check your internet connection and try again'
+        )
       } else if (err?.status === 404) {
-        error('Customer not found', 'The customer may have already been deleted')
+        error(
+          'Customer not found',
+          'The customer may have already been deleted'
+        )
+      } else if (err?.status === 400) {
+        error('Cannot delete customer', err.message)
       } else {
         error('Failed to delete customer', 'Please try again')
       }
@@ -360,7 +392,7 @@ export function useDeleteCustomer() {
       // Use centralized cache invalidation service
       const cacheService = getCacheInvalidationService(queryClient)
       cacheService.crossEntity.onCustomerDeleted(customerId)
-      
+
       success('Customer deleted', 'Customer has been removed successfully')
     },
     onSettled: () => {

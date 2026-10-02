@@ -16,9 +16,7 @@ import {
 } from '../components/features/dashboard'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
-import { Modal } from '../components/ui/Modal'
-import { InvoiceBuilder } from '../components/features/invoices/InvoiceBuilder'
-import { CustomerForm } from '../components/features/customers/CustomerForm'
+import { CustomerFormModal } from '../components/features/customers/CustomerFormModal'
 import { ErrorDisplay } from '../components/shared/ErrorDisplay'
 import { PageLoading } from '../components/shared/LoadingState'
 import {
@@ -32,7 +30,6 @@ import { useDashboardStats } from '../hooks/useDashboardStats'
 import { useCompanyProfileStatus } from '../hooks/useCompany'
 import { useAuthStatus } from '../hooks/useAuth'
 import { DashboardStatisticsService } from '../services/dashboardStatistics.service'
-import type { Invoice } from '../types/entities'
 import type { DashboardStatistics } from '../services/dashboardStatistics.service'
 
 /**
@@ -80,7 +77,6 @@ export const DashboardPage: React.FC = () => {
   }
 
   // Modal states
-  const [showInvoiceBuilder, setShowInvoiceBuilder] = useState(false)
   const [showCustomerForm, setShowCustomerForm] = useState(false)
 
   // Extract data from responses
@@ -103,13 +99,13 @@ export const DashboardPage: React.FC = () => {
     )
   }, [invoices, customers])
 
-  const handleInvoiceClick = (_invoiceId: string) => {
-    // Navigate to invoices page - the InvoicesPage will handle showing the specific invoice
-    navigate('/invoices')
+  const handleInvoiceClick = (invoiceId: string) => {
+    // Navigate to invoices page and automatically open the selected invoice
+    navigate(`/invoices?id=${invoiceId}`)
   }
 
   const handleCreateInvoice = () => {
-    setShowInvoiceBuilder(true)
+    navigate('/invoices?create=true')
   }
 
   const handleAddCustomer = () => {
@@ -118,12 +114,6 @@ export const DashboardPage: React.FC = () => {
 
   const handleQuickInvoice = () => {
     navigate('/quick-invoice')
-  }
-
-  const handleInvoiceSave = (_invoice: Invoice) => {
-    setShowInvoiceBuilder(false)
-    // Refetch data to get updated statistics
-    refetchInvoices()
   }
 
   const handleCustomerSuccess = () => {
@@ -302,7 +292,7 @@ export const DashboardPage: React.FC = () => {
                 </h4>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">This Month</span>
+                    <span className="text-gray-600">Total Invoices</span>
                     <span className="font-semibold text-gray-900">
                       {defaultStats.totalInvoices} invoices
                     </span>
@@ -325,30 +315,11 @@ export const DashboardPage: React.FC = () => {
           </ResponsiveGrid>
         </MobileOptimizedSection>
 
-        {/* Invoice Builder Modal */}
-        <Modal
-          open={showInvoiceBuilder}
-          onClose={() => setShowInvoiceBuilder(false)}
-          title="Create New Invoice"
-          size="large"
-        >
-          <InvoiceBuilder
-            onSave={handleInvoiceSave}
-          />
-        </Modal>
-
-        {/* Customer Form Modal */}
-        <Modal
+        <CustomerFormModal
           open={showCustomerForm}
           onClose={() => setShowCustomerForm(false)}
-          title="Add New Customer"
-          size="medium"
-        >
-          <CustomerForm
-            onSuccess={handleCustomerSuccess}
-            onCancel={() => setShowCustomerForm(false)}
-          />
-        </Modal>
+          onSuccess={handleCustomerSuccess}
+        />
       </ResponsiveStack>
     </div>
   )

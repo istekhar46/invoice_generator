@@ -84,31 +84,25 @@ export const PDFActions: React.FC<PDFActionsProps> = ({
 
   if (variant === 'compact') {
     return (
-      <div className={`flex space-x-2 ${className}`}>
-        <button
-          onClick={handlePreview}
+      <div className="flex items-center">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={(event) => {
+            event.stopPropagation()
+            void handleDownload()
+          }}
           disabled={isDisabled}
-          className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md disabled:opacity-50 disabled:cursor-not-allowed w-full"
+          className={`text-primary-600 hover:text-primary-700 ${className || ''}`}
         >
           {isGenerating ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
           ) : (
-            <Eye className="h-4 w-4" />
-          )}
-          <span>Preview PDF</span>
-        </button>
-        <button
-          onClick={handleDownload}
-          disabled={isDisabled}
-          className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md disabled:opacity-50 disabled:cursor-not-allowed w-full"
-        >
-          {isGenerating ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="h-4 w-4" />
+            <Download className="h-4 w-4 mr-1" />
           )}
           <span>Download PDF</span>
-        </button>
+        </Button>
       </div>
     )
   }

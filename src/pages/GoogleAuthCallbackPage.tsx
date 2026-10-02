@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TokenManager } from '../services/auth/tokenManager'
 import { LoadingSpinner } from '../components/ui/LoadingSpinner'
+import { hasStoredDraft } from '../utils/guestInvoiceStorage'
 
 /**
  * GoogleAuthCallbackPage
@@ -28,7 +29,14 @@ export const GoogleAuthCallbackPage = () => {
 
     if (accessToken) {
       TokenManager.setAccessToken(accessToken)
-      navigate('/dashboard', { replace: true })
+      if (hasStoredDraft()) {
+        navigate('/quick-invoice', {
+          replace: true,
+          state: { importGuestDraft: true },
+        })
+      } else {
+        navigate('/dashboard', { replace: true })
+      }
     } else {
       // No token means something went wrong — send to login with an error flag
       navigate('/login?error=google_auth_failed', { replace: true })

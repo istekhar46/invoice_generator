@@ -35,15 +35,17 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
   const getStatusBadge = (status?: string) => {
     if (!status) return null
 
-    const styles = {
-      draft: 'bg-gray-100 text-gray-800',
-      sent: 'bg-yellow-100 text-yellow-800',
-      paid: 'bg-green-100 text-green-800',
+    const styles: Record<string, string> = {
+      DRAFT: 'bg-gray-100 text-gray-800',
+      SENT: 'bg-yellow-100 text-yellow-800',
+      PAID: 'bg-green-100 text-green-800',
     }
 
+    const label = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
+
     return (
-      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${styles[status as keyof typeof styles] || styles.draft}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${styles[status.toUpperCase()] || styles.DRAFT}`}>
+        {label}
       </span>
     )
   }
@@ -164,7 +166,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
                         No line items added yet
                       </td>
                     </tr>

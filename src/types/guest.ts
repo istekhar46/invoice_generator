@@ -56,6 +56,7 @@ export interface GuestInvoiceDetails {
  * Complete guest invoice data structure
  */
 export interface GuestInvoiceData {
+  draftId?: string
   company: GuestCompanyDetails | null
   customer: GuestCustomerDetails
   invoiceDetails: GuestInvoiceDetails
@@ -63,28 +64,4 @@ export interface GuestInvoiceData {
   notes?: string
   createdAt: Date
   lastModified: Date
-}
-
-/**
- * Validation result for guest invoice data
- */
-export interface ValidationResult {
-  isValid: boolean
-  errors: string[]
-}
-
-/**
- * Validation errors by field
- */
-export interface ValidationErrors {
-  [field: string]: string[]
-}
-
-/**
- * Invoice totals calculation result
- */
-export interface InvoiceTotals {
-  subtotal: number
-  taxAmount: number
-  total: number
 }

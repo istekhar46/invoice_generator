@@ -69,11 +69,12 @@ describe('GlobalExceptionFilter', () => {
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           statusCode: HttpStatus.BAD_REQUEST,
-          message: ['Field is required', 'Invalid format'],
+          message: 'Validation failed',
           error: 'BAD_REQUEST',
           timestamp: expect.any(String),
           path: '/api/test',
           details: { field: 'email' },
+          validationErrors: expect.any(Array),
         }),
       );
     });

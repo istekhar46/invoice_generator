@@ -3,7 +3,7 @@
  * Allows users to create invoices without saving company or customer details
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { Invoice, LineItem } from '../../../types/entities'
@@ -31,8 +31,11 @@ import {
   Check,
   Building2,
   Download,
+  UserPlus,
 } from 'lucide-react'
 import { formatCurrency } from '../../../utils/formatters'
+import { generateAndDownloadPDF } from '../../../utils/guestPDFGeneration'
+import { clearLocalStorage, saveToLocalStorage } from '../../../utils/guestInvoiceStorage'
 
 type BuilderStep = 'company' | 'customer' | 'details' | 'items' | 'review'
 
@@ -68,12 +71,67 @@ interface QuickInvoiceBuilderProps {
   invoice?: Invoice | null
   onSave?: (invoice: Invoice, company: any, customer: any) => void
   initialGuestData?: GuestInvoiceData | null
+  mode?: 'authenticated' | 'guest'
+  autoSaveImportedDraft?: boolean
+  onSignUp?: () => void
   className?: string
+}
+
+const toGuestInvoiceData = (
+  data: Partial<QuickInvoiceFormData>,
+  lineItems: LineItem[],
+  createdAt: Date,
+  draftId: string,
+): GuestInvoiceData => {
+  const company = {
+    businessName: data.quickCompanyName || '',
+    address: data.quickCompanyAddress || '',
+    city: data.quickCompanyCity || '',
+    state: data.quickCompanyState || '',
+    zipCode: data.quickCompanyZipCode || '',
+    phone: data.quickCompanyPhone || '',
+    email: data.quickCompanyEmail || '',
+    taxNumber: data.quickCompanyTaxNumber || '',
+  }
+
+  return {
+    draftId,
+    company: Object.values(company).some(Boolean) ? company : null,
+    customer: {
+      name: data.quickCustomerName || '',
+      email: data.quickCustomerEmail || '',
+      phone: data.quickCustomerPhone || '',
+      address: data.quickCustomerAddress || '',
+      city: data.quickCustomerCity || '',
+      state: data.quickCustomerState || '',
+      zipCode: data.quickCustomerZipCode || '',
+    },
+    invoiceDetails: {
+      serviceDate: data.serviceDate || new Date(),
+      dueDate: data.dueDate || new Date(),
+      taxRate: data.taxRate || 0,
+    },
+    lineItems: lineItems.map(({ id, type, description, unit, quantity, rate, amount }) => ({
+      id,
+      type,
+      description,
+      unit,
+      quantity,
+      rate,
+      amount,
+    })),
+    notes: data.notes || '',
+    createdAt,
+    lastModified: new Date(),
+  }
 }
 
 export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
   onSave,
   initialGuestData = null,
+  mode = 'authenticated',
+  autoSaveImportedDraft = false,
+  onSignUp,
   className,
 }) => {
   const [currentStep, setCurrentStep] = useState<BuilderStep>('company')
@@ -81,11 +139,26 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [hasImportedGuestData, setHasImportedGuestData] = useState(false)
+  const [isGeneratingGuestPDF, setIsGeneratingGuestPDF] = useState(false)
+  const [guestDraftCreatedAt] = useState(() => initialGuestData?.createdAt || new Date())
+  const [clientRequestId] = useState(() =>
+    initialGuestData?.draftId ||
+    (initialGuestData
+      ? `guest-${new Date(initialGuestData.createdAt).toISOString()}`
+      : crypto.randomUUID())
+  )
+  const [taxRateInput, setTaxRateInput] = useState(() =>
+    ((initialGuestData?.invoiceDetails.taxRate ?? 0.08) * 100).toString()
+  )
+
+  const isGuest = mode === 'guest'
+  const autoSaveAttempted = useRef(false)
+  const submitImportedDraft = useRef<() => Promise<void>>(async () => undefined)
 
   const createQuickInvoice = useCreateQuickInvoice()
 
-  const loading = createQuickInvoice.isPending
-  const error = createQuickInvoice.error
+  const loading = isGuest ? isGeneratingGuestPDF : createQuickInvoice.isPending
+  const error = isGuest ? null : createQuickInvoice.error
 
   // Form setup with React Hook Form and Zod validation
   const {
@@ -157,6 +230,7 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
     setValue('serviceDate', new Date(initialGuestData.invoiceDetails.serviceDate))
     setValue('dueDate', new Date(initialGuestData.invoiceDetails.dueDate))
     setValue('taxRate', initialGuestData.invoiceDetails.taxRate)
+    setTaxRateInput((initialGuestData.invoiceDetails.taxRate * 100).toString())
     setValue('notes', initialGuestData.notes || '')
 
     if (!initialGuestData.customer.name) {
@@ -169,6 +243,35 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
 
     setHasImportedGuestData(true)
   }, [initialGuestData, hasImportedGuestData, setValue])
+
+  useEffect(() => {
+    if (!isGuest || (initialGuestData && !hasImportedGuestData)) return
+
+    const timeout = window.setTimeout(() => {
+      try {
+        saveToLocalStorage(
+          toGuestInvoiceData(
+            watchedValues,
+            lineItems,
+            guestDraftCreatedAt,
+            clientRequestId,
+          )
+        )
+      } catch (saveError) {
+        console.error('Failed to save guest invoice draft:', saveError)
+      }
+    }, 500)
+
+    return () => window.clearTimeout(timeout)
+  }, [
+    guestDraftCreatedAt,
+    clientRequestId,
+    hasImportedGuestData,
+    initialGuestData,
+    isGuest,
+    lineItems,
+    watchedValues,
+  ])
 
   // Calculate totals for real-time display
   const calculateTotals = () => {
@@ -297,6 +400,7 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
       // Build the payload
       const payload: CreateQuickInvoiceDto = {
         isQuickInvoice: true,
+        clientRequestId,
         customerId: data.customerId || undefined,
         quickCompanyName: data.quickCompanyName || undefined,
         quickCompanyAddress: data.quickCompanyAddress || undefined,
@@ -328,6 +432,14 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
 
       const newInvoice = await createQuickInvoice.mutateAsync(payload)
       setSubmitSuccess(true)
+
+      if (initialGuestData) {
+        try {
+          clearLocalStorage()
+        } catch (clearError) {
+          console.error('Failed to clear imported guest invoice draft:', clearError)
+        }
+      }
 
       // Build company and customer objects for preview
       const company = data.quickCompanyName
@@ -372,7 +484,7 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
           {
             id: newInvoice.id,
             userId: '', // Will be set by the caller if needed
-            customerId: newInvoice.customer.id,
+            customerId: newInvoice.customer?.id ?? null,
             invoiceNumber: newInvoice.invoiceNumber,
             serviceDate: new Date(newInvoice.serviceDate),
             dueDate: new Date(newInvoice.dueDate),
@@ -405,11 +517,67 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
     }
   }
 
+  submitImportedDraft.current = handleSubmit(onSubmit)
+
+  const canAutoSaveImportedDraft =
+    autoSaveImportedDraft &&
+    !isGuest &&
+    hasImportedGuestData &&
+    watchedValues.lineItems?.length === lineItems.length &&
+    validateReviewStep()
+
+  useEffect(() => {
+    if (!canAutoSaveImportedDraft || autoSaveAttempted.current) return
+
+    autoSaveAttempted.current = true
+    void submitImportedDraft.current()
+  }, [canAutoSaveImportedDraft])
+
+  const downloadGuestInvoice = async (data: QuickInvoiceFormData) => {
+    if (!validateReviewStep()) {
+      setSubmitError('Please complete all required fields before downloading.')
+      return
+    }
+
+    setSubmitError(null)
+    setIsGeneratingGuestPDF(true)
+    try {
+      const guestData = toGuestInvoiceData(
+        data,
+        lineItems,
+        guestDraftCreatedAt,
+        clientRequestId,
+      )
+      saveToLocalStorage(guestData)
+      await generateAndDownloadPDF(guestData)
+    } catch (downloadError) {
+      setSubmitError(
+        downloadError instanceof Error
+          ? downloadError.message
+          : 'Failed to download PDF. Please try again.'
+      )
+    } finally {
+      setIsGeneratingGuestPDF(false)
+    }
+  }
+
+  const handleGuestSignUp = () => {
+    saveToLocalStorage(
+      toGuestInvoiceData(
+        watchedValues,
+        lineItems,
+        guestDraftCreatedAt,
+        clientRequestId,
+      )
+    )
+    onSignUp?.()
+  }
+
   const renderStepIndicator = () => {
     const steps: BuilderStep[] = ['company', 'customer', 'details', 'items', 'review']
 
     return (
-      <div className="flex items-center justify-center space-x-4 mb-8">
+      <div className="grid grid-cols-5 mb-8">
         {steps.map((step, index) => {
           const isActive = step === currentStep
           const isCompleted = steps.indexOf(currentStep) > index
@@ -417,22 +585,27 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
           const Icon = config.icon
 
           return (
-            <div key={step} className="flex items-center">
+            <div key={step} className="relative flex flex-col items-center px-1 text-center">
+              {index < steps.length - 1 && (
+                <div
+                  className={`absolute left-1/2 top-5 h-0.5 w-full transition-colors ${isCompleted ? 'bg-green-600' : 'bg-gray-300'}`}
+                />
+              )}
               <div
                 className={`
-                flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors
+                relative z-10 flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors
                 ${isActive ? 'border-blue-600 bg-blue-600 text-white' : isCompleted ? 'border-green-600 bg-green-600 text-white' : 'border-gray-300 bg-white text-gray-400'}
               `}
               >
                 {isCompleted ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
               </div>
 
-              <div className="ml-3 hidden sm:block">
-                <p className={`text-sm font-medium ${isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'}`}>{config.title}</p>
-                <p className="text-xs text-gray-500">{config.description}</p>
+              <div className="mt-2 min-w-0">
+                <p className={`text-xs font-medium sm:text-sm ${isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'}`}>
+                  {isGuest && step === 'review' ? 'Review & Download' : config.title}
+                </p>
+                <p className="mt-0.5 hidden text-xs text-gray-500 lg:block">{config.description}</p>
               </div>
-
-              {index < steps.length - 1 && <div className={`w-6 h-0.5 mx-4 transition-colors ${isCompleted ? 'bg-green-600' : 'bg-gray-300'}`} />}
             </div>
           )
         })}
@@ -684,16 +857,18 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
               render={({ field }) => (
                 <Input
                   label="Tax Rate (%) *"
-                  type="number"
-                  value={field.value ? (field.value * 100).toString() : ''}
+                  type="text"
+                  inputMode="decimal"
+                  value={taxRateInput}
                   onChange={(e) => {
-                    const value = parseFloat(e.target.value) / 100 || 0
-                    field.onChange(value)
+                    const value = e.target.value
+                    if (!/^\d*(?:\.\d*)?$/.test(value)) return
+
+                    setTaxRateInput(value)
+                    field.onChange(value && value !== '.' ? Number(value) / 100 : 0)
                     if (submitError) setSubmitError(null)
                   }}
-                  min="0"
-                  max="100"
-                  step="0.1"
+                  onBlur={field.onBlur}
                   placeholder="8.5"
                   error={errors.taxRate?.message}
                   helpText="Enter tax rate as a percentage (e.g., 8.5 for 8.5%)"
@@ -814,7 +989,11 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
               <Eye className="h-4 w-4 shrink-0" />
-              <span>This is a live preview. Click <strong>Save Invoice</strong> below to create it.</span>
+              <span>
+                This is a live preview. Click{' '}
+                <strong>{isGuest ? 'Download PDF' : 'Save Invoice'}</strong> below to{' '}
+                {isGuest ? 'download it' : 'create it'}.
+              </span>
             </div>
           <div id="printable-invoice">
             <InvoicePreview
@@ -850,7 +1029,7 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
       )}
 
       {/* Success Display */}
-      {submitSuccess && (
+      {!isGuest && submitSuccess && (
         <ErrorAlert
           type="success"
           title="Success!"
@@ -878,26 +1057,53 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
 
           {currentStep === 'review' ? (
             <div className="flex items-center gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => window.print()}
-                disabled={loading}
-                className="flex items-center space-x-2"
-              >
-                <Download className="h-4 w-4" />
-                <span>Download PDF</span>
-              </Button>
-              <Button
-                type="button"
-                loading={loading}
-                disabled={!validateReviewStep() || submitSuccess || loading}
-                onClick={handleSubmit(onSubmit)}
-                className="flex items-center space-x-2"
-              >
-                <Save className="h-4 w-4" />
-                <span>Save Invoice</span>
-              </Button>
+              {isGuest ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    loading={isGeneratingGuestPDF}
+                    disabled={!validateReviewStep() || loading}
+                    onClick={handleSubmit(downloadGuestInvoice)}
+                    className="flex items-center space-x-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Download PDF</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={!validateReviewStep() || loading}
+                    onClick={handleGuestSignUp}
+                    className="flex items-center space-x-2"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    <span>Sign Up to Save</span>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => window.print()}
+                    disabled={loading}
+                    className="flex items-center space-x-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Download PDF</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    loading={loading}
+                    disabled={!validateReviewStep() || submitSuccess || loading}
+                    onClick={handleSubmit(onSubmit)}
+                    className="flex items-center space-x-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    <span>Save Invoice</span>
+                  </Button>
+                </>
+              )}
             </div>
           ) : (
             <Button

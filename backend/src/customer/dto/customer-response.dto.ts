@@ -24,8 +24,8 @@ export class CustomerResponseDto {
   email!: string;
 
   @ApiProperty({
-    description: 'Phone number',
-    example: '(555) 123-4567',
+    description: 'Phone number (international formats accepted)',
+    example: '+91 97948 83638',
   })
   @Expose()
   phone!: string;
@@ -45,15 +45,15 @@ export class CustomerResponseDto {
   city!: string;
 
   @ApiProperty({
-    description: 'State (2-letter code)',
-    example: 'CA',
+    description: 'State, province, or region',
+    example: 'Maharashtra',
   })
   @Expose()
   state!: string;
 
   @ApiProperty({
-    description: 'ZIP code',
-    example: '90210',
+    description: 'Postal or ZIP code',
+    example: '412308',
   })
   @Expose()
   zipCode!: string;

@@ -56,7 +56,7 @@ describe('CloudinaryService', () => {
     it('should successfully upload a logo file', async () => {
       // Setup: make upload_stream call the success callback
       mockUploadStream.end.mockImplementation(function (buffer: any) {
-        const callback = (cloudinary.uploader.upload_stream as jest.Mock).mock.results[0].value;
+        const callback = (cloudinary.uploader.upload_stream as jest.Mock).mock.calls[0][1];
         // Simulate successful upload callback
         setTimeout(() => {
           callback(null, mockCloudinaryResponse);
@@ -103,7 +103,7 @@ describe('CloudinaryService', () => {
 
     it('should throw InternalServerErrorException when upload stream fails', async () => {
       mockUploadStream.end.mockImplementation(function (buffer: any) {
-        const callback = (cloudinary.uploader.upload_stream as jest.Mock).mock.results[0].value;
+        const callback = (cloudinary.uploader.upload_stream as jest.Mock).mock.calls[0][1];
         // Simulate upload error
         setTimeout(() => {
           callback(new Error('Network error'), null);
@@ -117,7 +117,7 @@ describe('CloudinaryService', () => {
 
     it('should throw InternalServerErrorException when no URL in response', async () => {
       mockUploadStream.end.mockImplementation(function (buffer: any) {
-        const callback = (cloudinary.uploader.upload_stream as jest.Mock).mock.results[0].value;
+        const callback = (cloudinary.uploader.upload_stream as jest.Mock).mock.calls[0][1];
         // Simulate response without URL
         setTimeout(() => {
           callback(null, { public_id: 'test', secure_url: undefined });
@@ -131,7 +131,7 @@ describe('CloudinaryService', () => {
 
     it('should handle Cloudinary API Key error', async () => {
       mockUploadStream.end.mockImplementation(function (buffer: any) {
-        const callback = (cloudinary.uploader.upload_stream as jest.Mock).mock.results[0].value;
+        const callback = (cloudinary.uploader.upload_stream as jest.Mock).mock.calls[0][1];
         setTimeout(() => {
           callback(new Error('Invalid API Key'), null);
         }, 0);
@@ -144,7 +144,7 @@ describe('CloudinaryService', () => {
 
     it('should handle rate limit error', async () => {
       mockUploadStream.end.mockImplementation(function (buffer: any) {
-        const callback = (cloudinary.uploader.upload_stream as jest.Mock).mock.results[0].value;
+        const callback = (cloudinary.uploader.upload_stream as jest.Mock).mock.calls[0][1];
         setTimeout(() => {
           callback(new Error('rate limit exceeded'), null);
         }, 0);
@@ -250,7 +250,7 @@ describe('CloudinaryService', () => {
         const file = { ...mockFile, mimetype: mimeType };
 
         mockUploadStream.end.mockImplementation(function (buffer: any) {
-          const callback = (cloudinary.uploader.upload_stream as jest.Mock).mock.results[0].value;
+          const callback = (cloudinary.uploader.upload_stream as jest.Mock).mock.calls[0][1];
           setTimeout(() => {
             callback(null, mockCloudinaryResponse);
           }, 0);
@@ -266,7 +266,7 @@ describe('CloudinaryService', () => {
       const file = { ...mockFile, size: 5 * 1024 * 1024 };
 
       mockUploadStream.end.mockImplementation(function (buffer: any) {
-        const callback = (cloudinary.uploader.upload_stream as jest.Mock).mock.results[0].value;
+        const callback = (cloudinary.uploader.upload_stream as jest.Mock).mock.calls[0][1];
         setTimeout(() => {
           callback(null, mockCloudinaryResponse);
         }, 0);

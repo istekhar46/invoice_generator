@@ -23,8 +23,13 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   }
 
   override handleRequest(err: any, user: any, info: any) {
-    if (err || !user) {
-      throw err || new UnauthorizedException('Authentication required');
+    if (err) {
+      throw err instanceof UnauthorizedException
+        ? err
+        : new UnauthorizedException(err.message || 'Authentication failed');
+    }
+    if (!user) {
+      throw new UnauthorizedException('Authentication required');
     }
     return user;
   }

@@ -32,8 +32,24 @@ if (typeof window !== 'undefined') {
 }
 
 // Mock ResizeObserver
-;(globalThis as any).ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
+class MockResizeObserver {
+  observe = vi.fn()
+  unobserve = vi.fn()
+  disconnect = vi.fn()
+}
+;(globalThis as any).ResizeObserver = MockResizeObserver
+if (typeof window !== 'undefined') {
+  ;(window as any).ResizeObserver = MockResizeObserver
+}
+
+// Mock IntersectionObserver
+class MockIntersectionObserver {
+  observe = vi.fn()
+  unobserve = vi.fn()
+  disconnect = vi.fn()
+  takeRecords = vi.fn()
+}
+;(globalThis as any).IntersectionObserver = MockIntersectionObserver
+if (typeof window !== 'undefined') {
+  ;(window as any).IntersectionObserver = MockIntersectionObserver
+}

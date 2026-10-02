@@ -1,14 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsNumber, Min, Max, MaxLength, Equals } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, Min, Max, MaxLength, IsEnum } from 'class-validator';
 import { LineItemType } from '@prisma/client';
 
 export class CreateLineItemDto {
   @ApiProperty({
     description: 'Type of line item',
     example: 'MATERIAL',
-    enum: [LineItemType.MATERIAL],
+    enum: LineItemType,
   })
-  @Equals(LineItemType.MATERIAL, { message: 'Only MATERIAL line items are supported' })
+  @IsEnum(LineItemType, { message: 'Line item type must be MATERIAL or LABOR' })
   type!: LineItemType;
 
   @ApiProperty({

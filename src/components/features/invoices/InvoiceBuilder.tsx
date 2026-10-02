@@ -30,13 +30,15 @@ import {
   Save,
   ArrowLeft,
   ArrowRight,
-  Check
+  Check,
+  Download
 } from 'lucide-react'
 import { formatCurrency } from '../../../utils/formatters'
 import { transformLineItemToDto, transformInvoiceResponse } from '../../../utils/apiTransformers'
 
 interface InvoiceBuilderProps {
   invoice?: Invoice | null
+  initialCustomer?: Customer | null
   onSave?: (invoice: Invoice) => void
   className?: string
 }
@@ -68,13 +70,15 @@ const stepConfig = {
 
 export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   invoice,
+  initialCustomer,
   onSave,
   className,
 }) => {
   const [currentStep, setCurrentStep] = useState<BuilderStep>('customer')
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    initialCustomer ?? null
+  )
   const [showCustomerModal, setShowCustomerModal] = useState(false)
-  const [showPreview, setShowPreview] = useState(false)
   const [lineItems, setLineItems] = useState<LineItem[]>([])
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
@@ -108,6 +112,19 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   })
 
   const watchedValues = watch()
+
+  useEffect(() => {
+    if (initialCustomer) {
+      setSelectedCustomer(initialCustomer)
+      setValue('customerId', initialCustomer.id, { shouldValidate: true })
+    }
+  }, [initialCustomer, setValue])
+
+  useEffect(() => {
+    if (!invoice && companyProfile?.defaultTaxRate !== undefined) {
+      setValue('taxRate', companyProfile.defaultTaxRate, { shouldValidate: true })
+    }
+  }, [companyProfile?.defaultTaxRate, invoice, setValue])
 
   // Validation helpers - single source of truth for each step
   const validateCustomerStep = (): boolean => {
@@ -628,7 +645,8 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
               render={({ field }) => (
                 <Input
                   label="Tax Rate (%) *"
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   value={field.value ? (field.value * 100).toString() : ''}
                   onChange={(e) => {
                     const value = parseFloat(e.target.value) / 100 || 0
@@ -636,9 +654,6 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                     // Clear submit error when user makes changes
                     if (submitError) setSubmitError(null)
                   }}
-                  min="0"
-                  max="100"
-                  step="0.1"
                   placeholder="8.5"
                   error={errors.taxRate?.message}
                   helpText="Enter tax rate as a percentage (e.g., 8.5 for 8.5%)"
@@ -778,23 +793,21 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     }
 
     return (
-      <div className="space-y-6">
-        <InvoicePreview
-          invoice={previewInvoice}
-          company={companyProfile}
-          customer={selectedCustomer}
-        />
-        
-        <div className="flex items-center justify-center">
-          <Button
-            onClick={() => setShowPreview(true)}
-            variant="outline"
-            disabled={!selectedCustomer || lineItems.length === 0}
-            className="flex items-center space-x-2"
-          >
-            <Eye className="h-4 w-4" />
-            <span>Full Screen Preview</span>
-          </Button>
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+          <Eye className="h-4 w-4 shrink-0" />
+          <span>
+            This is a live preview. Click{' '}
+            <strong>{invoice ? 'Update Invoice' : 'Save Invoice'}</strong> below
+            to {invoice ? 'update' : 'create'} it.
+          </span>
+        </div>
+        <div id="printable-invoice">
+          <InvoicePreview
+            invoice={previewInvoice}
+            company={companyProfile}
+            customer={selectedCustomer}
+          />
         </div>
       </div>
     )
@@ -865,16 +878,28 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
           </Button>
 
           {currentStep === 'review' ? (
-            <Button
-              type="button"
-              loading={loading}
-              disabled={!validateReviewStep() || submitSuccess || loading}
-              onClick={handleSubmit(onSubmit)}
-              className="flex items-center space-x-2"
-            >
-              <Save className="h-4 w-4" />
-              <span>{invoice ? 'Update Invoice' : 'Save Invoice'}</span>
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => window.print()}
+                disabled={loading}
+                className="flex items-center space-x-2"
+              >
+                <Download className="h-4 w-4" />
+                <span>Download PDF</span>
+              </Button>
+              <Button
+                type="button"
+                loading={loading}
+                disabled={!validateReviewStep() || submitSuccess || loading}
+                onClick={handleSubmit(onSubmit)}
+                className="flex items-center space-x-2"
+              >
+                <Save className="h-4 w-4" />
+                <span>{invoice ? 'Update Invoice' : 'Save Invoice'}</span>
+              </Button>
+            </div>
           ) : (
             <Button
               type="button"
@@ -903,62 +928,6 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
         />
       </Modal>
 
-      {/* Full Screen Preview Modal */}
-      <Modal
-        open={showPreview}
-        onClose={() => setShowPreview(false)}
-        title={`Invoice Preview - ${invoice?.invoiceNumber || 'INV-PREVIEW'}`}
-        size="large"
-      >
-        {selectedCustomer && lineItems.length > 0 ? (
-          <InvoicePreview
-            invoice={{
-              id: invoice?.id || 'preview',
-              userId: invoice?.userId || '',
-              invoiceNumber: invoice?.invoiceNumber || 'INV-PREVIEW',
-              customerId: watchedValues.customerId,
-              serviceDate: watchedValues.serviceDate || new Date(),
-              dueDate: watchedValues.dueDate || new Date(),
-              lineItems: lineItems,
-              subtotal: totals.subtotal,
-              taxRate: watchedValues.taxRate || 0,
-              taxAmount: totals.taxAmount,
-              total: totals.total,
-              notes: watchedValues.notes || '',
-              status: invoice?.status || 'draft',
-              createdAt: invoice?.createdAt || new Date(),
-              updatedAt: invoice?.updatedAt || new Date(),
-            }}
-            company={companyProfile}
-            customer={selectedCustomer}
-          />
-        ) : (
-          <div className="text-center py-8">
-            <div className="text-gray-500 mb-4">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Preview Not Available
-            </h3>
-            <p className="text-gray-500 mb-4">
-              {!selectedCustomer && !lineItems.length 
-                ? 'Please select a customer and add line items to preview the invoice.'
-                : !selectedCustomer 
-                  ? 'Please select a customer to preview the invoice.'
-                  : 'Please add line items to preview the invoice.'
-              }
-            </p>
-            <button
-              onClick={() => setShowPreview(false)}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Close Preview
-            </button>
-          </div>
-        )}
-      </Modal>
     </div>
   )
 }

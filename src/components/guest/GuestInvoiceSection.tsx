@@ -5,9 +5,12 @@
  */
 
 import React, { useState } from 'react'
-import { GuestInvoiceBuilder } from './GuestInvoiceBuilder'
+import { useNavigate } from 'react-router-dom'
+import { QuickInvoiceBuilder } from '../features/invoices/QuickInvoiceBuilder'
 import { Button } from '../ui/Button'
-import { FileText, Zap, Download, Shield } from 'lucide-react'
+import { FileText, Zap, Download, Shield, X } from 'lucide-react'
+import { loadFromLocalStorage } from '../../utils/guestInvoiceStorage'
+import type { GuestInvoiceData } from '../../types/guest'
 
 interface GuestInvoiceSectionProps {
   className?: string
@@ -16,9 +19,12 @@ interface GuestInvoiceSectionProps {
 export const GuestInvoiceSection: React.FC<GuestInvoiceSectionProps> = ({
   className = '',
 }) => {
+  const navigate = useNavigate()
   const [isBuilderOpen, setIsBuilderOpen] = useState(false)
+  const [initialDraft, setInitialDraft] = useState<GuestInvoiceData | null>(null)
 
   const handleOpenBuilder = () => {
+    setInitialDraft(loadFromLocalStorage())
     setIsBuilderOpen(true)
     // Prevent body scroll when modal is open
     document.body.style.overflow = 'hidden'
@@ -28,6 +34,11 @@ export const GuestInvoiceSection: React.FC<GuestInvoiceSectionProps> = ({
     setIsBuilderOpen(false)
     // Restore body scroll when modal is closed
     document.body.style.overflow = 'unset'
+  }
+
+  const handleSignUp = () => {
+    handleCloseBuilder()
+    navigate('/signup')
   }
 
   // Cleanup on unmount
@@ -144,8 +155,21 @@ export const GuestInvoiceSection: React.FC<GuestInvoiceSectionProps> = ({
             }
           }}
         >
-          <div className="w-full max-w-4xl my-8 relative animate-slide-up">
-            <GuestInvoiceBuilder onClose={handleCloseBuilder} />
+          <div className="w-full max-w-6xl my-8 relative animate-slide-up bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+            <button
+              type="button"
+              onClick={handleCloseBuilder}
+              className="absolute right-4 top-4 z-10 rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+              aria-label="Close invoice builder"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <QuickInvoiceBuilder
+              mode="guest"
+              initialGuestData={initialDraft}
+              onSignUp={handleSignUp}
+              className="pt-8 sm:pt-4"
+            />
           </div>
         </div>
       )}

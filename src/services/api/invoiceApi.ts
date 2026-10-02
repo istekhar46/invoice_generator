@@ -20,6 +20,7 @@ export interface CreateInvoiceDto {
 
 export interface CreateQuickInvoiceDto {
   isQuickInvoice: true
+  clientRequestId?: string
   customerId?: string
   quickCompanyName?: string
   quickCompanyAddress?: string
@@ -78,7 +79,7 @@ export interface InvoiceResponseDto {
     city: string
     state: string
     zipCode: string
-  }
+  } | null
   serviceDate: Date
   dueDate: Date
   subtotal: number

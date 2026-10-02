@@ -28,8 +28,11 @@ export class CustomerService extends BaseUserService {
         data: {
           userId,
           ...createCustomerDto,
-          // Normalize state to uppercase
-          state: createCustomerDto.state.toUpperCase(),
+          // Normalize short state codes (e.g. CA, NY) to uppercase, keep full state names
+          state:
+            createCustomerDto.state.trim().length <= 3
+              ? createCustomerDto.state.trim().toUpperCase()
+              : createCustomerDto.state.trim(),
           // Normalize email to lowercase
           email: createCustomerDto.email.toLowerCase(),
         },
@@ -128,7 +131,10 @@ export class CustomerService extends BaseUserService {
       // Prepare update data with normalization
       const updateData = { ...updateCustomerDto };
       if (updateData.state) {
-        updateData.state = updateData.state.toUpperCase();
+        updateData.state =
+          updateData.state.trim().length <= 3
+            ? updateData.state.trim().toUpperCase()
+            : updateData.state.trim();
       }
       if (updateData.email) {
         updateData.email = updateData.email.toLowerCase();
@@ -178,27 +184,31 @@ export class CustomerService extends BaseUserService {
   }
 
   private validateCustomerData(data: CreateCustomerDto | UpdateCustomerDto): void {
-    // Validate phone number format more strictly
+    // Validate phone number format (between 7 and 15 digits)
     if (data.phone) {
       const phoneDigits = data.phone.replace(/\D/g, '');
-      if (phoneDigits.length !== 10) {
-        throw new BadRequestException('Phone number must contain exactly 10 digits');
+      if (phoneDigits.length < 7 || phoneDigits.length > 15) {
+        throw new BadRequestException('Phone number must contain between 7 and 15 digits');
       }
     }
 
-    // Validate ZIP code format
+    // Validate ZIP / postal code format
     if (data.zipCode) {
-      const zipPattern = /^\d{5}(-\d{4})?$/;
+      const zipPattern = /^[a-zA-Z0-9][\w\s-]{1,19}$/;
       if (!zipPattern.test(data.zipCode)) {
-        throw new BadRequestException('ZIP code must be in format 12345 or 12345-6789');
+        throw new BadRequestException(
+          'Postal code must be a valid format (e.g. 10001, 412308, SW1A 1AA)',
+        );
       }
     }
 
-    // Validate state code - accept 2-6 character strings for now
+    // Validate state / province / region
     if (data.state) {
-      // Accept any string with 2-6 characters (alphanumeric or digits)
-      if (data.state.length < 2 || data.state.length > 6) {
-        throw new BadRequestException('State code must be between 2 and 6 characters');
+      const stateLength = data.state.trim().length;
+      if (stateLength < 2 || stateLength > 100) {
+        throw new BadRequestException(
+          'State / Province / Region must be between 2 and 100 characters',
+        );
       }
     }
   }
