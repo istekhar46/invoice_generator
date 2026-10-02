@@ -36,12 +36,14 @@ import type { CustomerQueryParams } from '../../../services/api'
 
 interface CustomerListProps {
   onCustomerSelect?: (customer: Customer) => void
+  onAddCustomer?: () => void
   selectable?: boolean
   selectedCustomerId?: string
 }
 
 export const CustomerList: React.FC<CustomerListProps> = ({
   onCustomerSelect,
+  onAddCustomer,
   selectable = false,
   selectedCustomerId,
 }) => {
@@ -151,6 +153,8 @@ export const CustomerList: React.FC<CustomerListProps> = ({
       onCustomerSelect?.(customer)
     }
   }
+
+  const emptyStateAction = selectable ? onAddCustomer : handleAddCustomer
 
   const getSortIcon = (column: 'name' | 'createdAt') => {
     if (sortBy !== column) return null
@@ -273,15 +277,15 @@ export const CustomerList: React.FC<CustomerListProps> = ({
                 ? 'Try adjusting your search terms or clear the search to see all customers.'
                 : 'Get started by adding your first customer to manage your business relationships.'}
             </p>
-            {!selectable && !searchQuery && (
+            {!searchQuery && emptyStateAction && (
               <Button
-                onClick={handleAddCustomer}
+                onClick={emptyStateAction}
                 variant="primary"
                 size="lg"
                 className="group"
               >
                 <Plus className="w-5 h-5 mr-2" />
-                Add Your First Customer
+                {selectable ? 'Add Customer' : 'Add Your First Customer'}
                 <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
               </Button>
             )}

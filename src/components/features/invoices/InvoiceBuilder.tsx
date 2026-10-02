@@ -40,6 +40,7 @@ interface InvoiceBuilderProps {
   invoice?: Invoice | null
   initialCustomer?: Customer | null
   onSave?: (invoice: Invoice) => void
+  onAddCustomer?: () => void
   className?: string
 }
 
@@ -72,6 +73,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   invoice,
   initialCustomer,
   onSave,
+  onAddCustomer,
   className,
 }) => {
   const [currentStep, setCurrentStep] = useState<BuilderStep>('customer')
@@ -923,6 +925,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       >
         <CustomerList
           onCustomerSelect={handleCustomerSelect}
+          onAddCustomer={onAddCustomer}
           selectable={true}
           selectedCustomerId={selectedCustomer?.id}
         />

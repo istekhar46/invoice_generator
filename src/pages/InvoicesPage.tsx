@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { InvoiceList } from '../components/features/invoices/InvoiceList'
 import { InvoiceBuilder } from '../components/features/invoices/InvoiceBuilder'
 import { InvoicePreview } from '../components/features/invoices/InvoicePreview'
@@ -20,6 +20,7 @@ import { ArrowLeft, Download, FilePlus } from 'lucide-react'
  * Requirements: 4.9 - WHEN a user views the invoice list, THE System SHALL display all invoices sorted by creation date
  */
 export const InvoicesPage: React.FC = () => {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const invoiceIdParam = searchParams.get('id')
 
@@ -136,6 +137,7 @@ export const InvoicesPage: React.FC = () => {
                 invoice={editingInvoice}
                 initialCustomer={editingInvoice ? activeCustomer : null}
                 onSave={handleInvoiceSave}
+                onAddCustomer={() => navigate('/customers')}
               />
             </div>
           ) : (
