@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Menu,
   X,
@@ -8,6 +9,7 @@ import {
   Users,
   FileText,
   Building2,
+  ChevronRight,
 } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 import { Button } from '../ui/Button'
@@ -30,6 +32,7 @@ export interface HeaderProps {
 interface NavigationItem {
   name: string
   href: string
+  description: string
   icon: React.ComponentType<{ className?: string }>
   requiresAuth?: boolean
 }
@@ -38,12 +41,14 @@ const navigation: NavigationItem[] = [
   {
     name: 'Dashboard',
     href: '/dashboard',
+    description: 'Your business at a glance',
     icon: LayoutDashboard,
     requiresAuth: true,
   },
   {
     name: 'Invoices',
     href: '/invoices',
+    description: 'Create and manage your billing',
     icon: FileText,
     requiresAuth: true,
   },
@@ -51,12 +56,14 @@ const navigation: NavigationItem[] = [
   {
     name: 'Customers',
     href: '/customers',
+    description: 'Keep your client details together',
     icon: Users,
     requiresAuth: true,
   },
   {
     name: 'Company',
     href: '/company',
+    description: 'Business profile and branding',
     icon: Building2,
     requiresAuth: true,
   },
@@ -73,6 +80,7 @@ const Header: React.FC<HeaderProps> = ({
   className,
   isLoading = false,
 }) => {
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
   const isAuthenticated = !!user
   const [localMobileMenuOpen, setLocalMobileMenuOpen] = useState(false)
 
@@ -105,6 +113,12 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <header
+      onKeyDown={(event) => {
+        if (mobileMenuOpen && event.key === 'Escape') {
+          handleMenuClose()
+          menuButtonRef.current?.focus()
+        }
+      }}
       className={cn(
         'sticky top-0 z-40 w-full',
         // Glass morphism effect
@@ -122,7 +136,15 @@ const Header: React.FC<HeaderProps> = ({
             <Button
               variant="ghost"
               size="small"
-              className="mr-2 md:hidden min-h-11 min-w-11"
+              ref={menuButtonRef}
+              className={cn(
+                'md:hidden min-h-11 min-w-11 px-3 border shadow-none',
+                mobileMenuOpen
+                  ? 'bg-primary-50 border-primary-200 text-primary-700'
+                  : 'bg-white border-gray-200 text-gray-600'
+              )}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation"
               onClick={handleMenuToggle}
               aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
             >
@@ -141,7 +163,7 @@ const Header: React.FC<HeaderProps> = ({
                 {/* <Zap className="w-6 h-6 text-white" /> */}
                 <img
                   src={logo}
-                  alt="logo"
+                  alt="Invoiceo home"
                   className="w-24 md:w-32 mix-blend- multiply"
                 />
               </div>
@@ -221,28 +243,72 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Mobile Navigation - Slide down animation */}
+      {/* Mobile workspace navigation */}
       {isAuthenticated && mobileMenuOpen && (
-        <nav className="md:hidden py-4 border-t border-gray-200 animate-slide-down bg-white/90 backdrop-blur-lg">
-          {filteredNavigation.map(item => (
-            <NavLink
-              key={item.name}
-              to={item.href}
-              onClick={handleMenuClose}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center space-x-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 mb-1 min-h-11 mx-4',
-                  isActive
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                )
-              }
-            >
-              <item.icon className="w-5 h-5" />
-              <span>{item.name}</span>
-            </NavLink>
-          ))}
-        </nav>
+        <>
+          {createPortal(
+            <button
+              type="button"
+              aria-label="Close navigation backdrop"
+              tabIndex={-1}
+              onClick={() => {
+                handleMenuClose()
+                menuButtonRef.current?.focus()
+              }}
+              className="fixed inset-x-0 bottom-0 top-16 z-30 bg-gray-900/30 backdrop-blur-sm md:hidden sm:top-20"
+            />,
+            document.body
+          )}
+          <div className="absolute inset-x-0 top-full md:hidden px-3 pb-3 pt-2 sm:px-6 motion-safe:animate-slide-down">
+          <div className="max-h-[calc(100dvh-6rem)] overflow-y-auto rounded-2xl border border-gray-200 bg-white shadow-hard">
+            <div className="flex items-center gap-3 bg-linear-to-br from-gray-900 to-primary-950 p-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20">
+                <User className="h-5 w-5 text-primary-200" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-white">{user.displayName}</p>
+                <p className="truncate text-xs text-gray-300">{user.email}</p>
+              </div>
+            </div>
+            <nav id="mobile-navigation" aria-label="Mobile navigation" className="space-y-1 p-2">
+              <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-widest text-gray-500">Workspace</p>
+              {filteredNavigation.map(item => (
+                <NavLink
+                  key={item.name}
+                  to={item.href}
+                  onClick={handleMenuClose}
+                  className={({ isActive }) => cn(
+                    'group flex min-h-16 items-center gap-3 rounded-xl px-3 py-3 transition-colors focus-ring-inset',
+                    isActive
+                      ? 'bg-linear-to-r from-primary-600 to-primary-500 text-white shadow-sm'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  )}
+                >
+                  {({ isActive }) => (
+                    <>
+                      <span className={cn(
+                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                        isActive ? 'bg-white/15' : 'bg-gray-100 text-gray-500 group-hover:bg-primary-50 group-hover:text-primary-600'
+                      )}>
+                        <item.icon className="h-5 w-5" aria-hidden="true" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold">{item.name}</span>
+                        <span className={cn('block text-xs', isActive ? 'text-primary-100' : 'text-gray-500')}>{item.description}</span>
+                      </span>
+                      <ChevronRight className={cn('h-4 w-4 shrink-0', isActive ? 'text-white' : 'text-gray-400')} aria-hidden="true" />
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </nav>
+            <div className="flex gap-4 border-t border-gray-100 bg-gray-50/70 px-5 py-2 text-xs">
+              <Link to="/help" onClick={handleMenuClose} className="text-link inline-flex min-h-11 items-center">Help</Link>
+              <Link to="/about" onClick={handleMenuClose} className="text-link inline-flex min-h-11 items-center">About Invoiceo</Link>
+            </div>
+          </div>
+        </div>
+        </>
       )}
     </header>
   )

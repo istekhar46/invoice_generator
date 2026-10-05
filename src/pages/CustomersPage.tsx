@@ -9,8 +9,8 @@ import { ResponsiveContainer } from '../components/layout/ResponsiveLayout'
  */
 export const CustomersPage: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50/30">
-      <ResponsiveContainer maxWidth="xl" padding="md" className="py-6">
+    <div className="min-w-0 bg-gradient-to-br from-gray-50 via-white to-primary-50/30">
+      <ResponsiveContainer maxWidth="xl" padding="md">
         <div className="animate-fade-in">
           <CustomerList />
         </div>

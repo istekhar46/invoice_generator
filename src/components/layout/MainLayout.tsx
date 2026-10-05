@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { Header } from './Header'
+import { SiteMetadata } from '../seo/SiteMetadata'
+import { Footer } from './Footer'
 import { Breadcrumbs } from './Breadcrumbs'
 import { ResponsiveContainer } from './ResponsiveLayout'
 import { useAuthStatus, useLogout } from '../../hooks/useAuth'
@@ -19,6 +21,7 @@ export interface MainLayoutProps {
  * Requirements: 3.2, 3.3, 3.5, 9.2 - Responsive layout adaptation and mobile optimization
  */
 const MainLayout: React.FC<MainLayoutProps> = ({ className }) => {
+  const { pathname } = useLocation()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { user, isAuthenticated } = useAuthStatus()
   const logout = useLogout()
@@ -42,7 +45,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ className }) => {
   }
 
   return (
-    <div className={cn('min-h-screen bg-gray-50', className)}>
+    <div className={cn('min-h-screen flex flex-col bg-gray-50', className)}>
+      <SiteMetadata pathname={pathname} />
       {/* Header with integrated navigation */}
       <Header
         user={user}
@@ -55,16 +59,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ className }) => {
 
       {/* Main content area with responsive container */}
       <main className="flex-1">
-        <ResponsiveContainer
-          // maxWidth={isAuthenticated ? 'xl' : 'lg'}
-          padding="md"
-          className="py-6"
-        >
-          {/* Breadcrumbs - only show for authenticated users */}
-          {isAuthenticated && <Breadcrumbs className="mb-6" />}
-          <Outlet />
-        </ResponsiveContainer>
+        {isAuthenticated && (
+          <ResponsiveContainer padding="none" className="px-4 pt-4 sm:px-6 lg:px-8">
+            <Breadcrumbs />
+          </ResponsiveContainer>
+        )}
+        <Outlet />
       </main>
+      <Footer />
     </div>
   )
 }

@@ -192,7 +192,7 @@ export interface MobileOptimizedSectionProps {
   className?: string
   title?: string
   description?: string
-  padding?: 'sm' | 'md' | 'lg'
+  padding?: 'none' | 'sm' | 'md' | 'lg'
   background?: 'none' | 'subtle' | 'elevated'
 }
 
@@ -208,6 +208,7 @@ export const MobileOptimizedSection: React.FC<MobileOptimizedSectionProps> = ({
   background = 'none'
 }) => {
   const paddingClasses = {
+    none: '',
     sm: 'p-4 sm:p-6',
     md: 'p-4 sm:p-6 lg:p-8',
     lg: 'p-6 sm:p-8 lg:p-12'

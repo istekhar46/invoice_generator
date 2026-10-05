@@ -119,8 +119,8 @@ export const InvoicesPage: React.FC = () => {
   // Get customer data for the selected invoice
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50/30">
-      <ResponsiveContainer maxWidth="xl" padding="md" className="py-6">
+    <div className="min-w-0 bg-gradient-to-br from-gray-50 via-white to-primary-50/30">
+      <ResponsiveContainer maxWidth="xl" padding="md">
         <div className="animate-fade-in">
           {showInvoiceBuilder ? (
             <div className="space-y-6">

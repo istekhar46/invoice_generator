@@ -79,8 +79,8 @@ export const SettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50/30">
-      <ResponsiveContainer maxWidth="xl" padding="md" className="py-6">
+    <div className="min-w-0 bg-gradient-to-br from-gray-50 via-white to-primary-50/30">
+      <ResponsiveContainer maxWidth="xl" padding="md">
         <ResponsiveStack spacing="lg" className="animate-fade-in">
           {/* Modern Header */}
           <div className="flex items-center space-x-3">

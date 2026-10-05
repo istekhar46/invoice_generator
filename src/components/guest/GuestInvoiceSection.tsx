@@ -85,14 +85,14 @@ export const GuestInvoiceSection: React.FC<GuestInvoiceSectionProps> = ({
 
   return (
     <>
-      <section className={`bg-linear-to-br from-blue-50 to-indigo-50 py-20 px-6 ${className}`}>
+      <section className={`bg-linear-to-br from-blue-50 to-indigo-50 py-10 px-4 sm:py-16 sm:px-6 lg:py-20 lg:px-8 ${className}`}>
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-12">
+          <div className="text-center mb-6 sm:mb-12">
             {/* <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 mb-6">
               <FileText className="w-8 h-8 text-white" />
             </div> */}
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
               Try It For Free
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -101,11 +101,11 @@ export const GuestInvoiceSection: React.FC<GuestInvoiceSectionProps> = ({
           </div>
 
           {/* Features Grid */}
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
+          <div className="grid md:grid-cols-3 gap-4 sm:gap-8 mb-6 sm:mb-12">
             {features.map((feature) => {
               const IconComponent = feature.icon
               return (
-                <div key={feature.title} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <div key={feature.title} className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100">
                   <div className="flex items-start space-x-4">
                     <div className="shrink-0">
                       <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -155,7 +155,7 @@ export const GuestInvoiceSection: React.FC<GuestInvoiceSectionProps> = ({
             }
           }}
         >
-          <div className="w-full max-w-6xl my-8 relative animate-slide-up bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+          <div className="w-full max-w-6xl my-2 sm:my-8 relative animate-slide-up bg-white rounded-2xl shadow-xl p-4 sm:p-8">
             <button
               type="button"
               onClick={handleCloseBuilder}

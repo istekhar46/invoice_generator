@@ -10,5 +10,3 @@ export {
   downloadInvoicePDF,
   previewInvoicePDF,
 } from './pdfGenerator.service'
-
-export { InvoicePDFTemplate } from './InvoicePDFTemplate'

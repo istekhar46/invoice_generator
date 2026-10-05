@@ -20,7 +20,7 @@ describe('HomePage Navigation Tests', () => {
     mockNavigate.mockClear();
   });
 
-  it('navigates to /signup when "Start Invoicing for Free" button is clicked', { timeout: 10000 }, async () => {
+  it('navigates to /signup when "Start Invoicing for Free" link is clicked', { timeout: 10000 }, async () => {
     const user = userEvent.setup();
     
     render(
@@ -29,11 +29,11 @@ describe('HomePage Navigation Tests', () => {
       </BrowserRouter>
     );
 
-    const signupButton = screen.getByRole('button', { name: /start invoicing for free/i });
+    const signupButton = screen.getByRole('link', { name: /start invoicing for free/i });
     await user.click(signupButton);
 
-    expect(mockNavigate).toHaveBeenCalledWith('/signup');
-    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(signupButton).toHaveAttribute('href', '/signup');
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it('navigates to /login when "Login here" link is clicked', { timeout: 10000 }, async () => {
@@ -52,7 +52,7 @@ describe('HomePage Navigation Tests', () => {
     expect(loginLink).toHaveAttribute('href', '/login');
   });
 
-  it('navigates to /signup when "Create My First Invoice Now" button is clicked', { timeout: 10000 }, async () => {
+  it('navigates to /signup when "Create My First Invoice Now" link is clicked', { timeout: 10000 }, async () => {
     const user = userEvent.setup();
     
     render(
@@ -61,11 +61,11 @@ describe('HomePage Navigation Tests', () => {
       </BrowserRouter>
     );
 
-    const ctaButton = screen.getByRole('button', { name: /create my first invoice now/i });
+    const ctaButton = screen.getByRole('link', { name: /create my first invoice now/i });
     await user.click(ctaButton);
 
-    expect(mockNavigate).toHaveBeenCalledWith('/signup');
-    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(ctaButton).toHaveAttribute('href', '/signup');
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it('has all navigation elements present', () => {
@@ -76,8 +76,8 @@ describe('HomePage Navigation Tests', () => {
     );
 
     // Check all navigation elements exist
-    expect(screen.getByRole('button', { name: /start invoicing for free/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /start invoicing for free/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /login here/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /create my first invoice now/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /create my first invoice now/i })).toBeInTheDocument();
   });
 });

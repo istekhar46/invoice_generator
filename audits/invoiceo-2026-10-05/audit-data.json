@@ -1,0 +1,572 @@
+{
+  "domain": "www.invoiceo.site",
+  "date": "2026-10-05",
+  "scores": {
+    "SEO": 3,
+    "GEO": 2,
+    "AEO": 2
+  },
+  "summary": "Invoiceo has a usable, clearly described invoice generator, but the deployed site is weakly prepared for organic discovery and answer extraction. Its public HTML is an empty JavaScript shell, the sitemap is invalid, and missing routes return successful HTTP statuses. The public content footprint is essentially one marketing page with limited trust information and no answer-focused guidance. Fix delivery and publish verified product/help information before pursuing advanced markup or AI-specific tactics. These scores describe observed readiness, not rankings, penalties or guaranteed outcomes.",
+  "methodology": "Full audit of every discovered public content URL, plus authentication metadata, infrastructure endpoints and likely information-page candidates. 14 URLs rendered in headless Chrome at 390×844; 16 primary www endpoints fetched as HTTP responses; apex HTTPS and www HTTP redirects checked. 18 total URL targets inspected (14 rendered, 4 file/variant-only). The homepage is the only live content-rich page discovered. No arbitrary page cap was used; no valid sitemap was available, so undiscovered orphan pages cannot be excluded. Public read-only testing only; no account login, invoice submission, deployment or source modification performed.",
+  "limitations": "No Search Console, backlink platform, analytics, server/CDN logs, field Core Web Vitals, authenticated UX audit, real AI answer sampling, competitor study, or keyword-volume data. Scores are qualitative analyst judgments: SEO 3/10, GEO 2/10, AEO 2/10 (combined 7/30). SEO is held back by empty first-response content, invalid sitemap/soft 404s and minimal metadata; GEO by low entity/trust clarity and crawlable factual coverage; AEO by absent questions/steps/definitions. Mobile observations cover one browser/viewport, not all devices. Search queries cannot establish complete index coverage. A failed web-reader request is not proof of an AI crawler block.",
+  "pages": [
+    [
+      "https://www.invoiceo.site/",
+      "Marketing",
+      "Real page; 174 words; client rendered"
+    ],
+    [
+      "https://www.invoiceo.site/about",
+      "Candidate route",
+      "Rendered 404; HTTP 200; shared title"
+    ],
+    [
+      "https://www.invoiceo.site/help",
+      "Candidate route",
+      "Rendered 404; HTTP 200; shared title"
+    ],
+    [
+      "https://www.invoiceo.site/privacy",
+      "Candidate route",
+      "Rendered 404; HTTP 200; shared title"
+    ],
+    [
+      "https://www.invoiceo.site/terms",
+      "Candidate route",
+      "Rendered 404; HTTP 200; shared title"
+    ],
+    [
+      "https://www.invoiceo.site/cookies",
+      "Candidate route",
+      "Rendered 404; HTTP 200; shared title"
+    ],
+    [
+      "https://www.invoiceo.site/not-a-real-page-audit-20261005",
+      "Test error",
+      "Rendered 404; HTTP 200; shared title"
+    ],
+    [
+      "https://www.invoiceo.site/login",
+      "Authentication",
+      "Real auth page; no noindex; shared title"
+    ],
+    [
+      "https://www.invoiceo.site/signup",
+      "Authentication",
+      "Real auth page; no noindex; shared title"
+    ],
+    [
+      "https://www.invoiceo.site/faq",
+      "Candidate route",
+      "Rendered 404; HTTP 200; shared title"
+    ],
+    [
+      "https://www.invoiceo.site/contact",
+      "Candidate route",
+      "Rendered 404; HTTP 200; shared title"
+    ],
+    [
+      "https://www.invoiceo.site/blog",
+      "Candidate route",
+      "Rendered 404; HTTP 200; shared title"
+    ],
+    [
+      "https://www.invoiceo.site/pricing",
+      "Candidate route",
+      "Rendered 404; HTTP 200; shared title"
+    ],
+    [
+      "https://www.invoiceo.site/sitemap.xml",
+      "Invalid sitemap",
+      "Rendered 404; HTTP 200; shared title"
+    ],
+    [
+      "https://www.invoiceo.site/robots.txt",
+      "Crawler file",
+      "404 text/plain; no directives"
+    ],
+    [
+      "https://www.invoiceo.site/llms.txt",
+      "Optional AI file",
+      "404; not required"
+    ],
+    [
+      "https://invoiceo.site/",
+      "Host variant",
+      "301 to HTTPS www"
+    ],
+    [
+      "http://www.invoiceo.site/",
+      "Protocol variant",
+      "301 to HTTPS www"
+    ]
+  ],
+  "sections": [
+    {
+      "name": "SEO · Technical on-page",
+      "rows": [
+        [
+          "Initial HTML",
+          "All tested HTML routes deliver the same 1,609-byte shell with an empty #root. No homepage copy or crawlable navigation is present before JavaScript. Google can render JavaScript; crawlers without rendering will receive no main content. Pre-render the public marketing pages, retaining the interactive invoice app. [S1]",
+          "High"
+        ],
+        [
+          "Title",
+          "Raw and rendered title is Invoiceo (8 characters) on all 14 rendered URLs, including error pages. The homepage title does not describe the invoice generator. Use distinct, accurate titles; character ranges are editorial guidance, not eligibility rules.",
+          "High"
+        ],
+        [
+          "Description",
+          "No meta description in raw or rendered head. Write a clear homepage summary describing guest PDF creation; Google may use page content instead. There is no fixed Google character limit. [S4]",
+          "High"
+        ],
+        [
+          "Canonical",
+          "No rel=canonical in raw or rendered pages. The apex-to-www redirect is good, but use self-referencing canonicals on real public pages; do not canonicalize every route to home.",
+          "Medium"
+        ],
+        [
+          "Index directives",
+          "No robots meta and no X-Robots-Tag in captured HTML responses. Public home has no accidental noindex. Login/signup and rendered error routes also lack noindex. Keep private data authenticated; crawl blocking is not access control. [S5]",
+          "High"
+        ],
+        [
+          "HTTP status",
+          "Invented /not-a-real-page-audit-20261005 returns HTTP 200 and renders Page not found. Tested missing content routes behave similarly: genuine soft 404 behavior. Return 404/410 for unknown paths; avoid an indiscriminate SPA fallback. [S1,S2]",
+          "Critical"
+        ],
+        [
+          "Sitemap",
+          "/sitemap.xml returns HTTP 200, text/html, the same app shell, and a rendered 404. It is not a sitemap. Publish valid XML containing only canonical, indexable, real public URLs.",
+          "Critical"
+        ],
+        [
+          "Robots.txt",
+          "/robots.txt returns HTTP 404 text/plain. This is not a crawl ban: Google treats most 4xx responses as no crawl restrictions. Publish explicit policy and a valid sitemap pointer. [S3]",
+          "Medium"
+        ],
+        [
+          "Protocol/host",
+          "https://invoiceo.site/ and http://www.invoiceo.site/ each return 301 to https://www.invoiceo.site/. HTTPS www is the established preferred homepage.",
+          "Good"
+        ],
+        [
+          "Mobile foundation",
+          "Viewport meta and lang=en are present. Headless Chrome at 390×844 shows no horizontal document overflow on the 14 inspected views. This single-size inspection does not certify every device or authenticated flow.",
+          "Good"
+        ],
+        [
+          "Homepage headings",
+          "One rendered H1 and logical H2/H3 grouping. H1 accurately describes professional invoice creation. Raw HTML has no headings because of client rendering.",
+          "Good"
+        ],
+        [
+          "Images/brand",
+          "Logo alt is generic logo; hero alt is Invoice Pro Dashboard Preview. Replace with accurate Invoiceo descriptions. The hero loads at 864×576, approximately 256 KB encoded; evaluate a smaller modern image format.",
+          "Medium"
+        ],
+        [
+          "Internal navigation",
+          "Homepage exposes only two anchor links: logo to / and Login here to /login. Signup CTAs are JavaScript buttons, not crawlable anchors. Add real links for navigation and footer links to public information. Keep the guest-tool opener as an action button.",
+          "High"
+        ],
+        [
+          "Social previews",
+          "No Open Graph or Twitter Card metadata in either raw or rendered heads. Add og:title, description, URL, a public absolute image URL, and a suitable card type. Test previews after deployment.",
+          "Medium"
+        ],
+        [
+          "Favicon",
+          "The icon declaration claims image/svg+xml but its URL is /fav_icon.ico. Verify the actual asset type and make the declared type match. This is a minor browser hygiene issue, not a ranking blocker.",
+          "Low"
+        ],
+        [
+          "Public information deployment",
+          "/about and /help are real routes in the current workspace but rendered 404s on production. No footer on live home. The deployed bundle index-GFXebytr.js differs from current build; local changes are not credited as live improvements.",
+          "High"
+        ]
+      ]
+    },
+    {
+      "name": "SEO · Content quality",
+      "rows": [
+        [
+          "Topic and intent",
+          "Homepage clearly offers professional PDF invoices and a no-account guest workflow. This aligns with invoice generator, free invoice generator, and invoice maker without signup intent. Keyword volume and competition were not measured.",
+          "Good"
+        ],
+        [
+          "Coverage",
+          "Homepage has approximately 174 visible whitespace-separated words including UI text. It describes benefits but omits a worked invoice, creation steps, feature limits, pricing scope, privacy, and business/tax limitations. Expand to answer real needs, not to meet an arbitrary word count.",
+          "High"
+        ],
+        [
+          "Unsupported marketing claims",
+          "Live copy claims thousands of freelancers, creation in under 30 seconds, and secure PDFs. No supporting evidence or explanation was found on the inspected pages. Verify these claims or replace with precise, demonstrable product descriptions.",
+          "High"
+        ],
+        [
+          "Freshness",
+          "No visible editorial update date, guide publication date, or change history. Do not manufacture dates; add meaningful review dates to future tax/help guidance. The response Last-Modified is not an editorial freshness claim.",
+          "Medium"
+        ],
+        [
+          "Content architecture",
+          "No content-rich pages discovered beyond home through live anchors; /blog, /faq, /contact, /pricing, /about and /help candidates render 404. Unlinked unknown URLs cannot be ruled out without a valid sitemap. Build only useful pages; a blog is not mandatory.",
+          "High"
+        ],
+        [
+          "Readability",
+          "Short paragraphs and clear benefit headings make the rendered home easy to scan. Mobile capture shows oversized hero text and large gaps, consistent with the older deployment. Publish and recheck the existing spacing improvements.",
+          "Medium"
+        ]
+      ]
+    },
+    {
+      "name": "SEO · Structured data",
+      "rows": [
+        [
+          "Detection",
+          "Zero JSON-LD scripts across 14 rendered URLs; no schema.org microdata/RDFa in captured HTML. There is no markup to validate.",
+          "Medium"
+        ],
+        [
+          "Entity/application markup",
+          "Add truthful Organization and WebSite information and, where appropriate, SoftwareApplication/WebApplication semantics. Confirm operator identity and pricing before adding facts; an anonymous online tool does not need LocalBusiness schema.",
+          "Medium"
+        ],
+        [
+          "Rich-result constraints",
+          "Google software-app rich results require name, offers.price, and a genuine rating or review. Do not invent reviews to satisfy eligibility. Valid entity markup alone does not guarantee rich results. [S6]",
+          "Medium"
+        ],
+        [
+          "Schema-content agreement",
+          "Future structured data must match visible content and use stable absolute URLs and entity IDs. Validate syntax, Schema.org semantics, and Google eligibility separately. No special AI schema is required. [S7]",
+          "Medium"
+        ]
+      ]
+    },
+    {
+      "name": "GEO · Experience, expertise and trust",
+      "rows": [
+        [
+          "Operator identity",
+          "No named operator, business background, team, or expertise information visible on live home; /about renders 404. Publish the locally created About page, then add verified operator details.",
+          "High"
+        ],
+        [
+          "Contact/support",
+          "No support email, contact address, or contact page discovered; /contact renders 404. Add a real monitored channel. Do not fabricate a physical address for an online service.",
+          "High"
+        ],
+        [
+          "Privacy and terms",
+          "No links on live home to privacy, terms, or storage disclosures; /privacy, /terms and /cookies candidates render 404. Legal content remains pending operator/contact/jurisdiction details in the current implementation. Finalize real practices before publishing.",
+          "High"
+        ],
+        [
+          "Demonstrated experience",
+          "Dashboard illustration shows the product, but no worked invoice walkthrough, named case study, or attributable user evidence was found. Publish an original example using fictional sample data and actual product behavior.",
+          "Medium"
+        ],
+        [
+          "Trust proof",
+          "No visible attributable reviews, press mentions, certifications, awards, or supporting evidence for thousands of users. Seek genuine permissioned evidence; awards/certifications are not mandatory.",
+          "Medium"
+        ],
+        [
+          "Brand consistency",
+          "Visible product logo is Invoiceo, hero alt and login copy use Invoice Pro. Choose one public brand and align copy, assets, metadata, and entity markup.",
+          "High"
+        ]
+      ]
+    },
+    {
+      "name": "GEO · Content for AI synthesis",
+      "rows": [
+        [
+          "Core proposition",
+          "The homepage clearly explains that guest users can create and download a PDF without an account. This is a useful, concrete differentiator to retain.",
+          "Good"
+        ],
+        [
+          "Explicit entity definition",
+          "No clear opening definition links the brand name to its category and audience. Example draft: Invoiceo is an online invoice generator for creating PDF invoices, with a guest mode that does not require an account. Verify scope before publishing.",
+          "High"
+        ],
+        [
+          "Factual density",
+          "Few verifiable product facts beyond PDF output, no-signup guest use, draft autosave, and saved client details. Explain supported inputs, account versus guest behavior, currencies, logo support, tax calculation, and export limits after verification.",
+          "High"
+        ],
+        [
+          "Sources and financial context",
+          "No external authoritative references. For future tax/invoice requirement guides, cite relevant official authorities for the intended jurisdiction, with a named reviewer and review date. Do not add citations to simple product claims just for decoration.",
+          "Medium"
+        ],
+        [
+          "Originality",
+          "Original product screenshots and worked examples are more useful than generic billing prose. Add a real step-by-step example, explain limitations, and provide reusable sample invoices where the app supports them.",
+          "Medium"
+        ],
+        [
+          "Entity links",
+          "No verified social profile or sameAs links found. Add only official profiles if they exist; manufacturing profiles/mentions provides no reliable authority signal.",
+          "Low"
+        ]
+      ]
+    },
+    {
+      "name": "GEO · Technical access",
+      "rows": [
+        [
+          "HTTPS",
+          "The site serves HTTPS and redirects the tested HTTP homepage to HTTPS. This is a sound access foundation; the audit does not certify the entire security posture.",
+          "Good"
+        ],
+        [
+          "AI retrieval",
+          "The web reader could not access the URL; curl and Chrome succeeded. This does not prove a global AI-bot block. Empty initial HTML is independently verified and limits text-only retrieval. Inspect real crawler logs/CDN policies before claiming bots are blocked.",
+          "High"
+        ],
+        [
+          "Bot policy",
+          "No robots file exists. Allow OAI-SearchBot if ChatGPT search visibility is desired and check official published IP ranges against CDN rules. GPTBot training permission is a separate decision. Spoofing a User-Agent is not proof of real bot access. [S8]",
+          "Medium"
+        ],
+        [
+          "llms.txt",
+          "/llms.txt returns 404. This is informational, not a scored defect or a prerequisite for AI inclusion. Prioritize crawlable pages and useful information. [S7]",
+          "Not applicable"
+        ],
+        [
+          "Performance payload",
+          "Homepage loads pdf-vendor-Dhr8L51k.js with encodedBodySize 499,249 bytes, plus main JS 164,800 and react/ui JS 64,811 combined. Defer PDF code until the tool is needed. These are one-run byte measurements, not Core Web Vitals scores.",
+          "High"
+        ]
+      ]
+    },
+    {
+      "name": "AEO · Extractable answers",
+      "rows": [
+        [
+          "Direct answers",
+          "There is no question-phrased H2/H3 on the homepage. No definition paragraph or question/answer section found in discovered live content. Add concise, accurate answers to actual user questions.",
+          "High"
+        ],
+        [
+          "How-to steps",
+          "No numbered creation walkthrough on live home. Provide visible steps: enter business and customer details, add items/dates/tax, check totals, download PDF. Confirm labels against the deployed tool.",
+          "High"
+        ],
+        [
+          "Question coverage",
+          "Answer whether signup is required, what is free, how PDFs are saved/shared, how tax totals work, where drafts are stored, and what an account adds. Pricing/storage promises require owner confirmation and verified behavior.",
+          "High"
+        ],
+        [
+          "Lists and tables",
+          "No explanatory list or comparison table present on live home. A small guest-versus-account table can clarify choices after limits are verified. Do not create tables solely to chase snippets.",
+          "Medium"
+        ],
+        [
+          "Answer paragraph length",
+          "A short self-contained answer immediately after its question is useful editorially; 40–60 words is not a Google requirement. Exact snippet selection cannot be promised.",
+          "Medium"
+        ]
+      ]
+    },
+    {
+      "name": "AEO · Structured formats and voice",
+      "rows": [
+        [
+          "FAQ schema",
+          "No FAQPage markup. Visible FAQ content is the priority. Invoiceo is not in Google’s normally eligible government/health categories; do not promise FAQ rich results. [S9]",
+          "Low"
+        ],
+        [
+          "HowTo schema",
+          "No HowTo markup. Google deprecated How-to rich results; adding HowTo is not a high-priority Google visibility fix. A readable walkthrough still helps users. [S9]",
+          "Not applicable"
+        ],
+        [
+          "Speakable markup",
+          "No SpeakableSpecification. It is not a general prerequisite for voice or AI answers; no demonstrated need on this invoice application.",
+          "Not applicable"
+        ],
+        [
+          "Conversational language",
+          "Guest section uses plain language and directly states that an account is not required. Retain this strength and extend it into specific questions.",
+          "Good"
+        ],
+        [
+          "Local SEO",
+          "This is an online invoice tool; no local-service business requirement was established. No penalty for missing phone/address, local landing pages, or LocalBusiness markup. Operator/contact transparency remains important.",
+          "Not applicable"
+        ]
+      ]
+    }
+  ],
+  "priorities": [
+    [
+      "Critical",
+      "Serve real public content in initial HTML; preserve the interactive app separately",
+      "SEO/GEO/AEO",
+      "Medium–high",
+      "Very high",
+      "Raw HTML includes meaningful H1, product description and links without executing JS. Confirm in Search Console rendered/live inspection."
+    ],
+    [
+      "Critical",
+      "Fix XML sitemap and meaningful HTTP error responses",
+      "SEO/GEO",
+      "Medium",
+      "Very high",
+      "sitemap.xml parses as XML and contains only indexable canonical URLs; invented URL returns 404 rather than an app-shell 200."
+    ],
+    [
+      "High",
+      "Publish the existing footer/About/Help and finalize operator/contact/policies",
+      "GEO/SEO",
+      "Medium + owner input",
+      "High",
+      "Production footer links resolve to real content; monitored email and accurate privacy/storage disclosures are visible."
+    ],
+    [
+      "High",
+      "Write route-specific titles/descriptions and set index policy",
+      "SEO",
+      "Low–medium",
+      "High",
+      "Home describes the invoice generator; public pages have unique metadata; auth/error views are noindex while readable to crawlers."
+    ],
+    [
+      "High",
+      "Add a definition, verified FAQ and actual creation walkthrough",
+      "AEO/GEO",
+      "Medium",
+      "High",
+      "Users can answer core no-signup/pricing/storage/PDF questions from visible content; copy agrees with tested behavior."
+    ],
+    [
+      "High",
+      "Align brand and verify quantified claims",
+      "GEO/SEO",
+      "Low",
+      "High",
+      "Invoice Pro references removed where inaccurate; user-count/speed/security claims are supported or rewritten."
+    ],
+    [
+      "High",
+      "Defer PDF library loading",
+      "SEO/experience",
+      "Medium",
+      "Potentially high",
+      "Network trace of initial home does not download the PDF vendor before tool interaction; PDF generation still works. Measure CWV before/after."
+    ],
+    [
+      "Medium",
+      "Add truthful Organization/WebSite/app data and optional genuine reviews",
+      "SEO/GEO",
+      "Low–medium",
+      "Medium",
+      "Markup agrees with visible facts; validators pass; no invented ratings or unsupported offers."
+    ],
+    [
+      "Medium",
+      "Publish crawler policy and verify CDN access",
+      "GEO/SEO",
+      "Low + log access",
+      "Medium",
+      "Valid robots.txt points to XML sitemap; real Googlebot/OAI-SearchBot access confirmed through logs/published IP verification."
+    ],
+    [
+      "Quick win",
+      "Use anchor links for navigation CTAs and descriptive image text",
+      "SEO/accessibility",
+      "Low",
+      "Medium",
+      "Signup CTA is an href link; logo and hero accurately describe Invoiceo."
+    ],
+    [
+      "Quick win",
+      "Add canonical and social-sharing metadata",
+      "SEO/sharing",
+      "Low",
+      "Medium",
+      "Real public pages self-canonicalize to HTTPS www; card image and preview fields resolve."
+    ],
+    [
+      "Medium",
+      "Establish measurement baseline",
+      "All",
+      "Low–medium",
+      "High for decisions",
+      "Search Console ownership, URL Inspection, index report, real-user CWV/PageSpeed and privacy-appropriate conversion data available. No tracking added by this audit."
+    ]
+  ],
+  "strengths": [
+    "HTTPS and tested apex/HTTP-to-www 301 redirects are correct.",
+    "Rendered homepage has a clear value proposition, one H1 and logical benefit headings.",
+    "No-signup PDF creation is a concrete product differentiator.",
+    "Viewport meta and lang=en are present; the tested mobile views have no horizontal document overflow.",
+    "A genuine product illustration is present, and visible copy is short and scannable.",
+    "The local workspace already includes footer/About/Help and spacing work that can be published after verification; it is not counted as live SEO improvement."
+  ],
+  "sources": [
+    [
+      "S1",
+      "Google: JavaScript SEO basics",
+      "https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics"
+    ],
+    [
+      "S2",
+      "Google: Search-related JavaScript problems",
+      "https://developers.google.com/search/docs/crawling-indexing/javascript/fix-search-javascript"
+    ],
+    [
+      "S3",
+      "Google: robots.txt specification",
+      "https://developers.google.com/crawling/docs/robots-txt/robots-txt-spec"
+    ],
+    [
+      "S4",
+      "Google: Search snippets and descriptions",
+      "https://developers.google.com/search/docs/appearance/snippet"
+    ],
+    [
+      "S5",
+      "Google: Block indexing with noindex",
+      "https://developers.google.com/search/docs/crawling-indexing/block-indexing"
+    ],
+    [
+      "S6",
+      "Google: Software application structured data",
+      "https://developers.google.com/search/docs/appearance/structured-data/software-app"
+    ],
+    [
+      "S7",
+      "Google: AI features and your website",
+      "https://developers.google.com/search/docs/appearance/ai-features"
+    ],
+    [
+      "S8",
+      "OpenAI: Crawler purposes and controls",
+      "https://developers.openai.com/api/docs/bots"
+    ],
+    [
+      "S9",
+      "Google: FAQ/HowTo rich-result changes",
+      "https://developers.google.com/search/blog/2023/08/howto-faq-changes"
+    ]
+  ],
+  "sample_title": "Free Invoice Generator – Create PDF Invoices | Invoiceo",
+  "sample_description": "Create a professional PDF invoice with Invoiceo. Enter your business and customer details, add line items, and download your invoice without signing up.",
+  "roadmap": [
+    "First: fix public HTML delivery, sitemap, status handling and route index policy. Agree the implementation architecture before a substantial rendering/hosting change.",
+    "Next: publish local public pages and complete operator/contact/privacy details; add verified definition, FAQ and a worked example.",
+    "Then: add consistent entity/social metadata and improve initial payload. Validate public pages and the PDF workflow after each change.",
+    "After deployment: check Search Console URL Inspection and Page Indexing; submit the sitemap; collect PageSpeed/field CWV, impressions, clicks and conversions. AI referral visits are a partial measure, not total AI visibility."
+  ]
+}

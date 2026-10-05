@@ -4,7 +4,6 @@
  */
 
 import React from 'react'
-import { pdf } from '@react-pdf/renderer'
 import type { Invoice, CompanyProfile, Customer } from '../../types/entities'
 
 /**
@@ -33,7 +32,10 @@ export class PDFGeneratorServiceImpl implements PDFGeneratorService {
   async generateInvoicePDF(invoice: Invoice, company: CompanyProfile, customer: Customer): Promise<Blob> {
     try {
       // Import the PDF template component dynamically to avoid SSR issues
-      const { InvoicePDFTemplate } = await import('./InvoicePDFTemplate')
+      const [{ pdf }, { InvoicePDFTemplate }] = await Promise.all([
+        import('@react-pdf/renderer'),
+        import('./InvoicePDFTemplate'),
+      ])
       
       // Generate PDF using @react-pdf/renderer
       const pdfBlob = await pdf(

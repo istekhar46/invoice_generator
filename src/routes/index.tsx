@@ -17,6 +17,7 @@ import {
   CompanyProfilePage,
   NotFoundPage,
 } from '../pages'
+import { InformationPage } from '../pages/InformationPage'
 import { GoogleAuthCallbackPage } from '../pages/GoogleAuthCallbackPage'
 
 export const router = createBrowserRouter([
@@ -110,6 +111,9 @@ export const router = createBrowserRouter([
         path: 'auth/callback',
         element: <GoogleAuthCallbackPage />,
       },
+
+      { path: 'about', element: <InformationPage page="about" /> },
+      { path: 'help', element: <InformationPage page="help" /> },
 
       // 404 page
       {

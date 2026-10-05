@@ -116,8 +116,8 @@ export const CompanyProfilePage: React.FC = () => {
   // Show loading while fetching profile data or not yet initialized
   if (loading || !initialized) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50/30">
-        <ResponsiveContainer maxWidth="xl" padding="md" className="py-6">
+      <div className="min-w-0 bg-gradient-to-br from-gray-50 via-white to-primary-50/30">
+        <ResponsiveContainer maxWidth="xl" padding="md">
           <div className="flex items-center justify-center min-h-[400px]">
             <LoadingSpinner size="large" label="Loading company profile..." />
           </div>

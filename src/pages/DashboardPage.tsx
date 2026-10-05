@@ -130,7 +130,7 @@ export const DashboardPage: React.FC = () => {
   // Show error state
   if (hasError) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-primary-50/30 p-6">
+      <div className="min-w-0 bg-linear-to-br from-gray-50 via-white to-primary-50/30 p-6">
         <ErrorDisplay
           error={invoicesError || customersError}
           onRetry={() => {
@@ -144,10 +144,10 @@ export const DashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-primary-50/30">
+    <div className="min-w-0 bg-linear-to-br from-gray-50 via-white to-primary-50/30 mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
       <ResponsiveStack spacing="lg" className="animate-fade-in">
         {/* Modern Header Section with Welcome Message */}
-        <MobileOptimizedSection padding="sm">
+        <MobileOptimizedSection padding="none">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
             <div className="space-y-2">
               <h1 className="heading-2 text-gray-900">
@@ -174,7 +174,7 @@ export const DashboardPage: React.FC = () => {
 
         {/* Company Setup Prompt - Show when no profile exists */}
         {!companyLoading && !hasProfile && (
-          <MobileOptimizedSection>
+          <MobileOptimizedSection padding="none">
             <Card className="bg-linear-to-r from-primary-50 to-secondary-50 border-primary-200">
                 <div className="flex items-start space-x-4">
                   <div className="shrink-0">
@@ -214,7 +214,7 @@ export const DashboardPage: React.FC = () => {
         )}
 
         {/* Statistics Cards - Modern Grid with Staggered Animation */}
-        <MobileOptimizedSection>
+        <MobileOptimizedSection padding="none">
           <DashboardStats
             statistics={defaultStats}
             totalCustomers={customers.length}
@@ -223,7 +223,7 @@ export const DashboardPage: React.FC = () => {
         </MobileOptimizedSection>
 
         {/* Main Content Grid - Enhanced Layout */}
-        <MobileOptimizedSection>
+        <MobileOptimizedSection padding="none">
           <ResponsiveGrid
             columns={{ mobile: 1, tablet: 1, desktop: 3 }}
             gap="lg"

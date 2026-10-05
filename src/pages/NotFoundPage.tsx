@@ -21,7 +21,7 @@ export const NotFoundPage: React.FC = () => {
         </div>
 
         <div className="mt-8">
-          <Link to="/dashboard">
+          <Link to="/">
             <Button>
               <Home className="h-4 w-4 mr-2" />
               Go back home

@@ -1121,7 +1121,7 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
         <div className="mb-8">{renderStepContent()}</div>
 
         {/* Navigation */}
-        <FormActions align="between" responsive={false}>
+        <FormActions align="between">
           <Button
             type="button"
             variant="outline"
@@ -1134,7 +1134,7 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
           </Button>
 
           {currentStep === 'review' ? (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               {isGuest ? (
                 <>
                   <Button

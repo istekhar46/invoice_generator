@@ -53,7 +53,7 @@ export const LoginPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to from-primary-50 via-white to-secondary-50 flex items-center justify-center py-12 p-0 md:px-4 sm:px-6 lg:px-8">
+    <div className="min-h-[70dvh] bg-gradient-to from-primary-50 via-white to-secondary-50 flex items-center justify-center py-6 px-4 sm:py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8 animate-fade-in">
         {/* Modern Logo and Branding */}
         <div className="text-center">
@@ -67,7 +67,7 @@ export const LoginPage: React.FC = () => {
             Welcome back
           </h1> */}
           <p className="text-body text-gray-600">
-            Sign in to your Invoice Pro account
+            Sign in to your Invoiceo account
           </p>
         </div>
 

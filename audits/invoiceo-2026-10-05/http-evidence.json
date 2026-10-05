@@ -1,0 +1,110 @@
+[
+  {
+    "target": "about",
+    "headers": "HTTP/2 200 \ndate: Mon, 05 Oct 2026 15:23:12 GMT\ncontent-type: text/html; charset=utf-8\ncache-control: public, max-age=0, s-maxage=300\ncf-cache-status: MISS\netag: W/\"f3cd552c70f239152d3853822f8e4f17\"\nlast-modified: Fri, 02 Oct 2026 22:09:58 UTC\nrndr-id: d0cb7c5c-673c-45bf\nserver: cloudflare\nvary: Accept-Encoding\nvary: Accept-Encoding\nx-content-type-options: nosniff\ncf-ray: a45d6d1aee878934-BOM\nalt-svc: h3=\":443\"; ma=86400\n\n",
+    "body_bytes": 1609,
+    "body_sha256": "c056a93fad8e5e60d12386764114e7f6f985ec5ddd9b51cbabc5a1737f0e1b0b"
+  },
+  {
+    "target": "apex",
+    "headers": "HTTP/2 301 \ndate: Mon, 05 Oct 2026 15:31:24 GMT\ncontent-type: text/html; charset=utf-8\ncontent-length: 61\nlocation: https://www.invoiceo.site/\nvary: accept-encoding\ncf-cache-status: HIT\nserver: cloudflare\ncf-ray: a45d791bbb034924-BOM\nalt-svc: h3=\":443\"; ma=86400\n\nHTTP/2 200 \ndate: Mon, 05 Oct 2026 15:31:24 GMT\ncontent-type: text/html; charset=utf-8\ncache-control: public, max-age=0, s-maxage=300\nage: 254\netag: W/\"f3cd552c70f239152d3853822f8e4f17\"\nlast-modified: Fri, 02 Oct 2026 22:09:58 UTC\nrndr-id: b66e0007-25e4-427f\nserver: cloudflare\nvary: Accept-Encoding\nvary: Accept-Encoding\nx-content-type-options: nosniff\ncf-cache-status: HIT\ncf-ray: a45d791edc8f1474-BOM\nalt-svc: h3=\":443\"; ma=86400\n\n",
+    "body_bytes": 1609,
+    "body_sha256": "c056a93fad8e5e60d12386764114e7f6f985ec5ddd9b51cbabc5a1737f0e1b0b"
+  },
+  {
+    "target": "blog",
+    "headers": "HTTP/2 200 \ndate: Mon, 05 Oct 2026 15:31:47 GMT\ncontent-type: text/html; charset=utf-8\ncache-control: public, max-age=0, s-maxage=300\nage: 34\netag: W/\"f3cd552c70f239152d3853822f8e4f17\"\nlast-modified: Fri, 02 Oct 2026 22:09:58 UTC\nrndr-id: 92fdbc69-f63b-4bdd\nserver: cloudflare\nvary: Accept-Encoding\nvary: Accept-Encoding\nx-content-type-options: nosniff\ncf-cache-status: HIT\ncf-ray: a45d79ae7fadc116-BOM\nalt-svc: h3=\":443\"; ma=86400\n\n",
+    "body_bytes": 1609,
+    "body_sha256": "c056a93fad8e5e60d12386764114e7f6f985ec5ddd9b51cbabc5a1737f0e1b0b"
+  },
+  {
+    "target": "contact",
+    "headers": "HTTP/2 200 \ndate: Mon, 05 Oct 2026 15:31:47 GMT\ncontent-type: text/html; charset=utf-8\ncache-control: public, max-age=0, s-maxage=300\ncf-cache-status: HIT\netag: W/\"f3cd552c70f239152d3853822f8e4f17\"\nlast-modified: Fri, 02 Oct 2026 22:09:58 UTC\nrndr-id: 16daf032-9ce9-43ff\nserver: cloudflare\nvary: Accept-Encoding\nvary: Accept-Encoding\nx-content-type-options: nosniff\ncf-ray: a45d79ae3ddd60b0-BOM\nalt-svc: h3=\":443\"; ma=86400\n\n",
+    "body_bytes": 1609,
+    "body_sha256": "c056a93fad8e5e60d12386764114e7f6f985ec5ddd9b51cbabc5a1737f0e1b0b"
+  },
+  {
+    "target": "cookies",
+    "headers": "HTTP/2 200 \ndate: Mon, 05 Oct 2026 15:23:13 GMT\ncontent-type: text/html; charset=utf-8\ncache-control: public, max-age=0, s-maxage=300\ncf-cache-status: MISS\netag: W/\"f3cd552c70f239152d3853822f8e4f17\"\nlast-modified: Fri, 02 Oct 2026 22:09:58 UTC\nrndr-id: d0237f54-059d-4ede\nserver: cloudflare\nvary: Accept-Encoding\nvary: Accept-Encoding\nx-content-type-options: nosniff\ncf-ray: a45d6d1e6daa0e0c-BOM\nalt-svc: h3=\":443\"; ma=86400\n\n",
+    "body_bytes": 1609,
+    "body_sha256": "c056a93fad8e5e60d12386764114e7f6f985ec5ddd9b51cbabc5a1737f0e1b0b"
+  },
+  {
+    "target": "faq",
+    "headers": "HTTP/2 200 \ndate: Mon, 05 Oct 2026 15:31:47 GMT\ncontent-type: text/html; charset=utf-8\ncache-control: public, max-age=0, s-maxage=300\ncf-cache-status: HIT\netag: W/\"f3cd552c70f239152d3853822f8e4f17\"\nlast-modified: Fri, 02 Oct 2026 22:09:58 UTC\nrndr-id: 9f5a5226-3507-470a\nserver: cloudflare\nvary: Accept-Encoding\nvary: Accept-Encoding\nx-content-type-options: nosniff\ncf-ray: a45d79ae5d64ff6a-BOM\nalt-svc: h3=\":443\"; ma=86400\n\n",
+    "body_bytes": 1609,
+    "body_sha256": "c056a93fad8e5e60d12386764114e7f6f985ec5ddd9b51cbabc5a1737f0e1b0b"
+  },
+  {
+    "target": "help",
+    "headers": "HTTP/2 200 \ndate: Mon, 05 Oct 2026 15:23:12 GMT\ncontent-type: text/html; charset=utf-8\ncache-control: public, max-age=0, s-maxage=300\ncf-cache-status: MISS\netag: W/\"f3cd552c70f239152d3853822f8e4f17\"\nlast-modified: Fri, 02 Oct 2026 22:09:58 UTC\nrndr-id: 50fab1f1-ca52-4d5f\nserver: cloudflare\nvary: Accept-Encoding\nvary: Accept-Encoding\nx-content-type-options: nosniff\ncf-ray: a45d6d1afaf64461-BOM\nalt-svc: h3=\":443\"; ma=86400\n\n",
+    "body_bytes": 1609,
+    "body_sha256": "c056a93fad8e5e60d12386764114e7f6f985ec5ddd9b51cbabc5a1737f0e1b0b"
+  },
+  {
+    "target": "home",
+    "headers": "HTTP/2 200 \ndate: Mon, 05 Oct 2026 15:23:12 GMT\ncontent-type: text/html; charset=utf-8\ncache-control: public, max-age=0, s-maxage=300\ncf-cache-status: HIT\netag: W/\"f3cd552c70f239152d3853822f8e4f17\"\nlast-modified: Fri, 02 Oct 2026 22:09:58 UTC\nrndr-id: a70c6e86-a1c6-4cbe\nserver: cloudflare\nvary: Accept-Encoding\nvary: Accept-Encoding\nx-content-type-options: nosniff\ncf-ray: a45d6d1b08ff20fe-BOM\nalt-svc: h3=\":443\"; ma=86400\n\n",
+    "body_bytes": 1609,
+    "body_sha256": "c056a93fad8e5e60d12386764114e7f6f985ec5ddd9b51cbabc5a1737f0e1b0b"
+  },
+  {
+    "target": "http",
+    "headers": "HTTP/1.1 301 Moved Permanently\nDate: Mon, 05 Oct 2026 15:31:25 GMT\nContent-Type: text/html; charset=utf-8\nContent-Length: 61\nConnection: keep-alive\nLocation: https://www.invoiceo.site/\nVary: accept-encoding\ncf-cache-status: HIT\nServer: cloudflare\nCF-RAY: a45d791fcfe2a9ef-BOM\nalt-svc: h3=\":443\"; ma=86400\n\nHTTP/2 200 \ndate: Mon, 05 Oct 2026 15:31:25 GMT\ncontent-type: text/html; charset=utf-8\ncache-control: public, max-age=0, s-maxage=300\ncf-cache-status: HIT\netag: W/\"f3cd552c70f239152d3853822f8e4f17\"\nlast-modified: Fri, 02 Oct 2026 22:09:58 UTC\nrndr-id: 7efc2aa7-7268-4cce\nserver: cloudflare\nvary: Accept-Encoding\nvary: Accept-Encoding\nx-content-type-options: nosniff\ncf-ray: a45d792299c260b0-BOM\nalt-svc: h3=\":443\"; ma=86400\n\n",
+    "body_bytes": 1609,
+    "body_sha256": "c056a93fad8e5e60d12386764114e7f6f985ec5ddd9b51cbabc5a1737f0e1b0b"
+  },
+  {
+    "target": "llms.txt",
+    "headers": "HTTP/2 404 \ndate: Mon, 05 Oct 2026 15:23:13 GMT\ncontent-type: text/plain; charset=utf-8\nrndr-id: 8272538c-8494-4b5e\nvary: Accept-Encoding\nx-content-type-options: nosniff\ncf-cache-status: BYPASS\nserver: cloudflare\ncf-ray: a45d6d1e6874c058-BOM\nalt-svc: h3=\":443\"; ma=86400\n\n",
+    "body_bytes": 10,
+    "body_sha256": "7515bf959b73b956ceb967351c7e299cbb3668a53d35f9c770eb72e00d93ced6"
+  },
+  {
+    "target": "login",
+    "headers": "HTTP/2 200 \ndate: Mon, 05 Oct 2026 15:23:13 GMT\ncontent-type: text/html; charset=utf-8\ncache-control: public, max-age=0, s-maxage=300\ncf-cache-status: EXPIRED\netag: W/\"f3cd552c70f239152d3853822f8e4f17\"\nlast-modified: Fri, 02 Oct 2026 22:09:58 UTC\nrndr-id: 3ed33be7-96ba-4cb6\nserver: cloudflare\nvary: Accept-Encoding\nvary: Accept-Encoding\nx-content-type-options: nosniff\ncf-ray: a45d6d1edfaf47c2-BOM\nalt-svc: h3=\":443\"; ma=86400\n\n",
+    "body_bytes": 1609,
+    "body_sha256": "c056a93fad8e5e60d12386764114e7f6f985ec5ddd9b51cbabc5a1737f0e1b0b"
+  },
+  {
+    "target": "not-a-real-page-audit-20261005",
+    "headers": "HTTP/2 200 \ndate: Mon, 05 Oct 2026 15:23:13 GMT\ncontent-type: text/html; charset=utf-8\ncache-control: public, max-age=0, s-maxage=300\ncf-cache-status: MISS\netag: W/\"f3cd552c70f239152d3853822f8e4f17\"\nlast-modified: Fri, 02 Oct 2026 22:09:58 UTC\nrndr-id: 2f6c3e59-8290-4a0a\nserver: cloudflare\nvary: Accept-Encoding\nvary: Accept-Encoding\nx-content-type-options: nosniff\ncf-ray: a45d6d1fa8261710-BOM\nalt-svc: h3=\":443\"; ma=86400\n\n",
+    "body_bytes": 1609,
+    "body_sha256": "c056a93fad8e5e60d12386764114e7f6f985ec5ddd9b51cbabc5a1737f0e1b0b"
+  },
+  {
+    "target": "pricing",
+    "headers": "HTTP/2 200 \ndate: Mon, 05 Oct 2026 15:31:47 GMT\ncontent-type: text/html; charset=utf-8\ncache-control: public, max-age=0, s-maxage=300\ncf-cache-status: HIT\netag: W/\"f3cd552c70f239152d3853822f8e4f17\"\nlast-modified: Fri, 02 Oct 2026 22:09:58 UTC\nrndr-id: 2dd4d185-fcdb-4f4a\nserver: cloudflare\nvary: Accept-Encoding\nvary: Accept-Encoding\nx-content-type-options: nosniff\ncf-ray: a45d79ae6ab53b9d-BOM\nalt-svc: h3=\":443\"; ma=86400\n\n",
+    "body_bytes": 1609,
+    "body_sha256": "c056a93fad8e5e60d12386764114e7f6f985ec5ddd9b51cbabc5a1737f0e1b0b"
+  },
+  {
+    "target": "privacy",
+    "headers": "HTTP/2 200 \ndate: Mon, 05 Oct 2026 15:23:12 GMT\ncontent-type: text/html; charset=utf-8\ncache-control: public, max-age=0, s-maxage=300\ncf-cache-status: MISS\netag: W/\"f3cd552c70f239152d3853822f8e4f17\"\nlast-modified: Fri, 02 Oct 2026 22:09:58 UTC\nrndr-id: 8c5076fc-96a1-41ad\nserver: cloudflare\nvary: Accept-Encoding\nvary: Accept-Encoding\nx-content-type-options: nosniff\ncf-ray: a45d6d1aead132a3-BOM\nalt-svc: h3=\":443\"; ma=86400\n\n",
+    "body_bytes": 1609,
+    "body_sha256": "c056a93fad8e5e60d12386764114e7f6f985ec5ddd9b51cbabc5a1737f0e1b0b"
+  },
+  {
+    "target": "robots.txt",
+    "headers": "HTTP/2 404 \ndate: Mon, 05 Oct 2026 15:23:12 GMT\ncontent-type: text/plain; charset=utf-8\nrndr-id: ccd8ce27-23c7-455d\nvary: Accept-Encoding\nx-content-type-options: nosniff\ncf-cache-status: BYPASS\nserver: cloudflare\ncf-ray: a45d6d1ade858934-BOM\nalt-svc: h3=\":443\"; ma=86400\n\n",
+    "body_bytes": 10,
+    "body_sha256": "7515bf959b73b956ceb967351c7e299cbb3668a53d35f9c770eb72e00d93ced6"
+  },
+  {
+    "target": "signup",
+    "headers": "HTTP/2 200 \ndate: Mon, 05 Oct 2026 15:23:13 GMT\ncontent-type: text/html; charset=utf-8\ncache-control: public, max-age=0, s-maxage=300\ncf-cache-status: MISS\netag: W/\"f3cd552c70f239152d3853822f8e4f17\"\nlast-modified: Fri, 02 Oct 2026 22:09:58 UTC\nrndr-id: b72ec938-493f-4ac7\nserver: cloudflare\nvary: Accept-Encoding\nvary: Accept-Encoding\nx-content-type-options: nosniff\ncf-ray: a45d6d1f2b0cbc9a-BOM\nalt-svc: h3=\":443\"; ma=86400\n\n",
+    "body_bytes": 1609,
+    "body_sha256": "c056a93fad8e5e60d12386764114e7f6f985ec5ddd9b51cbabc5a1737f0e1b0b"
+  },
+  {
+    "target": "sitemap.xml",
+    "headers": "HTTP/2 200 \ndate: Mon, 05 Oct 2026 15:23:12 GMT\ncontent-type: text/html; charset=utf-8\ncache-control: public, max-age=0, s-maxage=300\ncf-cache-status: MISS\netag: W/\"f3cd552c70f239152d3853822f8e4f17\"\nlast-modified: Fri, 02 Oct 2026 22:09:58 UTC\nrndr-id: 2529b6ff-644b-4190\nserver: cloudflare\nvary: Accept-Encoding\nvary: Accept-Encoding\nx-content-type-options: nosniff\ncf-ray: a45d6d1afdc23c52-BOM\nalt-svc: h3=\":443\"; ma=86400\n\n",
+    "body_bytes": 1609,
+    "body_sha256": "c056a93fad8e5e60d12386764114e7f6f985ec5ddd9b51cbabc5a1737f0e1b0b"
+  },
+  {
+    "target": "terms",
+    "headers": "HTTP/2 200 \ndate: Mon, 05 Oct 2026 15:23:13 GMT\ncontent-type: text/html; charset=utf-8\ncache-control: public, max-age=0, s-maxage=300\ncf-cache-status: MISS\netag: W/\"f3cd552c70f239152d3853822f8e4f17\"\nlast-modified: Fri, 02 Oct 2026 22:09:58 UTC\nrndr-id: 7f0b3fdf-0629-4ac1\nserver: cloudflare\nvary: Accept-Encoding\nvary: Accept-Encoding\nx-content-type-options: nosniff\ncf-ray: a45d6d1e0c7553df-BOM\nalt-svc: h3=\":443\"; ma=86400\n\n",
+    "body_bytes": 1609,
+    "body_sha256": "c056a93fad8e5e60d12386764114e7f6f985ec5ddd9b51cbabc5a1737f0e1b0b"
+  }
+]

@@ -867,7 +867,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
         </div>
 
         {/* Navigation */}
-        <FormActions align="between" responsive={false}>
+        <FormActions align="between">
           <Button
             type="button"
             variant="outline"
@@ -880,7 +880,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
           </Button>
 
           {currentStep === 'review' ? (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Button
                 type="button"
                 variant="outline"

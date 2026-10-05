@@ -102,7 +102,7 @@ export interface ModalFooterProps {
 
 const ModalFooter: React.FC<ModalFooterProps> = ({ children, className }) => {
   return (
-    <div className={cn('flex justify-end space-x-2 pt-4', className)}>
+    <div className={cn('flex justify-center space-x-2 pt-4', className)}>
       {children}
     </div>
   )

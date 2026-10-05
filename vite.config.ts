@@ -3,19 +3,26 @@ import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { SiteMetadata } from './src/components/seo/SiteMetadata'
 
 // import { cloudflare } from "@cloudflare/vite-plugin";
 
 // https://vite.dev/config/
 export default defineConfig({
   // plugins: [react(), tailwindcss(), cloudflare()],
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), {
+    name: 'invoiceo-metadata',
+    transformIndexHtml(html) {
+      return html.replace('<!-- seo-head -->', renderToStaticMarkup(createElement(SiteMetadata, { pathname: '/' })))
+    },
+  }],
   build: {
     rollupOptions: {
       output: {
         manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'pdf-vendor': ['@react-pdf/renderer'],
+          'react-vendor': ['react', 'react/jsx-runtime', 'react-dom', 'react-router-dom'],
           'ui-vendor': ['@headlessui/react', 'lucide-react', 'react-hook-form']
         }
       }

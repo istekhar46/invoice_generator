@@ -16,7 +16,6 @@ export {
   pdfGeneratorService,
   downloadInvoicePDF,
   previewInvoicePDF,
-  InvoicePDFTemplate,
 } from './pdf'
 export { 
   errorHandlerService, 

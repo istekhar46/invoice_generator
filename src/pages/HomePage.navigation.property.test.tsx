@@ -39,9 +39,9 @@ describe('HomePage Navigation Property Tests', () => {
         );
 
         // Verify navigation elements exist with correct configuration
-        const heroSignupButton = screen.getByRole('button', { name: /start invoicing for free/i });
+        const heroSignupButton = screen.getByRole('link', { name: /start invoicing for free/i });
         const loginLink = screen.getByRole('link', { name: /login here/i });
-        const ctaSignupButton = screen.getByRole('button', { name: /create my first invoice now/i });
+        const ctaSignupButton = screen.getByRole('link', { name: /create my first invoice now/i });
 
         // All elements should be present
         expect(heroSignupButton).toBeInTheDocument();
@@ -77,9 +77,9 @@ describe('HomePage Navigation Property Tests', () => {
       const user = userEvent.setup();
 
       // Test hero signup button
-      const heroSignupButton = screen.getByRole('button', { name: /start invoicing for free/i });
+      const heroSignupButton = screen.getByRole('link', { name: /start invoicing for free/i });
       await user.click(heroSignupButton);
-      expect(mockNavigate).toHaveBeenCalledWith('/signup');
+      expect(heroSignupButton).toHaveAttribute('href', '/signup');
       
       cleanup();
       mockNavigate.mockClear();
@@ -91,9 +91,9 @@ describe('HomePage Navigation Property Tests', () => {
       );
 
       // Test CTA signup button
-      const ctaSignupButton = screen.getByRole('button', { name: /create my first invoice now/i });
+      const ctaSignupButton = screen.getByRole('link', { name: /create my first invoice now/i });
       await user.click(ctaSignupButton);
-      expect(mockNavigate).toHaveBeenCalledWith('/signup');
+      expect(ctaSignupButton).toHaveAttribute('href', '/signup');
       
       cleanup();
     }
