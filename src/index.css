@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Modern Design System Foundation */
 @theme {
@@ -76,8 +76,12 @@
   --breakpoint-2xl: 1536px;
 
   /* Modern Typography System */
-  --font-family-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-family-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-family-sans:
+    'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-family-mono:
+    ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo,
+    monospace;
 
   /* Responsive Font Sizes - Mobile First */
   --font-size-xs: 0.75rem;
@@ -145,15 +149,34 @@
 
   /* Modern Shadow System */
   --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --shadow-medium: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-hard: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-glow: 0 0 0 1px rgb(59 130 246 / 0.15), 0 4px 6px -1px rgb(59 130 246 / 0.1);
+  --shadow-medium:
+    0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-hard:
+    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-glow:
+    0 0 0 1px rgb(59 130 246 / 0.15), 0 4px 6px -1px rgb(59 130 246 / 0.1);
 
   /* Gradient Backgrounds */
-  --gradient-primary: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500));
-  --gradient-secondary: linear-gradient(135deg, var(--color-secondary-600), var(--color-secondary-500));
-  --gradient-success: linear-gradient(135deg, var(--color-success-600), var(--color-success-500));
-  --gradient-danger: linear-gradient(135deg, var(--color-danger-600), var(--color-danger-500));
+  --gradient-primary: linear-gradient(
+    135deg,
+    var(--color-primary-600),
+    var(--color-primary-500)
+  );
+  --gradient-secondary: linear-gradient(
+    135deg,
+    var(--color-secondary-600),
+    var(--color-secondary-500)
+  );
+  --gradient-success: linear-gradient(
+    135deg,
+    var(--color-success-600),
+    var(--color-success-500)
+  );
+  --gradient-danger: linear-gradient(
+    135deg,
+    var(--color-danger-600),
+    var(--color-danger-500)
+  );
 
   /* Animation Keyframes */
   --animation-fade-in: fade-in 0.3s ease-out;
@@ -211,7 +234,6 @@
 }
 
 @keyframes bounce-subtle {
-
   0%,
   20%,
   53%,
@@ -505,7 +527,7 @@ html {
 /* Utility Typography Classes */
 .font-display {
   font-family: var(--font-family-sans);
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
 .text-balance {
@@ -607,7 +629,10 @@ html {
   color: #3c4043;
   text-decoration: none;
   cursor: pointer;
-  transition: background 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  transition:
+    background 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
   min-height: 44px;
   /* accessible touch target */
   user-select: none;
@@ -615,7 +640,9 @@ html {
 
 .google-signin-btn:hover {
   background: #f8f9fa;
-  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.15), 0 1px 2px rgba(60, 64, 67, 0.1);
+  box-shadow:
+    0 1px 3px rgba(60, 64, 67, 0.15),
+    0 1px 2px rgba(60, 64, 67, 0.1);
   border-color: #c6c6c6;
 }
 
@@ -632,7 +659,6 @@ html {
 /* ─── Print / Download PDF ─────────────────────────────────────────────────── */
 /* When window.print() is called, only the #printable-invoice area is shown.   */
 @media print {
-
   /* Hide everything on the page */
   body * {
     visibility: hidden;
@@ -657,5 +683,96 @@ html {
   /* Hide action buttons and modal chrome from print */
   .no-print {
     display: none !important;
+  }
+}
+/* Quiet editable surfaces on the invoice sheet; visible keyboard focus. */
+.quick-invoice .qi-field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+.quick-invoice .qi-field input,
+.quick-invoice .qi-field textarea,
+.quick-invoice .qi-field select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  padding: 0.65rem 0.7rem;
+  font-size: 0.8125rem;
+  color: #0f172a;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.quick-invoice .qi-field textarea {
+  resize: vertical;
+  min-height: 5rem;
+}
+.quick-invoice .qi-field input:focus,
+.quick-invoice .qi-field textarea:focus,
+.quick-invoice .qi-field select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px #dbeafe;
+  background: white;
+}
+.quick-invoice .qi-field.qi-inline {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.quick-invoice .qi-details {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+.quick-invoice .qi-details summary {
+  cursor: pointer;
+}
+.quick-invoice .qi-primary,
+.quick-invoice .qi-secondary {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.6rem;
+  padding: 0.8rem 0.65rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+.quick-invoice .qi-primary {
+  background: #2563eb;
+  color: white;
+}
+.quick-invoice .qi-primary:hover {
+  background: #1d4ed8;
+}
+.quick-invoice .qi-secondary {
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  background: white;
+}
+.quick-invoice .qi-secondary:hover {
+  background: #f8fafc;
+}
+.quick-invoice button:focus-visible,
+.quick-invoice summary:focus-visible,
+.quick-invoice .qi-logo:focus-within {
+  outline: 3px solid #93c5fd;
+  outline-offset: 3px;
+}
+.quick-invoice button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+@media (prefers-reduced-motion: reduce) {
+  .quick-invoice * {
+    transition: none !important;
   }
 }

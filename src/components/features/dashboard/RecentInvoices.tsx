@@ -1,3 +1,4 @@
+import { formatCurrency } from '../../../utils/formatters'
 /**
  * RecentInvoices Component
  * Displays a list of recent invoices with status indicators
@@ -25,8 +26,12 @@ interface StatusBadgeProps {
 
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   // Normalize status to lowercase to handle both 'DRAFT' and 'draft' formats
-  const normalizedStatus = status?.toLowerCase() as 'draft' | 'sent' | 'paid' | undefined
-  
+  const normalizedStatus = status?.toLowerCase() as
+    | 'draft'
+    | 'sent'
+    | 'paid'
+    | undefined
+
   const statusConfig = {
     draft: {
       label: 'Draft',
@@ -45,7 +50,9 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   const config = statusConfig[normalizedStatus || 'draft']
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config?.className || 'bg-gray-100 text-gray-800'}`}>
+    <span
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config?.className || 'bg-gray-100 text-gray-800'}`}
+    >
       {config?.label || 'Unknown'}
     </span>
   )
@@ -57,7 +64,10 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
 const RecentInvoicesLoading: React.FC = () => (
   <div className="space-y-4">
     {[...Array(3)].map((_, index) => (
-      <div key={index} className="flex items-center justify-between py-3 border-b border-gray-200 last:border-b-0">
+      <div
+        key={index}
+        className="flex items-center justify-between py-3 border-b border-gray-200 last:border-b-0"
+      >
         <div className="flex-1">
           <div className="h-4 bg-linear-to-r from-gray-200 via-gray-100 to-gray-200 bg-size-[200px_100%] animate-shimmer rounded mb-2" />
           <div className="h-3 bg-linear-to-r from-gray-200 via-gray-100 to-gray-200 bg-size-[200px_100%] animate-shimmer rounded w-2/3" />
@@ -96,19 +106,12 @@ const EmptyState: React.FC = () => (
 /**
  * RecentInvoices component displaying recent invoice activity
  */
-export const RecentInvoices: React.FC<RecentInvoicesProps> = ({ 
-  invoices, 
+export const RecentInvoices: React.FC<RecentInvoicesProps> = ({
+  invoices,
   loading = false,
   onInvoiceClick,
-  onViewAll 
+  onViewAll,
 }) => {
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount)
-  }
-
   const formatDate = (date: Date): string => {
     return new Intl.DateTimeFormat('en-US', {
       month: 'short',
@@ -120,9 +123,7 @@ export const RecentInvoices: React.FC<RecentInvoicesProps> = ({
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-medium text-gray-900">
-          Recent Invoices
-        </h3>
+        <h3 className="text-lg font-medium text-gray-900">Recent Invoices</h3>
         {onViewAll && (
           <button
             type="button"
@@ -140,11 +141,13 @@ export const RecentInvoices: React.FC<RecentInvoicesProps> = ({
         <EmptyState />
       ) : (
         <div className="space-y-4">
-          {invoices.map((invoice) => (
+          {invoices.map(invoice => (
             <div
               key={invoice.id}
               className={`flex items-center justify-between py-3 border-b border-gray-200 last:border-b-0 transition-all duration-200 ${
-                onInvoiceClick ? 'cursor-pointer hover:bg-gray-50 hover:shadow-sm -mx-2 px-2 rounded' : ''
+                onInvoiceClick
+                  ? 'cursor-pointer hover:bg-gray-50 hover:shadow-sm -mx-2 px-2 rounded'
+                  : ''
               }`}
               onClick={() => onInvoiceClick?.(invoice.id)}
             >
@@ -167,7 +170,7 @@ export const RecentInvoices: React.FC<RecentInvoicesProps> = ({
               </div>
               <div className="ml-4 text-right">
                 <p className="text-sm font-medium text-gray-900">
-                  {formatCurrency(invoice.total)}
+                  {formatCurrency(invoice.total, invoice.currency)}
                 </p>
                 <p className="text-xs text-gray-500">
                   {formatDate(invoice.createdAt)}

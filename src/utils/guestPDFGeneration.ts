@@ -9,7 +9,7 @@ import React from 'react'
 /**
  * Generates a unique invoice number based on timestamp
  * Format: INV-{timestamp}
- * 
+ *
  * @returns Generated invoice number
  */
 export function generateInvoiceNumber(): string {
@@ -20,7 +20,7 @@ export function generateInvoiceNumber(): string {
 /**
  * Generates filename for guest invoice PDF
  * Format: invoice-{timestamp}.pdf
- * 
+ *
  * @param invoiceNumber - Optional invoice number to include in filename
  * @returns Generated filename
  */
@@ -34,7 +34,7 @@ export function generatePDFFilename(invoiceNumber?: string): string {
 
 /**
  * Downloads a PDF blob to the user's device
- * 
+ *
  * @param blob - PDF blob to download
  * @param filename - Filename for the downloaded file
  */
@@ -47,7 +47,7 @@ export function downloadPDF(blob: Blob, filename: string): void {
     link.style.display = 'none'
     document.body.appendChild(link)
     link.click()
-    
+
     // Cleanup
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
@@ -59,18 +59,20 @@ export function downloadPDF(blob: Blob, filename: string): void {
 
 /**
  * Opens a PDF blob in a new browser tab for preview
- * 
+ *
  * @param blob - PDF blob to preview
  */
 export function previewPDF(blob: Blob): void {
   try {
     const url = URL.createObjectURL(blob)
     const newWindow = window.open(url, '_blank')
-    
+
     if (!newWindow) {
-      throw new Error('Failed to open preview window. Please check your popup blocker settings.')
+      throw new Error(
+        'Failed to open preview window. Please check your popup blocker settings.'
+      )
     }
-    
+
     // Note: URL will be cleaned up when the tab is closed
   } catch (error) {
     console.error('Error previewing PDF:', error)
@@ -80,7 +82,7 @@ export function previewPDF(blob: Blob): void {
 
 /**
  * Validates guest invoice data before PDF generation
- * 
+ *
  * @param data - Guest invoice data to validate
  * @throws Error if data is invalid
  */
@@ -120,7 +122,7 @@ export function validatePDFData(data: GuestInvoiceData): void {
 
 /**
  * Formats a date for display in PDF
- * 
+ *
  * @param date - Date to format
  * @returns Formatted date string (MM/DD/YYYY)
  */
@@ -133,7 +135,7 @@ export function formatDateForPDF(date: Date): string {
 
 /**
  * Formats currency for display in PDF
- * 
+ *
  * @param amount - Amount to format
  * @returns Formatted currency string ($X,XXX.XX)
  */
@@ -146,7 +148,7 @@ export function formatCurrencyForPDF(amount: number): string {
 
 /**
  * Formats tax rate as percentage for display
- * 
+ *
  * @param taxRate - Tax rate as decimal (e.g., 0.08)
  * @returns Formatted percentage string (8%)
  */
@@ -156,7 +158,7 @@ export function formatTaxRateForPDF(taxRate: number): string {
 
 /**
  * Generates a PDF blob for a guest invoice
- * 
+ *
  * @param data - Guest invoice data
  * @param invoiceNumber - Optional invoice number (generated if not provided)
  * @returns Promise resolving to PDF blob
@@ -170,7 +172,10 @@ export async function generateInvoicePDF(
     validatePDFData(data)
 
     // Generate invoice number if not provided
-    const invNumber = invoiceNumber || generateInvoiceNumber()
+    const invNumber =
+      invoiceNumber ||
+      data.invoiceDetails.invoiceNumber ||
+      generateInvoiceNumber()
 
     const [{ pdf }, { GuestInvoicePDFTemplate }] = await Promise.all([
       import('@react-pdf/renderer'),
@@ -195,7 +200,7 @@ export async function generateInvoicePDF(
 
 /**
  * Generates and downloads a guest invoice PDF
- * 
+ *
  * @param data - Guest invoice data
  * @param invoiceNumber - Optional invoice number
  */
@@ -203,7 +208,10 @@ export async function generateAndDownloadPDF(
   data: GuestInvoiceData,
   invoiceNumber?: string
 ): Promise<void> {
-  const invNumber = invoiceNumber || generateInvoiceNumber()
+  const invNumber =
+    invoiceNumber ||
+    data.invoiceDetails.invoiceNumber ||
+    generateInvoiceNumber()
   const pdfBlob = await generateInvoicePDF(data, invNumber)
   const filename = generatePDFFilename(invNumber)
   downloadPDF(pdfBlob, filename)
@@ -211,7 +219,7 @@ export async function generateAndDownloadPDF(
 
 /**
  * Generates and previews a guest invoice PDF
- * 
+ *
  * @param data - Guest invoice data
  * @param invoiceNumber - Optional invoice number
  */
@@ -219,7 +227,10 @@ export async function generateAndPreviewPDF(
   data: GuestInvoiceData,
   invoiceNumber?: string
 ): Promise<void> {
-  const invNumber = invoiceNumber || generateInvoiceNumber()
+  const invNumber =
+    invoiceNumber ||
+    data.invoiceDetails.invoiceNumber ||
+    generateInvoiceNumber()
   const pdfBlob = await generateInvoicePDF(data, invNumber)
   previewPDF(pdfBlob)
 }

@@ -44,6 +44,8 @@ export const transformLineItemResponse = (
  * Handles nested customer data and line items transformation
  */
 export const transformInvoiceResponse = (dto: InvoiceResponseDto): Invoice => ({
+  ...dto,
+  customer: dto.customer ? transformCustomerResponse(dto.customer) : null,
   id: dto.id,
   userId: '', // API doesn't provide userId, but frontend expects it
   customerId: dto.customer?.id ?? null,
@@ -145,7 +147,7 @@ export const transformInvoiceToUpdateDto = (
 
   // Handle optional notes field (undefined omitted, null preserved, empty string preserved)
   if (invoice.notes !== undefined) {
-    dto.notes = invoice.notes || undefined
+    dto.notes = invoice.notes
   }
 
   // Include tax rate if provided

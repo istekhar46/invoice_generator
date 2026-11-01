@@ -1,3 +1,5 @@
+import { QuickInvoiceBuilder } from '../components/features/invoices/QuickInvoiceBuilder'
+import { CompanySetupGuard } from '../components/guards/CompanySetupGuard'
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { InvoiceList } from '../components/features/invoices/InvoiceList'
@@ -33,7 +35,11 @@ export const InvoicesPage: React.FC = () => {
 
   const { data: companyProfile } = useCompanyProfile()
   const { data: directInvoiceDto } = useInvoice(invoiceIdParam || '')
-  const { downloadInvoicePDFDirect, isGenerating } = usePDFGeneration()
+  const {
+    downloadInvoicePDFDirect,
+    isGenerating,
+    error: pdfError,
+  } = usePDFGeneration()
   const { data: activeCustomer } = useCustomer(
     selectedInvoice?.customerId || editingInvoice?.customerId || ''
   )
@@ -108,11 +114,15 @@ export const InvoicesPage: React.FC = () => {
   }
 
   const handleDownloadPdf = async () => {
-    if (!selectedInvoice || !activeCustomer || !companyProfile) return
+    if (!selectedInvoice) return
     try {
-      await downloadInvoicePDFDirect(selectedInvoice, activeCustomer, companyProfile)
+      await downloadInvoicePDFDirect(
+        selectedInvoice,
+        activeCustomer,
+        companyProfile
+      )
     } catch {
-      window.print()
+      // The PDF hook exposes the error below; keep the invoice open for retry.
     }
   }
 
@@ -133,12 +143,22 @@ export const InvoicesPage: React.FC = () => {
                 <ArrowLeft className="h-4 w-4" />
                 Back to Invoices
               </Button>
-              <InvoiceBuilder
-                invoice={editingInvoice}
-                initialCustomer={editingInvoice ? activeCustomer : null}
-                onSave={handleInvoiceSave}
-                onAddCustomer={() => navigate('/customers')}
-              />
+              {editingInvoice?.isQuickInvoice ? (
+                <QuickInvoiceBuilder
+                  key={editingInvoice.id}
+                  invoice={editingInvoice}
+                  onSave={handleInvoiceSave}
+                />
+              ) : (
+                <CompanySetupGuard>
+                  <InvoiceBuilder
+                    invoice={editingInvoice}
+                    initialCustomer={editingInvoice ? activeCustomer : null}
+                    onSave={handleInvoiceSave}
+                    onAddCustomer={() => navigate('/customers')}
+                  />
+                </CompanySetupGuard>
+              )}
             </div>
           ) : (
             <InvoiceList
@@ -165,6 +185,11 @@ export const InvoicesPage: React.FC = () => {
                   customer={activeCustomer}
                 />
               </div>
+              {pdfError && (
+                <p role="alert" className="mt-4 text-sm text-red-600">
+                  {pdfError}
+                </p>
+              )}
               <ModalFooter className="no-print mt-6 flex-wrap gap-3 justify-between sm:justify-end">
                 <Button
                   type="button"
@@ -178,7 +203,11 @@ export const InvoicesPage: React.FC = () => {
                 <Button
                   type="button"
                   onClick={handleDownloadPdf}
-                  disabled={isGenerating || !activeCustomer || !companyProfile}
+                  disabled={
+                    isGenerating ||
+                    (!selectedInvoice.isQuickInvoice &&
+                      (!activeCustomer || !companyProfile))
+                  }
                   className="flex items-center gap-2"
                 >
                   <Download className="h-4 w-4" />

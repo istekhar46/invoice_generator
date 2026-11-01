@@ -17,8 +17,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     const sslRejectUnauthorized: boolean = process.env.PG_SSL_REJECT_UNAUTHORIZED !== 'false';
 
     // If PG_CA_CERT is defined, parse it correctly (handle both escaped and unescaped newlines)
-    const caCert: string | undefined = process.env.PG_CA_CERT
-      ?.replace(/\\n/g, '\n')
+    const caCert: string | undefined = process.env.PG_CA_CERT?.replace(/\\n/g, '\n')
       ?.replace(/\\"/g, '"')
       ?.trim();
 
@@ -35,14 +34,15 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         .replace(/[?&]sslrootcert=[^&]*/g, '');
 
       // Configure SSL options according to node-postgres documentation
-      const sslConfig: PoolConfig['ssl'] = sslRejectUnauthorized && caCert
-        ? {
-            rejectUnauthorized: true,
-            ca: caCert,
-          }
-        : {
-            rejectUnauthorized: false,
-          };
+      const sslConfig: PoolConfig['ssl'] =
+        sslRejectUnauthorized && caCert
+          ? {
+              rejectUnauthorized: true,
+              ca: caCert,
+            }
+          : {
+              rejectUnauthorized: false,
+            };
 
       poolConfig = {
         connectionString: cleanConnectionString,
@@ -56,7 +56,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     }
 
     const pool: Pool = new Pool(poolConfig);
-    const adapter: PrismaPg = new PrismaPg(pool);
+    const adapter: PrismaPg = new PrismaPg(pool, { disposeExternalPool: true });
 
     super({
       adapter,
@@ -64,7 +64,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     });
 
     if (sslEnabled) {
-      this.logger.debug(`SSL enabled with rejectUnauthorized: ${sslRejectUnauthorized && caCert ? 'true' : 'false'}`);
+      this.logger.debug(
+        `SSL enabled with rejectUnauthorized: ${sslRejectUnauthorized && caCert ? 'true' : 'false'}`,
+      );
     }
   }
 

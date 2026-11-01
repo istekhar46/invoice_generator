@@ -82,7 +82,8 @@ export type InvoiceStatus = 'draft' | 'sent' | 'paid'
 /**
  * Invoice entity representing a billing document
  */
-export interface Invoice {
+export interface Invoice extends InvoiceOptions {
+  customer?: Customer | null
   id: string
   userId: string
   customerId: string | null
@@ -100,21 +101,35 @@ export interface Invoice {
   updatedAt: Date
   // Quick invoice fields
   isQuickInvoice?: boolean
-  quickCompanyName?: string
-  quickCompanyAddress?: string
-  quickCompanyCity?: string
-  quickCompanyState?: string
-  quickCompanyZipCode?: string
-  quickCompanyPhone?: string
-  quickCompanyEmail?: string
-  quickCompanyTaxNumber?: string
-  quickCustomerName?: string
-  quickCustomerEmail?: string
-  quickCustomerPhone?: string
-  quickCustomerAddress?: string
-  quickCustomerCity?: string
-  quickCustomerState?: string
-  quickCustomerZipCode?: string
+  quickCompanyName?: string | null
+  quickCompanyAddress?: string | null
+  quickCompanyCity?: string | null
+  quickCompanyState?: string | null
+  quickCompanyZipCode?: string | null
+  quickCompanyPhone?: string | null
+  quickCompanyEmail?: string | null
+  quickCompanyTaxNumber?: string | null
+  quickCustomerName?: string | null
+  quickCustomerEmail?: string | null
+  quickCustomerPhone?: string | null
+  quickCustomerAddress?: string | null
+  quickCustomerCity?: string | null
+  quickCustomerState?: string | null
+  quickCustomerZipCode?: string | null
+}
+
+/** Optional on existing invoices; API defaults are USD with no adjustments. */
+export interface InvoiceOptions {
+  currency?: string
+  discountType?: 'percentage' | 'fixed'
+  discountValue?: number
+  shippingAmount?: number
+  amountPaid?: number
+  paymentTerms?: string
+  terms?: string
+  purchaseOrderNumber?: string
+  shippingAddress?: string
+  logoDataUrl?: string
 }
 
 /**

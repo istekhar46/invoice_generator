@@ -1,100 +1,52 @@
-/**
- * Quick Invoice Builder Component
- * Allows users to create invoices without saving company or customer details
- */
-
-import React, { useState, useEffect, useRef } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import React, { useEffect, useRef, useState } from 'react'
+import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form'
+import type { FieldPath } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import type { Invoice, LineItem } from '../../../types/entities'
+import {
+  Check,
+  Download,
+  ImagePlus,
+  Plus,
+  Save,
+  ShieldCheck,
+  Trash2,
+  X,
+} from 'lucide-react'
+import { quickInvoiceSchema } from '../../../types/forms'
 import type { QuickInvoiceFormData } from '../../../types/forms'
 import type { GuestInvoiceData } from '../../../types/guest'
-import type { CreateQuickInvoiceDto } from '../../../services/api'
-import { quickInvoiceSchema } from '../../../types/forms'
-import { useCreateQuickInvoice } from '../../../hooks/useInvoices'
-import { Button } from '../../ui/Button'
-import { Input } from '../../ui/Input'
-import { Card, CardHeader, CardTitle, CardContent } from '../../ui/Card'
-import { ErrorAlert } from '../../ui/ErrorAlert'
-import { FormSection, FormGrid, FormActions } from '../../ui/FormField'
-import { LoadingOverlay } from '../../ui/LoadingSpinner'
-import { LineItemsTable } from './LineItemsTable'
-import { InvoicePreview } from './InvoicePreview'
+import type { Invoice } from '../../../types/entities'
 import {
-  User,
-  Calendar,
-  Calculator,
-  Eye,
-  Save,
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Building2,
-  Download,
-  UserPlus,
-  Trash2,
-} from 'lucide-react'
-import { formatCurrency } from '../../../utils/formatters'
+  useCreateQuickInvoice,
+  useUpdateInvoice,
+} from '../../../hooks/useInvoices'
+import {
+  calculateInvoiceForEdit,
+  invoicePricingChanged,
+  currencyDigits,
+  money,
+  SUPPORTED_CURRENCIES,
+} from '../../../services/invoiceCalculation.service'
+import {
+  clearLocalStorage,
+  saveToLocalStorage,
+} from '../../../utils/guestInvoiceStorage'
 import { generateAndDownloadPDF } from '../../../utils/guestPDFGeneration'
-import { clearLocalStorage, saveToLocalStorage } from '../../../utils/guestInvoiceStorage'
-
-type BuilderStep = 'company' | 'customer' | 'details' | 'items' | 'review'
-
-const createQuickInvoiceDefaultValues = (): QuickInvoiceFormData => ({
-  customerId: '',
-  quickCompanyName: '',
-  quickCompanyAddress: '',
-  quickCompanyCity: '',
-  quickCompanyState: '',
-  quickCompanyZipCode: '',
-  quickCompanyPhone: '',
-  quickCompanyEmail: '',
-  quickCompanyTaxNumber: '',
-  quickCustomerName: '',
-  quickCustomerEmail: '',
-  quickCustomerPhone: '',
-  quickCustomerAddress: '',
-  quickCustomerCity: '',
-  quickCustomerState: '',
-  quickCustomerZipCode: '',
-  serviceDate: new Date(),
-  dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-  lineItems: [],
-  notes: '',
-  taxRate: 0.08,
-})
-
-const stepConfig = {
-  company: {
-    title: 'Company Details',
-    icon: Building2,
-    description: 'Enter your company information (optional)',
-  },
-  customer: {
-    title: 'Customer Details',
-    icon: User,
-    description: 'Enter customer information',
-  },
-  details: {
-    title: 'Invoice Details',
-    icon: Calendar,
-    description: 'Set service date, due date, and tax rate',
-  },
-  items: {
-    title: 'Line Items',
-    icon: Calculator,
-    description: 'Add material charges with units',
-  },
-  review: {
-    title: 'Review & Save',
-    icon: Eye,
-    description: 'Review the invoice and save',
-  },
-}
+import {
+  guestDocument,
+  invoiceOptions,
+  toGuestInvoiceData,
+} from '../../../utils/invoiceDocument'
+import { downloadInvoicePDF } from '../../../services/pdf/pdfGenerator.service'
+import {
+  transformInvoiceResponse,
+  transformLineItemToDto,
+} from '../../../utils/apiTransformers'
+import { formatCurrency, formatDateForInput } from '../../../utils/formatters'
 
 interface QuickInvoiceBuilderProps {
   invoice?: Invoice | null
-  onSave?: (invoice: Invoice, company: any, customer: any) => void
+  onSave?: (invoice: Invoice) => void
   initialGuestData?: GuestInvoiceData | null
   mode?: 'authenticated' | 'guest'
   autoSaveImportedDraft?: boolean
@@ -102,1100 +54,847 @@ interface QuickInvoiceBuilderProps {
   className?: string
 }
 
-const toGuestInvoiceData = (
-  data: Partial<QuickInvoiceFormData>,
-  lineItems: LineItem[],
-  createdAt: Date,
-  draftId: string,
-): GuestInvoiceData => {
-  const company = {
-    businessName: data.quickCompanyName || '',
-    address: data.quickCompanyAddress || '',
-    city: data.quickCompanyCity || '',
-    state: data.quickCompanyState || '',
-    zipCode: data.quickCompanyZipCode || '',
-    phone: data.quickCompanyPhone || '',
-    email: data.quickCompanyEmail || '',
-    taxNumber: data.quickCompanyTaxNumber || '',
-  }
+const newItem = () => ({
+  id: crypto.randomUUID(),
+  type: 'material' as const,
+  description: '',
+  unit: 'each',
+  quantity: 1,
+  rate: 0,
+  amount: 0,
+})
+const currencyNames = new Intl.DisplayNames(['en'], { type: 'currency' })
 
+function initialValues(
+  invoice?: Invoice | null,
+  draft?: GuestInvoiceData | null
+): QuickInvoiceFormData {
+  const today = new Date()
+  const due = new Date(today)
+  due.setDate(due.getDate() + 30)
   return {
-    draftId,
-    company: Object.values(company).some(Boolean) ? company : null,
-    customer: {
-      name: data.quickCustomerName || '',
-      email: data.quickCustomerEmail || '',
-      phone: data.quickCustomerPhone || '',
-      address: data.quickCustomerAddress || '',
-      city: data.quickCustomerCity || '',
-      state: data.quickCustomerState || '',
-      zipCode: data.quickCustomerZipCode || '',
-    },
-    invoiceDetails: {
-      serviceDate: data.serviceDate || new Date(),
-      dueDate: data.dueDate || new Date(),
-      taxRate: data.taxRate || 0,
-    },
-    lineItems: lineItems.map(({ id, type, description, unit, quantity, rate, amount }) => ({
-      id,
-      type,
-      description,
-      unit,
-      quantity,
-      rate,
-      amount,
-    })),
-    notes: data.notes || '',
-    createdAt,
-    lastModified: new Date(),
+    ...invoiceOptions(invoice || draft?.invoiceDetails || {}),
+    invoiceNumber:
+      invoice?.invoiceNumber || draft?.invoiceDetails.invoiceNumber || '',
+    customerId: invoice?.customerId || '',
+    quickCompanyName:
+      invoice?.quickCompanyName || draft?.company?.businessName || '',
+    quickCompanyAddress:
+      invoice?.quickCompanyAddress || draft?.company?.address || '',
+    quickCompanyCity: invoice?.quickCompanyCity || draft?.company?.city || '',
+    quickCompanyState:
+      invoice?.quickCompanyState || draft?.company?.state || '',
+    quickCompanyZipCode:
+      invoice?.quickCompanyZipCode || draft?.company?.zipCode || '',
+    quickCompanyPhone:
+      invoice?.quickCompanyPhone || draft?.company?.phone || '',
+    quickCompanyEmail:
+      invoice?.quickCompanyEmail || draft?.company?.email || '',
+    quickCompanyTaxNumber:
+      invoice?.quickCompanyTaxNumber || draft?.company?.taxNumber || '',
+    quickCustomerName:
+      invoice?.quickCustomerName ||
+      invoice?.customer?.name ||
+      draft?.customer.name ||
+      '',
+    quickCustomerAddress:
+      invoice?.quickCustomerAddress ||
+      invoice?.customer?.address ||
+      draft?.customer.address ||
+      '',
+    quickCustomerCity:
+      invoice?.quickCustomerCity ||
+      invoice?.customer?.city ||
+      draft?.customer.city ||
+      '',
+    quickCustomerState:
+      invoice?.quickCustomerState ||
+      invoice?.customer?.state ||
+      draft?.customer.state ||
+      '',
+    quickCustomerZipCode:
+      invoice?.quickCustomerZipCode ||
+      invoice?.customer?.zipCode ||
+      draft?.customer.zipCode ||
+      '',
+    quickCustomerPhone:
+      invoice?.quickCustomerPhone ||
+      invoice?.customer?.phone ||
+      draft?.customer.phone ||
+      '',
+    quickCustomerEmail:
+      invoice?.quickCustomerEmail ||
+      invoice?.customer?.email ||
+      draft?.customer.email ||
+      '',
+    serviceDate:
+      invoice?.serviceDate || draft?.invoiceDetails.serviceDate || today,
+    dueDate: invoice?.dueDate || draft?.invoiceDetails.dueDate || due,
+    taxRate: invoice?.taxRate ?? draft?.invoiceDetails.taxRate ?? 0,
+    notes: invoice?.notes || draft?.notes || '',
+    lineItems: invoice?.lineItems || draft?.lineItems || [newItem()],
   }
 }
 
 export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
+  invoice,
+  initialGuestData,
   onSave,
-  initialGuestData = null,
   mode = 'authenticated',
   autoSaveImportedDraft = false,
   onSignUp,
-  className,
+  className = '',
 }) => {
-  const [currentStep, setCurrentStep] = useState<BuilderStep>('company')
-  const [lineItems, setLineItems] = useState<LineItem[]>([])
-  const [submitError, setSubmitError] = useState<string | null>(null)
-  const [submitSuccess, setSubmitSuccess] = useState(false)
-  const [hasImportedGuestData, setHasImportedGuestData] = useState(false)
-  const [isGeneratingGuestPDF, setIsGeneratingGuestPDF] = useState(false)
-  const [draftCleared, setDraftCleared] = useState(false)
-  const [guestDraftCreatedAt, setGuestDraftCreatedAt] = useState(
+  const isGuest = mode === 'guest'
+  const [savedInvoice, setSavedInvoice] = useState(invoice ?? undefined)
+  const savedId = savedInvoice?.id
+  const [draftId, setDraftId] = useState(
+    () => initialGuestData?.draftId || crypto.randomUUID()
+  )
+  const [createdAt, setCreatedAt] = useState(
     () => initialGuestData?.createdAt || new Date()
   )
-  const [clientRequestId, setClientRequestId] = useState(() =>
-    initialGuestData?.draftId ||
-    (initialGuestData
-      ? `guest-${new Date(initialGuestData.createdAt).toISOString()}`
-      : crypto.randomUUID())
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [draftStatus, setDraftStatus] = useState(
+    initialGuestData
+      ? 'Draft restored in this browser'
+      : 'Drafts stay in this browser'
   )
-  const [taxRateInput, setTaxRateInput] = useState(() =>
-    ((initialGuestData?.invoiceDetails.taxRate ?? 0.08) * 100).toString()
-  )
-
-  const isGuest = mode === 'guest'
+  const [downloading, setDownloading] = useState(false)
   const autoSaveAttempted = useRef(false)
-  const submitImportedDraft = useRef<() => Promise<void>>(async () => undefined)
-
-  const createQuickInvoice = useCreateQuickInvoice()
-
-  const loading = isGuest ? isGeneratingGuestPDF : createQuickInvoice.isPending
-  const error = isGuest ? null : createQuickInvoice.error
-
-  // Form setup with React Hook Form and Zod validation
+  const createInvoice = useCreateQuickInvoice()
+  const updateInvoice = useUpdateInvoice()
+  const [defaultValues] = useState(() =>
+    initialValues(invoice, initialGuestData)
+  )
   const {
+    register,
     control,
     handleSubmit,
-    watch,
-    setValue,
     reset,
-    formState: { errors },
+    getValues,
+    setValue,
+    formState: { errors, isDirty },
   } = useForm<QuickInvoiceFormData>({
     resolver: zodResolver(quickInvoiceSchema),
-    defaultValues: createQuickInvoiceDefaultValues(),
-    mode: 'onChange',
+    defaultValues,
+    mode: 'onBlur',
   })
-
-  const watchedValues = watch()
-
-  // Update form when line items change
-  useEffect(() => {
-    setValue('lineItems', lineItems as any, {
-      shouldValidate: true,
-      shouldDirty: true,
-      shouldTouch: true,
-    })
-  }, [lineItems, setValue])
-
-  // If arriving from guest flow after signup, hydrate quick invoice with the same data
-  useEffect(() => {
-    if (!initialGuestData || hasImportedGuestData) {
-      return
-    }
-
-    const mappedLineItems: LineItem[] = initialGuestData.lineItems.map((item) => ({
-      id: item.id,
-      invoiceId: '',
-      type: 'material',
-      description: item.description,
-      unit: item.unit,
-      quantity: item.quantity,
-      rate: item.rate,
-      amount: item.amount,
-    }))
-
-    setLineItems(mappedLineItems)
-
-    setValue('quickCompanyName', initialGuestData.company?.businessName || '')
-    setValue('quickCompanyAddress', initialGuestData.company?.address || '')
-    setValue('quickCompanyCity', initialGuestData.company?.city || '')
-    setValue('quickCompanyState', initialGuestData.company?.state || '')
-    setValue('quickCompanyZipCode', initialGuestData.company?.zipCode || '')
-    setValue('quickCompanyPhone', initialGuestData.company?.phone || '')
-    setValue('quickCompanyEmail', initialGuestData.company?.email || '')
-    setValue('quickCompanyTaxNumber', initialGuestData.company?.taxNumber || '')
-
-    setValue('quickCustomerName', initialGuestData.customer.name || '')
-    setValue('quickCustomerEmail', initialGuestData.customer.email || '')
-    setValue('quickCustomerPhone', initialGuestData.customer.phone || '')
-    setValue('quickCustomerAddress', initialGuestData.customer.address || '')
-    setValue('quickCustomerCity', initialGuestData.customer.city || '')
-    setValue('quickCustomerState', initialGuestData.customer.state || '')
-    setValue('quickCustomerZipCode', initialGuestData.customer.zipCode || '')
-
-    setValue('serviceDate', new Date(initialGuestData.invoiceDetails.serviceDate))
-    setValue('dueDate', new Date(initialGuestData.invoiceDetails.dueDate))
-    setValue('taxRate', initialGuestData.invoiceDetails.taxRate)
-    setTaxRateInput((initialGuestData.invoiceDetails.taxRate * 100).toString())
-    setValue('notes', initialGuestData.notes || '')
-
-    if (!initialGuestData.customer.name) {
-      setCurrentStep('customer')
-    } else if (initialGuestData.lineItems.length === 0) {
-      setCurrentStep('items')
-    } else {
-      setCurrentStep('review')
-    }
-
-    setHasImportedGuestData(true)
-  }, [initialGuestData, hasImportedGuestData, setValue])
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'lineItems',
+  })
+  const values = useWatch({ control }) as QuickInvoiceFormData
+  const busy = downloading || createInvoice.isPending || updateInvoice.isPending
+  const currency = values.currency || 'USD'
+  const step = 10 ** -currencyDigits(currency)
+  let calculationError = ''
+  let totals: ReturnType<typeof calculateInvoiceForEdit> | undefined
+  try {
+    totals = calculateInvoiceForEdit(
+      values.lineItems || [],
+      values.taxRate,
+      values,
+      savedInvoice
+    )
+  } catch (err) {
+    calculationError =
+      err instanceof Error ? err.message : 'Check invoice amounts.'
+  }
+  const display = (value?: number) =>
+    value === undefined ? '—' : formatCurrency(value, currency)
 
   useEffect(() => {
-    if (!isGuest || (initialGuestData && !hasImportedGuestData)) return
-    if (draftCleared) return
-
-    const timeout = window.setTimeout(() => {
+    if (!isGuest || !isDirty) return
+    const timer = window.setTimeout(() => {
       try {
-        saveToLocalStorage(
-          toGuestInvoiceData(
-            watchedValues,
-            lineItems,
-            guestDraftCreatedAt,
-            clientRequestId,
-          )
+        saveToLocalStorage(toGuestInvoiceData(getValues(), draftId, createdAt))
+        setDraftStatus('Draft saved in this browser')
+      } catch (err) {
+        setDraftStatus(
+          `Draft not saved: ${err instanceof Error ? err.message : 'Browser storage is unavailable.'}`
         )
-      } catch (saveError) {
-        console.error('Failed to save guest invoice draft:', saveError)
       }
     }, 500)
+    return () => window.clearTimeout(timer)
+  }, [isGuest, isDirty, values, draftId, createdAt, getValues])
 
-    return () => window.clearTimeout(timeout)
-  }, [
-    guestDraftCreatedAt,
-    clientRequestId,
-    draftCleared,
-    hasImportedGuestData,
-    initialGuestData,
-    isGuest,
-    lineItems,
-    watchedValues,
-  ])
-
-  // Calculate totals for real-time display
-  const calculateTotals = () => {
-    const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0)
-    const taxAmount = subtotal * (watchedValues.taxRate || 0)
-    const total = subtotal + taxAmount
-
-    return {
-      subtotal: Math.round(subtotal * 100) / 100,
-      taxAmount: Math.round(taxAmount * 100) / 100,
-      total: Math.round(total * 100) / 100,
-    }
-  }
-
-  const totals = calculateTotals()
-
-  const validateCustomerStep = (): boolean => {
-    // Either customerId OR quick customer name must be provided
-    return !!watchedValues.customerId || !!watchedValues.quickCustomerName
-  }
-
-  const validateDetailsStep = (): boolean => {
-    // Check all required fields exist
-    if (!watchedValues.serviceDate || !watchedValues.dueDate) {
-      return false
-    }
-
-    // Check for form errors
-    if (errors.serviceDate || errors.dueDate || errors.taxRate) {
-      return false
-    }
-
-    // Check tax rate is valid
-    if (watchedValues.taxRate === undefined || watchedValues.taxRate === null) {
-      return false
-    }
-
-    // Validate date logic: due date must be >= service date
-    if (watchedValues.dueDate < watchedValues.serviceDate) {
-      return false
-    }
-
-    return true
-  }
-
-  const validateItemsStep = (): boolean => {
-    // Must have at least one line item
-    if (lineItems.length === 0) {
-      return false
-    }
-
-    // Validate each line item
-    const allItemsValid = lineItems.every((item) => {
-      if (!item.description || !item.description.trim()) {
-        return false
-      }
-      if (typeof item.quantity !== 'number' || item.quantity <= 0) {
-        return false
-      }
-      if (typeof item.rate !== 'number' || item.rate < 0) {
-        return false
-      }
-      if (item.type !== 'material') {
-        return false
-      }
-      if (!item.unit || !item.unit.trim()) {
-        return false
-      }
-      if (typeof item.amount !== 'number' || item.amount < 0) {
-        return false
-      }
-      return true
-    })
-
-    return allItemsValid
-  }
-
-  const validateReviewStep = (): boolean => {
-    return validateCustomerStep() && validateDetailsStep() && validateItemsStep()
-  }
-
-  const canProceedToNext = (): boolean => {
-    switch (currentStep) {
-      case 'company':
-        return true // Optional step
-      case 'customer':
-        return validateCustomerStep()
-      case 'details':
-        return validateDetailsStep()
-      case 'items':
-        return validateItemsStep()
-      case 'review':
-        return validateReviewStep()
-      default:
-        return false
-    }
-  }
-
-  const handleNextStep = () => {
-    const steps: BuilderStep[] = ['company', 'customer', 'details', 'items', 'review']
-    const currentIndex = steps.indexOf(currentStep)
-    if (currentIndex < steps.length - 1) {
-      setCurrentStep(steps[currentIndex + 1])
-    }
-  }
-
-  const handlePrevStep = () => {
-    const steps: BuilderStep[] = ['company', 'customer', 'details', 'items', 'review']
-    const currentIndex = steps.indexOf(currentStep)
-    if (currentIndex > 0) {
-      setCurrentStep(steps[currentIndex - 1])
-    }
-  }
-
-  const onSubmit = async (data: QuickInvoiceFormData): Promise<void> => {
+  const save = async (data: QuickInvoiceFormData) => {
+    setError('')
+    setMessage('')
     try {
-      setSubmitError(null)
-      setSubmitSuccess(false)
-
-      // Final validation
-      if (!validateReviewStep()) {
-        setSubmitError('Please complete all required fields before saving.')
-        return
-      }
-
-      // Build the payload
-      const payload: CreateQuickInvoiceDto = {
-        isQuickInvoice: true,
-        clientRequestId,
+      calculateInvoiceForEdit(data.lineItems, data.taxRate, data, savedInvoice)
+      const payload = {
+        ...data,
         customerId: data.customerId || undefined,
-        quickCompanyName: data.quickCompanyName || undefined,
-        quickCompanyAddress: data.quickCompanyAddress || undefined,
-        quickCompanyCity: data.quickCompanyCity || undefined,
-        quickCompanyState: data.quickCompanyState || undefined,
-        quickCompanyZipCode: data.quickCompanyZipCode || undefined,
-        quickCompanyPhone: data.quickCompanyPhone || undefined,
-        quickCompanyEmail: data.quickCompanyEmail || undefined,
-        quickCompanyTaxNumber: data.quickCompanyTaxNumber || undefined,
-        quickCustomerName: data.quickCustomerName || undefined,
-        quickCustomerEmail: data.quickCustomerEmail || undefined,
-        quickCustomerPhone: data.quickCustomerPhone || undefined,
-        quickCustomerAddress: data.quickCustomerAddress || undefined,
-        quickCustomerCity: data.quickCustomerCity || undefined,
-        quickCustomerState: data.quickCustomerState || undefined,
-        quickCustomerZipCode: data.quickCustomerZipCode || undefined,
-        serviceDate: data.serviceDate,
-        dueDate: data.dueDate,
-        lineItems: lineItems.map((item) => ({
-          type: 'MATERIAL' as const,
-          description: item.description,
-          unit: item.unit,
-          quantity: item.quantity,
-          rate: item.rate,
-        })),
-        notes: data.notes || undefined,
-        taxRate: data.taxRate,
+        lineItems: data.lineItems.map(transformLineItemToDto),
       }
-
-      const newInvoice = await createQuickInvoice.mutateAsync(payload)
-      setSubmitSuccess(true)
-
+      const result = savedId
+        ? await updateInvoice.mutateAsync({ id: savedId, data: payload })
+        : await createInvoice.mutateAsync({
+            ...payload,
+            isQuickInvoice: true,
+            clientRequestId: draftId,
+          })
+      const saved = transformInvoiceResponse(result)
+      setSavedInvoice(saved)
+      setValue('invoiceNumber', saved.invoiceNumber)
+      setMessage(`Invoice ${saved.invoiceNumber} saved.`)
       if (initialGuestData) {
         try {
           clearLocalStorage()
-        } catch (clearError) {
-          console.error('Failed to clear imported guest invoice draft:', clearError)
+        } catch {
+          setError('Invoice saved, but the browser draft could not be cleared.')
         }
       }
-
-      // Build company and customer objects for preview
-      const company = data.quickCompanyName
-        ? {
-            id: '',
-            userId: '',
-            businessName: data.quickCompanyName,
-            address: data.quickCompanyAddress || '',
-            city: data.quickCompanyCity || '',
-            state: data.quickCompanyState || '',
-            zipCode: data.quickCompanyZipCode || '',
-            phone: data.quickCompanyPhone || '',
-            email: data.quickCompanyEmail || '',
-            taxNumber: data.quickCompanyTaxNumber || '',
-            defaultLaborRate: 0,
-            defaultTaxRate: data.taxRate,
-            logoUrl: undefined,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          }
-        : null
-
-      const customer = data.quickCustomerName
-        ? {
-            id: '',
-            userId: '',
-            name: data.quickCustomerName,
-            email: data.quickCustomerEmail || '',
-            phone: data.quickCustomerPhone || '',
-            address: data.quickCustomerAddress || '',
-            city: data.quickCustomerCity || '',
-            state: data.quickCustomerState || '',
-            zipCode: data.quickCustomerZipCode || '',
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          }
-        : null
-
-      // Wait briefly to show success message, then call onSave
-      setTimeout(() => {
-        onSave?.(
-          {
-            id: newInvoice.id,
-            userId: '', // Will be set by the caller if needed
-            customerId: newInvoice.customer?.id ?? null,
-            invoiceNumber: newInvoice.invoiceNumber,
-            serviceDate: new Date(newInvoice.serviceDate),
-            dueDate: new Date(newInvoice.dueDate),
-            lineItems: newInvoice.lineItems.map(item => ({
-              id: item.id,
-              invoiceId: newInvoice.id,
-              type: 'material',
-              description: item.description,
-              unit: item.unit,
-              quantity: item.quantity,
-              rate: item.rate,
-              amount: item.amount,
-            })),
-            subtotal: newInvoice.subtotal,
-            taxRate: newInvoice.taxRate,
-            taxAmount: newInvoice.taxAmount,
-            total: newInvoice.total,
-            notes: newInvoice.notes,
-            status: newInvoice.status.toLowerCase() as 'draft' | 'sent' | 'paid',
-            createdAt: new Date(newInvoice.createdAt),
-            updatedAt: new Date(newInvoice.updatedAt),
-          } as Invoice,
-          company,
-          customer,
-        )
-      }, 1500)
-    } catch (err: any) {
-      console.error('Failed to save quick invoice:', err)
-      setSubmitError(err?.message || 'An unexpected error occurred. Please try again.')
+      onSave?.(saved)
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Invoice could not be saved. Please try again.'
+      )
     }
   }
-
-  submitImportedDraft.current = handleSubmit(onSubmit)
-
-  const canAutoSaveImportedDraft =
-    autoSaveImportedDraft &&
-    !isGuest &&
-    hasImportedGuestData &&
-    watchedValues.lineItems?.length === lineItems.length &&
-    validateReviewStep()
-
+  const importSubmit = useRef<() => Promise<void>>(async () => undefined)
+  importSubmit.current = handleSubmit(save)
   useEffect(() => {
-    if (!canAutoSaveImportedDraft || autoSaveAttempted.current) return
-
-    autoSaveAttempted.current = true
-    void submitImportedDraft.current()
-  }, [canAutoSaveImportedDraft])
-
-  const downloadGuestInvoice = async (data: QuickInvoiceFormData) => {
-    if (!validateReviewStep()) {
-      setSubmitError('Please complete all required fields before downloading.')
+    if (
+      isGuest ||
+      !autoSaveImportedDraft ||
+      !initialGuestData ||
+      autoSaveAttempted.current
+    )
       return
-    }
+    autoSaveAttempted.current = true
+    void importSubmit.current()
+  }, [isGuest, autoSaveImportedDraft, initialGuestData])
 
-    setSubmitError(null)
-    setIsGeneratingGuestPDF(true)
+  const download = async (data: QuickInvoiceFormData) => {
+    setError('')
+    setDownloading(true)
     try {
+      calculateInvoiceForEdit(data.lineItems, data.taxRate, data, savedInvoice)
+      const invoiceNumber =
+        data.invoiceNumber?.trim() || `INV-${crypto.randomUUID()}`
+      setValue('invoiceNumber', invoiceNumber, { shouldDirty: true })
       const guestData = toGuestInvoiceData(
-        data,
-        lineItems,
-        guestDraftCreatedAt,
-        clientRequestId,
+        { ...data, invoiceNumber },
+        draftId,
+        createdAt
       )
-      saveToLocalStorage(guestData)
-      await generateAndDownloadPDF(guestData)
-    } catch (downloadError) {
-      setSubmitError(
-        downloadError instanceof Error
-          ? downloadError.message
-          : 'Failed to download PDF. Please try again.'
+      if (isGuest) {
+        try {
+          saveToLocalStorage(guestData)
+        } catch {
+          setError(
+            'The PDF can be downloaded, but this browser could not save your draft.'
+          )
+        }
+      }
+      if (savedInvoice) {
+        await downloadInvoicePDF(
+          guestDocument(guestData, invoiceNumber, savedInvoice),
+          null,
+          null
+        )
+      } else {
+        await generateAndDownloadPDF(guestData, invoiceNumber)
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'PDF could not be downloaded. Please try again.'
       )
     } finally {
-      setIsGeneratingGuestPDF(false)
+      setDownloading(false)
     }
   }
-
-  const handleGuestSignUp = () => {
-    saveToLocalStorage(
-      toGuestInvoiceData(
-        watchedValues,
-        lineItems,
-        guestDraftCreatedAt,
-        clientRequestId,
-      )
-    )
-    onSignUp?.()
-  }
-
-  const handleClearGuestDraft = () => {
+  const startNew = () => {
     try {
-      clearLocalStorage()
-    } catch (clearError) {
-      setSubmitError(
-        clearError instanceof Error
-          ? clearError.message
-          : 'Failed to clear the saved draft. Please try again.'
+      if (isGuest) clearLocalStorage()
+      reset(initialValues())
+      setSavedInvoice(undefined)
+      setDraftId(crypto.randomUUID())
+      setCreatedAt(new Date())
+      setMessage('')
+      setError('')
+      setDraftStatus('Draft cleared')
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Draft could not be cleared.'
       )
+    }
+  }
+  const signUp = () => {
+    try {
+      saveToLocalStorage(toGuestInvoiceData(getValues(), draftId, createdAt))
+      onSignUp?.()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Draft could not be saved.')
+    }
+  }
+  const uploadLogo = async (file?: File) => {
+    if (!file) return
+    setError('')
+    if (
+      !['image/png', 'image/jpeg'].includes(file.type) ||
+      file.size > 256 * 1024
+    ) {
+      setError('Choose a PNG or JPEG logo smaller than 256 KB.')
       return
     }
-
-    const defaultValues = createQuickInvoiceDefaultValues()
-    reset(defaultValues)
-    setLineItems([])
-    setTaxRateInput((defaultValues.taxRate * 100).toString())
-    setCurrentStep('company')
-    setSubmitError(null)
-    setSubmitSuccess(false)
-    setHasImportedGuestData(true)
-    setGuestDraftCreatedAt(new Date())
-    setClientRequestId(crypto.randomUUID())
-    setDraftCleared(true)
-    autoSaveAttempted.current = false
-  }
-
-  const renderStepIndicator = () => {
-    const steps: BuilderStep[] = ['company', 'customer', 'details', 'items', 'review']
-
-    return (
-      <div className="grid grid-cols-5 mb-8">
-        {steps.map((step, index) => {
-          const isActive = step === currentStep
-          const isCompleted = steps.indexOf(currentStep) > index
-          const config = stepConfig[step]
-          const Icon = config.icon
-
-          return (
-            <div key={step} className="relative flex flex-col items-center px-1 text-center">
-              {index < steps.length - 1 && (
-                <div
-                  className={`absolute left-1/2 top-5 h-0.5 w-full transition-colors ${isCompleted ? 'bg-green-600' : 'bg-gray-300'}`}
-                />
-              )}
-              <div
-                className={`
-                relative z-10 flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors
-                ${isActive ? 'border-blue-600 bg-blue-600 text-white' : isCompleted ? 'border-green-600 bg-green-600 text-white' : 'border-gray-300 bg-white text-gray-400'}
-              `}
-              >
-                {isCompleted ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
-              </div>
-
-              <div className="mt-2 min-w-0">
-                <p className={`text-xs font-medium sm:text-sm ${isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'}`}>
-                  {isGuest && step === 'review' ? 'Review & Download' : config.title}
-                </p>
-                <p className="mt-0.5 hidden text-xs text-gray-500 lg:block">{config.description}</p>
-              </div>
-            </div>
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result))
+        reader.onerror = () => reject(new Error('Logo could not be read.'))
+        reader.readAsDataURL(file)
+      })
+      await new Promise<void>((resolve, reject) => {
+        const image = new Image()
+        image.onload = () =>
+          image.width <= 4096 && image.height <= 4096
+            ? resolve()
+            : reject(new Error('Logo must be at most 4096 × 4096 pixels.'))
+        image.onerror = () =>
+          reject(
+            new Error(
+              'This image could not be opened. Choose another PNG or JPEG.'
+            )
           )
-        })}
-      </div>
-    )
-  }
-
-  const renderCompanyStep = () => (
-    <Card padding="none">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Building2 className="h-5 w-5" />
-          <span>Company Details (Optional)</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <FormSection
-          title="Your Company Information"
-          description="Enter your company details for the invoice (optional - you can skip this step)"
-          variant="bordered"
-        >
-          <FormGrid columns={2} gap="md">
-            <Controller
-              name="quickCompanyName"
-              control={control}
-              render={({ field }) => <Input label="Business Name" placeholder="Acme Electric Co." {...field} />}
-            />
-            <Controller
-              name="quickCompanyEmail"
-              control={control}
-              render={({ field }) => <Input label="Email" type="email" placeholder="billing@company.com" {...field} />}
-            />
-          </FormGrid>
-
-          <Controller
-            name="quickCompanyAddress"
-            control={control}
-            render={({ field }) => <Input label="Address" placeholder="123 Main St" {...field} />}
-          />
-
-          <FormGrid columns={3} gap="md">
-            <Controller
-              name="quickCompanyCity"
-              control={control}
-              render={({ field }) => <Input label="City" placeholder="Springfield" {...field} />}
-            />
-            <Controller
-              name="quickCompanyState"
-              control={control}
-              render={({ field }) => (
-                <Input
-                  label="State / Province"
-                  placeholder="e.g. California, Ontario"
-                  error={errors.quickCompanyState?.message}
-                  {...field}
-                />
-              )}
-            />
-            <Controller
-              name="quickCompanyZipCode"
-              control={control}
-              render={({ field }) => (
-                <Input
-                  label="Postal Code"
-                  placeholder="e.g. 10001, SW1A 1AA"
-                  error={errors.quickCompanyZipCode?.message}
-                  {...field}
-                />
-              )}
-            />
-          </FormGrid>
-
-          <FormGrid columns={2} gap="md">
-            <Controller
-              name="quickCompanyPhone"
-              control={control}
-              render={({ field }) => (
-                <Input
-                  label="Phone"
-                  placeholder="+1 555 123 4567"
-                  error={errors.quickCompanyPhone?.message}
-                  {...field}
-                />
-              )}
-            />
-            <Controller
-              name="quickCompanyTaxNumber"
-              control={control}
-              render={({ field }) => <Input label="Tax / VAT Number" placeholder="e.g. EIN, VAT, GSTIN" {...field} />}
-            />
-          </FormGrid>
-        </FormSection>
-      </CardContent>
-    </Card>
-  )
-
-  const renderCustomerStep = () => (
-    <Card padding="none">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <User className="h-5 w-5" />
-          <span>Customer Details</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <FormSection
-          title="Customer Information"
-          description="Enter the customer details for this invoice"
-          variant="bordered"
-        >
-          <Controller
-            name="quickCustomerName"
-            control={control}
-            render={({ field }) => (
-              <Input
-                label="Customer Name *"
-                placeholder="John Smith"
-                error={errors.quickCustomerName?.message}
-                {...field}
-              />
-            )}
-          />
-
-          <FormGrid columns={2} gap="md">
-            <Controller
-              name="quickCustomerEmail"
-              control={control}
-              render={({ field }) => (
-                <Input
-                  label="Email"
-                  type="email"
-                  placeholder="john@example.com"
-                  error={errors.quickCustomerEmail?.message}
-                  {...field}
-                />
-              )}
-            />
-            <Controller
-              name="quickCustomerPhone"
-              control={control}
-              render={({ field }) => (
-                <Input
-                  label="Phone"
-                  placeholder="(555) 987-6543"
-                  error={errors.quickCustomerPhone?.message}
-                  {...field}
-                />
-              )}
-            />
-          </FormGrid>
-
-          <Controller
-            name="quickCustomerAddress"
-            control={control}
-            render={({ field }) => <Input label="Address" placeholder="456 Oak Ave" {...field} />}
-          />
-
-          <FormGrid columns={3} gap="md">
-            <Controller
-              name="quickCustomerCity"
-              control={control}
-              render={({ field }) => <Input label="City" placeholder="Springfield" {...field} />}
-            />
-            <Controller
-              name="quickCustomerState"
-              control={control}
-              render={({ field }) => (
-                <Input
-                  label="State / Province"
-                  placeholder="e.g. California, Ontario"
-                  error={errors.quickCustomerState?.message}
-                  {...field}
-                />
-              )}
-            />
-            <Controller
-              name="quickCustomerZipCode"
-              control={control}
-              render={({ field }) => (
-                <Input
-                  label="Postal Code"
-                  placeholder="e.g. 10001, SW1A 1AA"
-                  error={errors.quickCustomerZipCode?.message}
-                  {...field}
-                />
-              )}
-            />
-          </FormGrid>
-        </FormSection>
-      </CardContent>
-    </Card>
-  )
-
-  const renderDetailsStep = () => (
-    <Card padding="none">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Calendar className="h-5 w-5" />
-          <span>Invoice Details</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-8">
-        <FormSection title="Date Information" description="Set the service date and payment due date" variant="bordered">
-          <FormGrid columns={2} gap="lg">
-            <Controller
-              name="serviceDate"
-              control={control}
-              render={({ field }) => (
-                <Input
-                  label="Service Date *"
-                  type="date"
-                  value={field.value ? field.value.toISOString().split('T')[0] : ''}
-                  onChange={(e) => {
-                    const date = new Date(e.target.value)
-                    field.onChange(date)
-                    if (submitError) setSubmitError(null)
-                  }}
-                  error={errors.serviceDate?.message}
-                />
-              )}
-            />
-
-            <Controller
-              name="dueDate"
-              control={control}
-              render={({ field }) => (
-                <Input
-                  label="Due Date *"
-                  type="date"
-                  value={field.value ? field.value.toISOString().split('T')[0] : ''}
-                  onChange={(e) => {
-                    const date = new Date(e.target.value)
-                    field.onChange(date)
-                    if (submitError) setSubmitError(null)
-                  }}
-                  error={errors.dueDate?.message || (watchedValues.dueDate && watchedValues.serviceDate && watchedValues.dueDate < watchedValues.serviceDate ? 'Due date must be on or after service date' : undefined)}
-                  helpText="Payment due date (typically 30 days after service date)"
-                />
-              )}
-            />
-          </FormGrid>
-        </FormSection>
-
-        <FormSection title="Tax Information" description="Set the tax rate for this invoice" variant="bordered">
-          <FormGrid columns={1} gap="md">
-            <Controller
-              name="taxRate"
-              control={control}
-              render={({ field }) => (
-                <Input
-                  label="Tax Rate (%) *"
-                  type="text"
-                  inputMode="decimal"
-                  value={taxRateInput}
-                  onChange={(e) => {
-                    const value = e.target.value
-                    if (!/^\d*(?:\.\d*)?$/.test(value)) return
-
-                    setTaxRateInput(value)
-                    field.onChange(value && value !== '.' ? Number(value) / 100 : 0)
-                    if (submitError) setSubmitError(null)
-                  }}
-                  onBlur={field.onBlur}
-                  placeholder="8.5"
-                  error={errors.taxRate?.message}
-                  helpText="Enter tax rate as a percentage (e.g., 8.5 for 8.5%)"
-                />
-              )}
-            />
-          </FormGrid>
-        </FormSection>
-
-        <FormSection title="Additional Information" description="Add any notes or special terms" variant="elevated">
-          <Controller
-            name="notes"
-            control={control}
-            render={({ field }) => (
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Notes (Optional)</label>
-                <textarea
-                  {...field}
-                  rows={4}
-                  className="w-full px-4 py-3 rounded-xl text-base border-2 border-gray-200 bg-gray-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white hover:border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed placeholder:text-gray-400 min-h-11 resize-none"
-                  placeholder="Add any additional notes or terms..."
-                  onChange={(e) => {
-                    field.onChange(e)
-                    if (submitError) setSubmitError(null)
-                  }}
-                />
-                <p className="text-sm text-gray-500">Add any additional notes, terms, or special instructions</p>
-              </div>
-            )}
-          />
-        </FormSection>
-      </CardContent>
-    </Card>
-  )
-
-  const renderItemsStep = () => (
-    <div className="space-y-6">
-      <LineItemsTable
-        lineItems={lineItems}
-        onChange={(items) => {
-          if (draftCleared) setDraftCleared(false)
-          setLineItems(items)
-        }}
-        disabled={loading}
-      />
-
-      {/* Real-time totals display */}
-      <Card padding="none">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Calculator className="h-5 w-5" />
-            <span>Invoice Totals</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Subtotal:</span>
-              <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Tax ({((watchedValues.taxRate || 0) * 100).toFixed(1)}%):</span>
-              <span className="font-medium">{formatCurrency(totals.taxAmount)}</span>
-            </div>
-            <div className="border-t border-gray-200 pt-2">
-              <div className="flex justify-between text-lg font-bold">
-                <span>Total:</span>
-                <span>{formatCurrency(totals.total)}</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case 'company':
-        return renderCompanyStep()
-      case 'customer':
-        return renderCustomerStep()
-      case 'details':
-        return renderDetailsStep()
-      case 'items':
-        return renderItemsStep()
-      case 'review': {
-        // Build a partial invoice from current form data for live preview
-        const previewInvoice: Partial<Invoice> = {
-          invoiceNumber: 'PREVIEW',
-          serviceDate: watchedValues.serviceDate,
-          dueDate: watchedValues.dueDate,
-          lineItems: lineItems,
-          subtotal: totals.subtotal,
-          taxRate: watchedValues.taxRate || 0,
-          taxAmount: totals.taxAmount,
-          total: totals.total,
-          notes: watchedValues.notes || undefined,
-          status: 'draft',
-        }
-        const previewCompany = watchedValues.quickCompanyName
-          ? {
-              businessName: watchedValues.quickCompanyName,
-              address: watchedValues.quickCompanyAddress || '',
-              city: watchedValues.quickCompanyCity || '',
-              state: watchedValues.quickCompanyState || '',
-              zipCode: watchedValues.quickCompanyZipCode || '',
-              phone: watchedValues.quickCompanyPhone || '',
-              email: watchedValues.quickCompanyEmail || '',
-              taxNumber: watchedValues.quickCompanyTaxNumber || '',
-            } as any
-          : null
-        const previewCustomer = watchedValues.quickCustomerName
-          ? {
-              name: watchedValues.quickCustomerName,
-              email: watchedValues.quickCustomerEmail || '',
-              phone: watchedValues.quickCustomerPhone || '',
-              address: watchedValues.quickCustomerAddress || '',
-              city: watchedValues.quickCustomerCity || '',
-              state: watchedValues.quickCustomerState || '',
-              zipCode: watchedValues.quickCustomerZipCode || '',
-            } as any
-          : null
-        return (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
-              <Eye className="h-4 w-4 shrink-0" />
-              <span>
-                This is a live preview. Click{' '}
-                <strong>{isGuest ? 'Download PDF' : 'Save Invoice'}</strong> below to{' '}
-                {isGuest ? 'download it' : 'create it'}.
-              </span>
-            </div>
-          <div id="printable-invoice">
-            <InvoicePreview
-              invoice={previewInvoice}
-              company={previewCompany}
-              customer={previewCustomer}
-            />
-          </div>
-        </div>
-        )
-      }
-      default:
-        return null
+        image.src = dataUrl
+      })
+      setValue('logoDataUrl', dataUrl, {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Logo could not be loaded.')
     }
   }
+  const field = (
+    name: FieldPath<QuickInvoiceFormData>,
+    label: string,
+    placeholder = '',
+    multiline = false
+  ) => (
+    <label className="qi-field" key={name}>
+      <span>{label}</span>
+      {multiline ? (
+        <textarea {...register(name)} placeholder={placeholder} rows={3} />
+      ) : (
+        <input {...register(name)} placeholder={placeholder} />
+      )}
+    </label>
+  )
+  const dateField = (name: 'serviceDate' | 'dueDate', label: string) => (
+    <Controller
+      name={name}
+      control={control}
+      render={({ field: input }) => (
+        <label className="qi-field">
+          <span>{label}</span>
+          <input
+            type="date"
+            value={
+              input.value && Number.isFinite(input.value.getTime())
+                ? formatDateForInput(input.value)
+                : ''
+            }
+            onBlur={input.onBlur}
+            ref={input.ref}
+            onChange={event =>
+              input.onChange(new Date(`${event.target.value}T00:00:00`))
+            }
+          />
+        </label>
+      )}
+    />
+  )
+  const numeric = {
+    setValueAs: (value: string) => (value === '' ? 0 : Number(value)),
+  }
+  const validationMessages = Array.from(new Set(flattenErrors(errors)))
 
   return (
-    <div
-      className={className}
-      onChangeCapture={() => {
-        if (isGuest && draftCleared) setDraftCleared(false)
-      }}
-    >
-      {isGuest && (
-        <div className="mb-4 flex justify-end">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleClearGuestDraft}
-            disabled={loading}
-            className="gap-2 text-red-600 hover:bg-red-50"
-          >
-            <Trash2 className="h-4 w-4" />
-            <span>Clear Draft</span>
-          </Button>
+    <div className={`quick-invoice ${className}`}>
+      <div className="mb-7 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-600">
+            Invoiceo · Invoice studio
+          </p>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+            Your work. Ready to invoice.
+          </h2>
+          <p className="mt-2 text-sm text-slate-500">
+            Fill it in, make it yours, and download a professional PDF.
+          </p>
         </div>
-      )}
-
-      {/* Step Indicator */}
-      <div className="mb-8">{renderStepIndicator()}</div>
-
-      {/* Error Display */}
-      {(error || submitError) && (
-        <ErrorAlert
-          type="error"
-          title={submitError ? 'Validation Error' : 'Error'}
-          message={submitError || error || 'An unexpected error occurred'}
-          onDismiss={() => {
-            if (submitError) setSubmitError(null)
-          }}
-          className="mb-6"
-        />
-      )}
-
-      {/* Success Display */}
-      {!isGuest && submitSuccess && (
-        <ErrorAlert
-          type="success"
-          title="Success!"
-          message="Quick invoice created successfully!"
-          className="mb-6"
-        />
-      )}
-
-      {/* Step Content */}
-      <LoadingOverlay loading={loading} message="Creating invoice...">
-        <div className="mb-8">{renderStepContent()}</div>
-
-        {/* Navigation */}
-        <FormActions align="between">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handlePrevStep}
-            disabled={currentStep === 'company' || loading}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Previous</span>
-          </Button>
-
-          {currentStep === 'review' ? (
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              {isGuest ? (
-                <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    loading={isGeneratingGuestPDF}
-                    disabled={!validateReviewStep() || loading}
-                    onClick={handleSubmit(downloadGuestInvoice)}
-                    className="flex items-center space-x-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    <span>Download PDF</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    disabled={!validateReviewStep() || loading}
-                    onClick={handleGuestSignUp}
-                    className="flex items-center space-x-2"
-                  >
-                    <UserPlus className="h-4 w-4" />
-                    <span>Sign Up to Save</span>
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => window.print()}
-                    disabled={loading}
-                    className="flex items-center space-x-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    <span>Download PDF</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    loading={loading}
-                    disabled={!validateReviewStep() || submitSuccess || loading}
-                    onClick={handleSubmit(onSubmit)}
-                    className="flex items-center space-x-2"
-                  >
-                    <Save className="h-4 w-4" />
-                    <span>Save Invoice</span>
-                  </Button>
-                </>
+        <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
+          <ShieldCheck size={14} />{' '}
+          {isGuest ? 'No account needed' : 'Save to your account'}
+        </span>
+      </div>
+      <form
+        noValidate
+        onSubmit={handleSubmit(isGuest ? download : save)}
+        className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_240px]"
+      >
+        <fieldset
+          disabled={busy}
+          className="qi-sheet min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8 lg:p-10"
+        >
+          <legend className="sr-only">Invoice details</legend>
+          <div className="mb-9 flex flex-wrap items-start justify-between gap-6">
+            <div className="relative">
+              <label className="qi-logo flex h-28 w-44 cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm font-medium text-slate-500 hover:border-primary-400">
+                {values.logoDataUrl ? (
+                  <img
+                    className="h-full w-full object-contain p-2"
+                    src={values.logoDataUrl}
+                    alt="Your company logo"
+                  />
+                ) : (
+                  <>
+                    <ImagePlus size={23} />
+                    <span>Add your logo</span>
+                    <small className="text-[10px] font-normal">
+                      PNG or JPEG · up to 256 KB
+                    </small>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  aria-label="Upload company logo"
+                  className="sr-only"
+                  onChange={event => {
+                    void uploadLogo(event.target.files?.[0])
+                    event.target.value = ''
+                  }}
+                />
+              </label>
+              {values.logoDataUrl && (
+                <button
+                  type="button"
+                  aria-label="Remove logo"
+                  className="absolute -right-2 -top-2 rounded-full border bg-white p-1 text-slate-500"
+                  onClick={() =>
+                    setValue('logoDataUrl', '', { shouldDirty: true })
+                  }
+                >
+                  <X size={14} />
+                </button>
               )}
             </div>
-          ) : (
-            <Button
+            <div className="w-full max-w-60 sm:text-right">
+              <p className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">
+                INVOICE
+              </p>
+              <div className="mt-4">
+                {field(
+                  'invoiceNumber',
+                  'Invoice number',
+                  'Auto-generated when blank'
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="grid gap-7 xl:grid-cols-[1.1fr_1fr]">
+            <div className="space-y-5">
+              <div className="space-y-3">
+                {field('quickCompanyName', 'From', 'Your business name')}
+                {field(
+                  'quickCompanyAddress',
+                  'Business address',
+                  'Street address',
+                  true
+                )}
+              </div>
+              <details className="qi-details">
+                <summary>Business contact & tax details</summary>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  {field('quickCompanyCity', 'City')}
+                  {field('quickCompanyState', 'State / region')}
+                  {field('quickCompanyZipCode', 'Postal code')}
+                  {field('quickCompanyTaxNumber', 'Tax / VAT / GST ID')}
+                  {field('quickCompanyEmail', 'Business email')}
+                  {field('quickCompanyPhone', 'Business phone')}
+                </div>
+              </details>
+            </div>
+            <div className="grid grid-cols-2 content-start gap-3">
+              {dateField('serviceDate', 'Invoice date')}
+              {dateField('dueDate', 'Due date')}
+              {field('paymentTerms', 'Payment terms', 'e.g. Net 30')}
+              {field('purchaseOrderNumber', 'PO number', 'Optional reference')}
+            </div>
+          </div>
+          <div className="my-7 grid gap-6 sm:grid-cols-2">
+            <div className="space-y-3">
+              {field(
+                'quickCustomerName',
+                'Bill to *',
+                'Customer or business name'
+              )}
+              {field(
+                'quickCustomerAddress',
+                'Billing address',
+                'Street address',
+                true
+              )}
+              <details className="qi-details mt-3">
+                <summary>Customer contact details</summary>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  {field('quickCustomerCity', 'Customer city')}
+                  {field('quickCustomerState', 'Customer state / region')}
+                  {field('quickCustomerZipCode', 'Customer postal code')}
+                  {field('quickCustomerEmail', 'Customer email')}
+                  {field('quickCustomerPhone', 'Customer phone')}
+                </div>
+              </details>
+            </div>
+            <div>
+              {field(
+                'shippingAddress',
+                'Ship to',
+                'Shipping address (optional)',
+                true
+              )}
+            </div>
+          </div>
+          <div
+            className="hidden grid-cols-[minmax(0,1fr)_64px_72px_100px_100px_28px] gap-3 rounded-lg bg-slate-900 px-3 py-3 text-xs font-medium text-white xl:grid"
+            aria-hidden="true"
+          >
+            <span>Item / service</span>
+            <span>Unit</span>
+            <span>Qty</span>
+            <span>Rate</span>
+            <span className="text-right">Amount</span>
+            <span />
+          </div>
+          <div className="divide-y divide-slate-100">
+            {fields.map((item, index) => {
+              const value = values.lineItems?.[index]
+              let amount: number | undefined
+              try {
+                if (value)
+                  amount =
+                    savedInvoice &&
+                    !invoicePricingChanged(
+                      values.lineItems,
+                      values.taxRate,
+                      values,
+                      savedInvoice
+                    )
+                      ? savedInvoice.lineItems[index].amount
+                      : money(value.quantity * value.rate, currency)
+              } catch {
+                /* Invalid amounts are explained in the totals panel. */
+              }
+              return (
+                <div
+                  key={item.id}
+                  className="grid min-w-0 grid-cols-2 items-end gap-3 py-4 xl:grid-cols-[minmax(0,1fr)_64px_72px_100px_100px_28px]"
+                >
+                  <label className="qi-field col-span-2 xl:col-span-1">
+                    <span className="xl:sr-only">
+                      Item {index + 1} description *
+                    </span>
+                    <textarea
+                      rows={2}
+                      {...register(`lineItems.${index}.description`)}
+                      placeholder="Describe your product or service"
+                    />
+                  </label>
+                  <label className="qi-field">
+                    <span className="xl:sr-only">Item {index + 1} unit *</span>
+                    <input {...register(`lineItems.${index}.unit`)} />
+                  </label>
+                  <label className="qi-field">
+                    <span className="xl:sr-only">
+                      Item {index + 1} quantity *
+                    </span>
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="any"
+                      {...register(`lineItems.${index}.quantity`, numeric)}
+                    />
+                  </label>
+                  <label className="qi-field">
+                    <span className="xl:sr-only">Item {index + 1} rate *</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step={step}
+                      {...register(`lineItems.${index}.rate`, numeric)}
+                    />
+                  </label>
+                  <output
+                    aria-label={`Item ${index + 1} amount`}
+                    className="pb-3 text-right text-sm font-semibold text-slate-800"
+                  >
+                    {display(amount)}
+                  </output>
+                  <button
+                    type="button"
+                    aria-label={`Remove item ${index + 1}`}
+                    className="col-start-2 justify-self-end rounded-lg p-2 text-slate-400 xl:col-start-auto hover:bg-red-50 hover:text-red-600"
+                    onClick={() => remove(index)}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+          <button
+            type="button"
+            onClick={() => append(newItem())}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-primary-200 bg-primary-50/40 py-3 text-sm font-medium text-primary-700 hover:bg-primary-50"
+          >
+            <Plus size={17} /> Add line item
+          </button>
+          <div className="mt-9 grid gap-8 xl:grid-cols-2">
+            <div className="space-y-5">
+              {field(
+                'notes',
+                'Notes',
+                'A thank-you or details about your work',
+                true
+              )}
+              {field(
+                'terms',
+                'Terms & payment instructions',
+                'Bank details, accepted payment methods, or other terms',
+                true
+              )}
+            </div>
+            <div className="space-y-4 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Subtotal</span>
+                <output aria-label="Subtotal" className="font-medium">
+                  {display(totals?.subtotal)}
+                </output>
+              </div>
+              <div className="grid grid-cols-[minmax(0,1fr)_92px] sm:grid-cols-[minmax(0,1fr)_92px_100px] items-end gap-2">
+                <label className="qi-field">
+                  <span>Discount</span>
+                  <select
+                    aria-label="Discount type"
+                    {...register('discountType')}
+                  >
+                    <option value="percentage">Percentage (%)</option>
+                    <option value="fixed">Fixed ({currency})</option>
+                  </select>
+                </label>
+                <label className="qi-field">
+                  <span className="sr-only">Discount value</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    {...register('discountValue', numeric)}
+                  />
+                </label>
+                <output
+                  aria-label="Discount amount"
+                  className="col-span-2 pb-3 text-right text-slate-500 sm:col-span-1"
+                >
+                  −{display(totals?.discountAmount)}
+                </output>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <Controller
+                  name="taxRate"
+                  control={control}
+                  render={({ field: input }) => (
+                    <label className="qi-field max-w-36">
+                      <span>Tax (%)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="any"
+                        value={
+                          Number.isFinite(input.value)
+                            ? Number((input.value * 100).toFixed(6))
+                            : ''
+                        }
+                        onBlur={input.onBlur}
+                        ref={input.ref}
+                        onChange={event =>
+                          input.onChange(Number(event.target.value) / 100)
+                        }
+                      />
+                    </label>
+                  )}
+                />
+                <output aria-label="Tax amount" className="pt-5">
+                  {display(totals?.taxAmount)}
+                </output>
+              </div>
+              <label className="qi-field qi-inline">
+                <span>Shipping ({currency})</span>
+                <input
+                  className="max-w-36 text-right"
+                  type="number"
+                  min="0"
+                  step={step}
+                  {...register('shippingAmount', numeric)}
+                />
+              </label>
+              <div className="flex justify-between border-t border-slate-200 pt-4 text-base font-bold">
+                <span>Total</span>
+                <output aria-label="Invoice total">
+                  {display(totals?.total)}
+                </output>
+              </div>
+              <label className="qi-field qi-inline">
+                <span>Amount paid ({currency})</span>
+                <input
+                  className="max-w-36 text-right"
+                  type="number"
+                  min="0"
+                  max={totals?.total}
+                  step={step}
+                  {...register('amountPaid', numeric)}
+                />
+              </label>
+              <div className="flex justify-between rounded-xl bg-primary-50 p-4 text-base font-bold text-primary-800">
+                <span>Balance due</span>
+                <output aria-label="Balance due">
+                  {display(totals?.balanceDue)}
+                </output>
+              </div>
+              {calculationError && (
+                <p role="alert" className="text-sm text-red-600">
+                  {calculationError}
+                </p>
+              )}
+            </div>
+          </div>
+        </fieldset>
+        <aside className="qi-actions space-y-4 lg:sticky lg:top-24">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+              Ready when you are
+            </p>
+            <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
+              {display(totals?.balanceDue)}
+            </p>
+            <p className="mb-5 mt-1 text-xs text-slate-400">
+              Balance due · {currency}
+            </p>
+            <button
               type="button"
-              onClick={handleNextStep}
-              disabled={!canProceedToNext() || loading}
-              className="flex items-center space-x-2"
+              disabled={busy}
+              onClick={handleSubmit(download)}
+              className="qi-primary"
             >
-              <span>Next</span>
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+              <Download size={17} />
+              {downloading ? 'Preparing PDF…' : 'Download PDF'}
+            </button>
+            {!isGuest && (
+              <button
+                type="submit"
+                disabled={busy}
+                className="qi-secondary mt-3"
+              >
+                <Save size={17} />
+                {createInvoice.isPending || updateInvoice.isPending
+                  ? 'Saving…'
+                  : 'Save Invoice'}
+              </button>
+            )}
+            {isGuest && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={handleSubmit(signUp)}
+                className="qi-secondary mt-3"
+              >
+                Sign Up to Save
+              </button>
+            )}
+            <p className="mt-4 text-xs leading-relaxed text-slate-400">
+              Review your details before sharing the PDF with your customer.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <h3 className="mb-4 text-sm font-semibold text-slate-800">
+              Invoice settings
+            </h3>
+            <label className="qi-field">
+              <span>Currency</span>
+              <select aria-label="Currency" {...register('currency')}>
+                {SUPPORTED_CURRENCIES.map(code => (
+                  <option key={code} value={code}>
+                    {code} — {currencyNames.of(code)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="mt-3 text-xs leading-relaxed text-slate-400">
+              Currency changes the denomination. Your prices are not converted.
+            </p>
+          </div>
+          <div
+            className="px-1 text-xs leading-relaxed text-slate-500"
+            role="status"
+          >
+            {isGuest && (
+              <span className="flex items-center gap-2">
+                <ShieldCheck size={14} />
+                {draftStatus}
+              </span>
+            )}
+            {message && (
+              <span className="mt-2 flex items-start gap-2 text-green-700">
+                <Check size={15} className="shrink-0" />
+                {message}
+              </span>
+            )}
+          </div>
+          {(error || validationMessages.length > 0) && (
+            <div
+              role="alert"
+              className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+            >
+              <p className="font-semibold">Check your invoice</p>
+              {error && <p className="mt-1">{error}</p>}
+              {validationMessages.map(text => (
+                <p key={text} className="mt-1">
+                  {text}
+                </p>
+              ))}
+            </div>
           )}
-        </FormActions>
-      </LoadingOverlay>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={startNew}
+            className="flex items-center gap-2 px-2 py-2 text-xs text-slate-500 hover:text-red-600"
+          >
+            <Trash2 size={14} />
+            {isGuest ? 'Clear Draft' : 'New invoice'}
+          </button>
+        </aside>
+      </form>
     </div>
   )
+}
+
+function flattenErrors(value: unknown): string[] {
+  if (!value || typeof value !== 'object') return []
+  const record = value as Record<string, unknown>
+  if (typeof record.message === 'string') return [record.message]
+  return Object.entries(record)
+    .filter(([key]) => key !== 'ref')
+    .flatMap(([, child]) => flattenErrors(child))
 }

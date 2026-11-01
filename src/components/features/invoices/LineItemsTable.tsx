@@ -17,6 +17,7 @@ interface LineItemsTableProps {
   lineItems: LineItem[]
   onChange: (lineItems: LineItem[]) => void
   disabled?: boolean
+  currency?: string
 }
 
 interface LineItemFormData {
@@ -37,16 +38,13 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
   lineItems,
   onChange,
   disabled = false,
+  currency = 'USD',
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [showMobileModal, setShowMobileModal] = useState(false)
   const [formData, setFormData] = useState<LineItemFormData>(emptyLineItem)
   const [errors, setErrors] = useState<Partial<LineItemFormData>>({})
-
-  const generateId = (): string => {
-    return `lineitem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  }
 
   const validateForm = (data: LineItemFormData): boolean => {
     const newErrors: Partial<LineItemFormData> = {}
@@ -77,10 +75,14 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
 
     const quantity = parseFloat(formData.quantity)
     const rate = parseFloat(formData.rate)
-    const amount = InvoiceCalculationService.calculateLineItemAmount(quantity, rate)
+    const amount = InvoiceCalculationService.calculateLineItemAmount(
+      quantity,
+      rate,
+      currency
+    )
 
     const newLineItem: LineItem = {
-      id: generateId(),
+      id: crypto.randomUUID(),
       invoiceId: '', // Will be set when invoice is saved
       type: 'material',
       description: formData.description.trim(),
@@ -117,7 +119,11 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
 
     const quantity = parseFloat(formData.quantity)
     const rate = parseFloat(formData.rate)
-    const amount = InvoiceCalculationService.calculateLineItemAmount(quantity, rate)
+    const amount = InvoiceCalculationService.calculateLineItemAmount(
+      quantity,
+      rate,
+      currency
+    )
 
     const updatedLineItems = lineItems.map(item =>
       item.id === editingId
@@ -128,7 +134,10 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
             unit: formData.unit.trim(),
             quantity,
             rate,
-            amount,
+            amount:
+              quantity === item.quantity && rate === item.rate
+                ? item.amount
+                : amount,
           }
         : item
     )
@@ -186,7 +195,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
         <Input
           type="text"
           value={formData.description}
-          onChange={(e) => handleFormChange('description', e.target.value)}
+          onChange={e => handleFormChange('description', e.target.value)}
           placeholder="Enter description"
           error={errors.description}
           disabled={disabled}
@@ -200,7 +209,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
         <Input
           type="text"
           value={formData.unit}
-          onChange={(e) => handleFormChange('unit', e.target.value)}
+          onChange={e => handleFormChange('unit', e.target.value)}
           placeholder="mtr, bundle, box..."
           error={errors.unit}
           disabled={disabled}
@@ -214,7 +223,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
         <Input
           type="number"
           value={formData.quantity}
-          onChange={(e) => handleFormChange('quantity', e.target.value)}
+          onChange={e => handleFormChange('quantity', e.target.value)}
           placeholder="0"
           min="0"
           step="0.01"
@@ -230,7 +239,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
         <Input
           type="number"
           value={formData.rate}
-          onChange={(e) => handleFormChange('rate', e.target.value)}
+          onChange={e => handleFormChange('rate', e.target.value)}
           placeholder="0.00"
           min="0"
           step="0.01"
@@ -241,17 +250,23 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
 
       <div className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-gray-700">Total Amount:</span>
+          <span className="text-sm font-medium text-gray-700">
+            Total Amount:
+          </span>
           <span className="text-lg font-bold text-gray-900">
-            {formData.quantity && formData.rate && !errors.quantity && !errors.rate
+            {formData.quantity &&
+            formData.rate &&
+            !errors.quantity &&
+            !errors.rate
               ? formatCurrency(
                   InvoiceCalculationService.calculateLineItemAmount(
                     parseFloat(formData.quantity) || 0,
-                    parseFloat(formData.rate) || 0
-                  )
+                    parseFloat(formData.rate) || 0,
+                    currency
+                  ),
+                  currency
                 )
-              : '$0.00'
-            }
+              : formatCurrency(0, currency)}
           </span>
         </div>
       </div>
@@ -285,7 +300,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
         <Input
           type="text"
           value={formData.description}
-          onChange={(e) => handleFormChange('description', e.target.value)}
+          onChange={e => handleFormChange('description', e.target.value)}
           placeholder="Item name"
           error={errors.description}
           disabled={disabled}
@@ -296,7 +311,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
         <Input
           type="number"
           value={formData.rate}
-          onChange={(e) => handleFormChange('rate', e.target.value)}
+          onChange={e => handleFormChange('rate', e.target.value)}
           placeholder="0.00"
           min="0"
           step="0.01"
@@ -309,7 +324,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
         <Input
           type="number"
           value={formData.quantity}
-          onChange={(e) => handleFormChange('quantity', e.target.value)}
+          onChange={e => handleFormChange('quantity', e.target.value)}
           placeholder="0"
           min="0"
           step="0.01"
@@ -321,7 +336,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
           <Input
             type="text"
             value={formData.unit}
-            onChange={(e) => handleFormChange('unit', e.target.value)}
+            onChange={e => handleFormChange('unit', e.target.value)}
             placeholder="unit"
             error={errors.unit}
             disabled={disabled}
@@ -332,15 +347,19 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
       <td className="px-4 py-3 text-right">
         <div className="bg-gray-100 rounded-xl px-4 py-3 min-h-11 flex items-center justify-end">
           <span className="text-sm font-medium text-gray-700">
-            {formData.quantity && formData.rate && !errors.quantity && !errors.rate
+            {formData.quantity &&
+            formData.rate &&
+            !errors.quantity &&
+            !errors.rate
               ? formatCurrency(
                   InvoiceCalculationService.calculateLineItemAmount(
                     parseFloat(formData.quantity) || 0,
-                    parseFloat(formData.rate) || 0
-                  )
+                    parseFloat(formData.rate) || 0,
+                    currency
+                  ),
+                  currency
                 )
-              : '$0.00'
-            }
+              : formatCurrency(0, currency)}
           </span>
         </div>
       </td>
@@ -350,9 +369,10 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
             variant="ghost"
             size="sm"
             type="button"
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation()
-              isEditing ? handleUpdateLineItem() : handleAddLineItem()
+              if (isEditing) handleUpdateLineItem()
+              else handleAddLineItem()
             }}
             disabled={disabled}
             title={isEditing ? 'Save Changes' : 'Add Line Item'}
@@ -364,7 +384,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
             variant="ghost"
             size="sm"
             type="button"
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation()
               handleCancelEdit()
             }}
@@ -390,7 +410,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
                 variant="outline"
                 size="sm"
                 type="button"
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation()
                   openAddForm()
                 }}
@@ -409,14 +429,16 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
               <div className="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                 <Plus className="h-8 w-8 text-gray-400" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No line items yet</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No line items yet
+              </h3>
               <p className="text-gray-600 mb-6 max-w-sm mx-auto">
                 Add material charges to build your invoice.
               </p>
               <Button
                 variant="primary"
                 type="button"
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation()
                   openAddForm()
                 }}
@@ -450,7 +472,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {lineItems.map((item) => (
+                  {lineItems.map(item =>
                     editingId === item.id && window.innerWidth >= 768 ? (
                       // Show edit form for this item (desktop only)
                       renderFormRow(true, item.id)
@@ -460,13 +482,13 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
                           {item.description}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          {formatCurrency(item.rate)}
+                          {formatCurrency(item.rate, currency)}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
                           {item.quantity} {item.unit}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
-                          {formatCurrency(item.amount)}
+                          {formatCurrency(item.amount, currency)}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end space-x-2">
@@ -474,11 +496,13 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
                               variant="ghost"
                               size="small"
                               type="button"
-                              onClick={(e) => {
+                              onClick={e => {
                                 e.stopPropagation()
                                 handleEditLineItem(item.id)
                               }}
-                              disabled={disabled || editingId !== null || showAddForm}
+                              disabled={
+                                disabled || editingId !== null || showAddForm
+                              }
                               title="Edit Line Item"
                             >
                               <Edit className="h-4 w-4" />
@@ -487,11 +511,13 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
                               variant="ghost"
                               size="small"
                               type="button"
-                              onClick={(e) => {
+                              onClick={e => {
                                 e.stopPropagation()
                                 handleDeleteLineItem(item.id)
                               }}
-                              disabled={disabled || editingId !== null || showAddForm}
+                              disabled={
+                                disabled || editingId !== null || showAddForm
+                              }
                               title="Delete Line Item"
                               className="text-red-600 hover:text-red-700"
                             >
@@ -501,19 +527,22 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
                         </td>
                       </tr>
                     )
-                  ))}
-                  
+                  )}
+
                   {/* Add Form Row (desktop only) */}
                   {showAddForm && renderFormRow(false, 'add-form')}
-                  
+
                   {/* Subtotal Row */}
                   {lineItems.length > 0 && (
                     <tr className="border-t-2 border-gray-300 bg-gray-50">
-                      <td colSpan={3} className="px-4 py-3 text-right text-sm font-medium text-gray-900">
+                      <td
+                        colSpan={3}
+                        className="px-4 py-3 text-right text-sm font-medium text-gray-900"
+                      >
                         Subtotal:
                       </td>
                       <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
-                        {formatCurrency(calculateSubtotal())}
+                        {formatCurrency(calculateSubtotal(), currency)}
                       </td>
                       <td className="px-4 py-3"></td>
                     </tr>

@@ -1,3 +1,4 @@
+import { formatCurrency } from '../utils/formatters'
 import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -176,39 +177,40 @@ export const DashboardPage: React.FC = () => {
         {!companyLoading && !hasProfile && (
           <MobileOptimizedSection padding="none">
             <Card className="bg-linear-to-r from-primary-50 to-secondary-50 border-primary-200">
-                <div className="flex items-start space-x-4">
-                  <div className="shrink-0">
-                    <div className="flex items-center justify-center w-12 h-12 bg-primary-100 rounded-lg">
-                      <AlertCircle className="w-6 h-6 text-primary-600" />
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      Complete Your Company Setup
-                    </h3>
-                    <p className="text-gray-600 mb-4">
-                      Set up your company profile to start creating professional invoices and managing customers. 
-                      This will only take a few minutes.
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <Button
-                        onClick={() => navigate('/company?setup=true')}
-                        className="group"
-                      >
-                        <Building2 className="w-4 h-4 mr-2" />
-                        Setup Company Profile
-                        <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => navigate('/company')}
-                        className="text-gray-600"
-                      >
-                        Skip for now
-                      </Button>
-                    </div>
+              <div className="flex items-start space-x-4">
+                <div className="shrink-0">
+                  <div className="flex items-center justify-center w-12 h-12 bg-primary-100 rounded-lg">
+                    <AlertCircle className="w-6 h-6 text-primary-600" />
                   </div>
                 </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Complete Your Company Setup
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    Set up your company profile to start creating professional
+                    invoices and managing customers. This will only take a few
+                    minutes.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button
+                      onClick={() => navigate('/company?setup=true')}
+                      className="group"
+                    >
+                      <Building2 className="w-4 h-4 mr-2" />
+                      Setup Company Profile
+                      <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate('/company')}
+                      className="text-gray-600"
+                    >
+                      Skip for now
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </Card>
           </MobileOptimizedSection>
         )}
@@ -300,7 +302,13 @@ export const DashboardPage: React.FC = () => {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">Revenue</span>
                     <span className="font-semibold text-success-600">
-                      ${defaultStats.totalRevenue.toLocaleString()}
+                      {defaultStats.currencyTotals?.length
+                        ? defaultStats.currencyTotals
+                            .map(value =>
+                              formatCurrency(value.totalRevenue, value.currency)
+                            )
+                            .join(' · ')
+                        : formatCurrency(defaultStats.totalRevenue)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">

@@ -1,3 +1,4 @@
+import { hasStoredDraft } from '../utils/guestInvoiceStorage'
 import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuthStatus } from '../hooks/useAuth'
@@ -10,13 +11,13 @@ interface PublicRouteProps {
 /**
  * PublicRoute component that guards public routes (login, signup).
  * Redirects authenticated users to the dashboard.
- * 
+ *
  * Requirements: 8.4 - WHEN a user is authenticated, THE System SHALL prevent access to login/signup pages
  */
 export const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
   const location = useLocation()
   const { isAuthenticated, isLoading } = useAuthStatus()
-  
+
   // Show loading while checking authentication
   if (isLoading) {
     return (
@@ -25,12 +26,20 @@ export const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
       </div>
     )
   }
-  
+
   if (isAuthenticated) {
     // Redirect to dashboard or the originally requested page
     const from = (location.state as any)?.from?.pathname || '/dashboard'
-    return <Navigate to={from} replace />
+    const importDraft =
+      ['/login', '/signup'].includes(location.pathname) && hasStoredDraft()
+    return (
+      <Navigate
+        to={importDraft ? '/quick-invoice' : from}
+        state={importDraft ? { importGuestDraft: true } : undefined}
+        replace
+      />
+    )
   }
-  
+
   return <>{children}</>
 }

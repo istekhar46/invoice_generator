@@ -89,16 +89,20 @@ vi.mock('../../../hooks/useOnlineStatus', () => ({
 vi.mock('../customers/CustomerList', () => ({
   CustomerList: ({ onCustomerSelect }: any) => (
     <div data-testid="customer-list">
-      <button onClick={() => onCustomerSelect({
-        id: 'test-customer-id',
-        name: 'Test Customer',
-        email: 'test@example.com',
-        phone: '555-1234',
-        address: '123 Test St',
-        city: 'Test City',
-        state: 'TS',
-        zipCode: '12345',
-      })}>
+      <button
+        onClick={() =>
+          onCustomerSelect({
+            id: 'test-customer-id',
+            name: 'Test Customer',
+            email: 'test@example.com',
+            phone: '555-1234',
+            address: '123 Test St',
+            city: 'Test City',
+            state: 'TS',
+            zipCode: '12345',
+          })
+        }
+      >
         Select Customer
       </button>
     </div>
@@ -115,16 +119,56 @@ vi.mock('./LineItemsTable', () => ({
           {item.description}
         </div>
       ))}
-      <button onClick={() => onChange([...lineItems, {
-        id: 'new-item',
-        type: 'material',
-        description: 'New Item',
-        unit: 'pcs',
-        quantity: 1,
-        rate: 10,
-        amount: 10,
-      }])}>
+      <button
+        onClick={() =>
+          onChange([
+            ...lineItems,
+            {
+              id: 'new-item',
+              type: 'material',
+              description: 'New Item',
+              unit: 'pcs',
+              quantity: 1,
+              rate: 10,
+              amount: 10,
+            },
+          ])
+        }
+      >
         Add Item
+      </button>
+      <button
+        onClick={() =>
+          onChange(
+            lineItems.map((item: any) => ({
+              ...item,
+              description: 'Updated Material Description',
+            }))
+          )
+        }
+      >
+        Change description
+      </button>
+      <button
+        onClick={() =>
+          onChange(lineItems.map((item: any) => ({ ...item, unit: 'hour' })))
+        }
+      >
+        Change unit
+      </button>
+      <button
+        onClick={() =>
+          onChange(lineItems.map((item: any) => ({ ...item, description: '' })))
+        }
+      >
+        Empty description
+      </button>
+      <button
+        onClick={() =>
+          onChange(lineItems.map((item: any) => ({ ...item, quantity: 0 })))
+        }
+      >
+        Invalid quantity
       </button>
     </div>
   ),
@@ -132,7 +176,9 @@ vi.mock('./LineItemsTable', () => ({
 
 // Mock InvoicePreview component
 vi.mock('./InvoicePreview', () => ({
-  InvoicePreview: () => <div data-testid="invoice-preview">Invoice Preview</div>,
+  InvoicePreview: () => (
+    <div data-testid="invoice-preview">Invoice Preview</div>
+  ),
 }))
 
 // Mock the transformers
@@ -236,7 +282,7 @@ describe('InvoiceBuilder - Update Invoice Functionality', () => {
       renderInvoiceBuilder({ invoice: invoiceWithCustomer })
 
       // Should skip to details step when editing
-      expect(screen.getByText('Invoice Details')).toBeInTheDocument()
+      expect(screen.getAllByText('Invoice Details').length).toBeGreaterThan(0)
     })
 
     it('should populate form fields with existing invoice data', () => {
@@ -248,11 +294,13 @@ describe('InvoiceBuilder - Update Invoice Functionality', () => {
       renderInvoiceBuilder({ invoice: invoiceWithCustomer })
 
       // Check if notes are populated
-      const notesField = screen.getByPlaceholderText(/add any additional notes/i)
+      const notesField = screen.getByPlaceholderText(
+        /add any additional notes/i
+      )
       expect(notesField).toHaveValue('Test notes')
     })
 
-    it('should display existing line items', () => {
+    it('should display existing line items', async () => {
       const invoiceWithCustomer = {
         ...mockInvoice,
         customer: mockCustomer,
@@ -262,9 +310,9 @@ describe('InvoiceBuilder - Update Invoice Functionality', () => {
 
       // Navigate to items step
       const nextButton = screen.getByRole('button', { name: /next/i })
-      userEvent.click(nextButton)
+      await userEvent.click(nextButton)
 
-      waitFor(() => {
+      await waitFor(() => {
         expect(screen.getByText('Test Material')).toBeInTheDocument()
       })
     })
@@ -280,7 +328,7 @@ describe('InvoiceBuilder - Update Invoice Functionality', () => {
       renderInvoiceBuilder({ invoice: invoiceWithCustomer })
 
       const nextButton = screen.getByRole('button', { name: /next/i })
-      
+
       // Button should be enabled with valid data
       await waitFor(() => {
         expect(nextButton).not.toBeDisabled()
@@ -302,13 +350,15 @@ describe('InvoiceBuilder - Update Invoice Functionality', () => {
       await user.type(dueDateInput, '2024-01-01') // Before service date (2024-01-15)
 
       const nextButton = screen.getByRole('button', { name: /next/i })
-      
+
       await waitFor(() => {
         expect(nextButton).toBeDisabled()
       })
 
       // Should show error message
-      expect(screen.getByText(/due date must be on or after service date/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/due date must be on or after (the )?service date/i)
+      ).toBeInTheDocument()
     })
 
     it('should enable Next button when dates are corrected', async () => {
@@ -368,151 +418,54 @@ describe('InvoiceBuilder - Update Invoice Functionality', () => {
 
     it('should keep Next button enabled after editing line item description', async () => {
       const user = userEvent.setup()
-      const invoiceWithCustomer = {
-        ...mockInvoice,
-        customer: mockCustomer,
-      }
-
-      renderInvoiceBuilder({ invoice: invoiceWithCustomer })
-
-      // Navigate to items step
-      let nextButton = screen.getByRole('button', { name: /next/i })
-      await user.click(nextButton)
-
-      await waitFor(() => {
-        expect(screen.getByText('Line Items')).toBeInTheDocument()
+      renderInvoiceBuilder({
+        invoice: { ...mockInvoice, customer: mockCustomer },
       })
-
-      // Click edit button on the line item
-      const editButton = screen.getByTitle(/edit line item/i)
-      await user.click(editButton)
-
-      // Wait for edit form to appear
-      await waitFor(() => {
-        expect(screen.getByPlaceholderText(/description/i)).toBeInTheDocument()
-      })
-
-      // Edit the description
-      const descriptionInput = screen.getByPlaceholderText(/description/i)
-      await user.clear(descriptionInput)
-      await user.type(descriptionInput, 'Updated Material Description')
-
-      // Save the changes
-      const saveButton = screen.getByTitle(/save changes/i)
-      await user.click(saveButton)
-
-      // Next button should still be enabled
-      nextButton = screen.getByRole('button', { name: /next/i })
-      await waitFor(() => {
-        expect(nextButton).not.toBeDisabled()
-      })
+      await user.click(screen.getByRole('button', { name: /next/i }))
+      await user.click(
+        screen.getByRole('button', { name: 'Change description' })
+      )
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /next/i })).not.toBeDisabled()
+      )
     })
 
-    it('should keep Next button enabled after changing line item type', async () => {
+    it('should keep Next button enabled after changing the line item unit', async () => {
       const user = userEvent.setup()
-      const invoiceWithCustomer = {
-        ...mockInvoice,
-        customer: mockCustomer,
-      }
-
-      renderInvoiceBuilder({ invoice: invoiceWithCustomer })
-
-      // Navigate to items step
-      let nextButton = screen.getByRole('button', { name: /next/i })
-      await user.click(nextButton)
-
-      await waitFor(() => {
-        expect(screen.getByText('Line Items')).toBeInTheDocument()
+      renderInvoiceBuilder({
+        invoice: { ...mockInvoice, customer: mockCustomer },
       })
-
-      // Click edit button
-      const editButton = screen.getByTitle(/edit line item/i)
-      await user.click(editButton)
-
-      // Change type from material to labor
-      const typeSelect = screen.getByRole('combobox')
-      await user.selectOptions(typeSelect, 'labor')
-
-      // Save changes
-      const saveButton = screen.getByTitle(/save changes/i)
-      await user.click(saveButton)
-
-      // Next button should be enabled
-      nextButton = screen.getByRole('button', { name: /next/i })
-      await waitFor(() => {
-        expect(nextButton).not.toBeDisabled()
-      })
+      await user.click(screen.getByRole('button', { name: /next/i }))
+      await user.click(screen.getByRole('button', { name: 'Change unit' }))
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /next/i })).not.toBeDisabled()
+      )
     })
 
     it('should disable Next button when line item has empty description', async () => {
       const user = userEvent.setup()
-      const invoiceWithCustomer = {
-        ...mockInvoice,
-        customer: mockCustomer,
-      }
-
-      renderInvoiceBuilder({ invoice: invoiceWithCustomer })
-
-      // Navigate to items step
-      const nextButton = screen.getByRole('button', { name: /next/i })
-      await user.click(nextButton)
-
-      await waitFor(() => {
-        expect(screen.getByText('Line Items')).toBeInTheDocument()
+      renderInvoiceBuilder({
+        invoice: { ...mockInvoice, customer: mockCustomer },
       })
-
-      // Edit line item
-      const editButton = screen.getByTitle(/edit line item/i)
-      await user.click(editButton)
-
-      // Clear description
-      const descriptionInput = screen.getByPlaceholderText(/description/i)
-      await user.clear(descriptionInput)
-
-      // Try to save (should show validation error)
-      const saveButton = screen.getByTitle(/save changes/i)
-      await user.click(saveButton)
-
-      // Should show error and not save
-      await waitFor(() => {
-        expect(screen.getByText(/description is required/i)).toBeInTheDocument()
-      })
+      await user.click(screen.getByRole('button', { name: /next/i }))
+      await user.click(
+        screen.getByRole('button', { name: 'Empty description' })
+      )
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /next/i })).toBeDisabled()
+      )
     })
 
     it('should disable Next button when line item has invalid quantity', async () => {
       const user = userEvent.setup()
-      const invoiceWithCustomer = {
-        ...mockInvoice,
-        customer: mockCustomer,
-      }
-
-      renderInvoiceBuilder({ invoice: invoiceWithCustomer })
-
-      // Navigate to items step
-      const nextButton = screen.getByRole('button', { name: /next/i })
-      await user.click(nextButton)
-
-      await waitFor(() => {
-        expect(screen.getByText('Line Items')).toBeInTheDocument()
+      renderInvoiceBuilder({
+        invoice: { ...mockInvoice, customer: mockCustomer },
       })
-
-      // Edit line item
-      const editButton = screen.getByTitle(/edit line item/i)
-      await user.click(editButton)
-
-      // Set invalid quantity
-      const quantityInput = screen.getByPlaceholderText('0')
-      await user.clear(quantityInput)
-      await user.type(quantityInput, '0')
-
-      // Try to save
-      const saveButton = screen.getByTitle(/save changes/i)
-      await user.click(saveButton)
-
-      // Should show validation error
-      await waitFor(() => {
-        expect(screen.getByText(/quantity must be a positive number/i)).toBeInTheDocument()
-      })
+      await user.click(screen.getByRole('button', { name: /next/i }))
+      await user.click(screen.getByRole('button', { name: 'Invalid quantity' }))
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /next/i })).toBeDisabled()
+      )
     })
   })
 
@@ -528,7 +481,7 @@ describe('InvoiceBuilder - Update Invoice Functionality', () => {
 
       // Navigate through all steps to review
       const nextButton = screen.getByRole('button', { name: /next/i })
-      
+
       // Details -> Items
       await user.click(nextButton)
       await waitFor(() => {
@@ -542,7 +495,9 @@ describe('InvoiceBuilder - Update Invoice Functionality', () => {
       })
 
       // Update button should be enabled
-      const updateButton = screen.getByRole('button', { name: /update invoice/i })
+      const updateButton = screen.getByRole('button', {
+        name: /update invoice/i,
+      })
       await waitFor(() => {
         expect(updateButton).not.toBeDisabled()
       })
@@ -568,7 +523,9 @@ describe('InvoiceBuilder - Update Invoice Functionality', () => {
       })
 
       // Click update button
-      const updateButton = screen.getByRole('button', { name: /update invoice/i })
+      const updateButton = screen.getByRole('button', {
+        name: /update invoice/i,
+      })
       await user.click(updateButton)
 
       // Button should be disabled after submission
@@ -578,7 +535,9 @@ describe('InvoiceBuilder - Update Invoice Functionality', () => {
 
       // Should show success message
       await waitFor(() => {
-        expect(screen.getByText(/invoice updated successfully/i)).toBeInTheDocument()
+        expect(
+          screen.getByText(/invoice updated successfully/i)
+        ).toBeInTheDocument()
       })
     })
   })
@@ -599,13 +558,18 @@ describe('InvoiceBuilder - Update Invoice Functionality', () => {
       await user.click(nextButton)
       await user.click(nextButton)
 
-      const updateButton = screen.getByRole('button', { name: /update invoice/i })
+      const updateButton = screen.getByRole('button', {
+        name: /update invoice/i,
+      })
       await user.click(updateButton)
 
       // Wait for onSave to be called
-      await waitFor(() => {
-        expect(onSave).toHaveBeenCalled()
-      }, { timeout: 2000 })
+      await waitFor(
+        () => {
+          expect(onSave).toHaveBeenCalled()
+        },
+        { timeout: 2000 }
+      )
 
       // Verify the data passed to onSave
       const savedInvoice = onSave.mock.calls[0][0]
@@ -616,18 +580,13 @@ describe('InvoiceBuilder - Update Invoice Functionality', () => {
 
     it('should display error message when update fails', async () => {
       const user = userEvent.setup()
-      
+
       // Mock update to fail
-      vi.mock('../../../hooks/useInvoices', () => ({
-        useUpdateInvoice: () => ({
-          mutateAsync: vi.fn().mockRejectedValue({
-            status: 400,
-            data: { message: 'Validation failed' },
-          }),
-          isPending: false,
-          error: null,
-        }),
-      }))
+      mockUpdateInvoiceMutate.mockRejectedValueOnce({
+        message: 'Validation failed',
+        status: 400,
+        data: { message: 'Validation failed' },
+      })
 
       const invoiceWithCustomer = {
         ...mockInvoice,
@@ -641,12 +600,16 @@ describe('InvoiceBuilder - Update Invoice Functionality', () => {
       await user.click(nextButton)
       await user.click(nextButton)
 
-      const updateButton = screen.getByRole('button', { name: /update invoice/i })
+      const updateButton = screen.getByRole('button', {
+        name: /update invoice/i,
+      })
       await user.click(updateButton)
 
       // Should show error message
       await waitFor(() => {
-        expect(screen.getByText(/validation error/i)).toBeInTheDocument()
+        expect(screen.getAllByText(/validation error/i).length).toBeGreaterThan(
+          0
+        )
       })
     })
   })
@@ -662,7 +625,7 @@ describe('InvoiceBuilder - Update Invoice Functionality', () => {
       renderInvoiceBuilder({ invoice: invoiceWithCustomer })
 
       // Start at details step
-      expect(screen.getByText('Invoice Details')).toBeInTheDocument()
+      expect(screen.getAllByText('Invoice Details').length).toBeGreaterThan(0)
 
       // Go to items step
       const nextButton = screen.getByRole('button', { name: /next/i })
@@ -677,7 +640,7 @@ describe('InvoiceBuilder - Update Invoice Functionality', () => {
       await user.click(prevButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Invoice Details')).toBeInTheDocument()
+        expect(screen.getAllByText('Invoice Details').length).toBeGreaterThan(0)
       })
     })
 
@@ -691,7 +654,9 @@ describe('InvoiceBuilder - Update Invoice Functionality', () => {
       renderInvoiceBuilder({ invoice: invoiceWithCustomer })
 
       // Update notes in details step
-      const notesField = screen.getByPlaceholderText(/add any additional notes/i)
+      const notesField = screen.getByPlaceholderText(
+        /add any additional notes/i
+      )
       await user.clear(notesField)
       await user.type(notesField, 'Modified notes')
 

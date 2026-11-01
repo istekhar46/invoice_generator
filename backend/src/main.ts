@@ -14,6 +14,8 @@ async function bootstrap(): Promise<void> {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
+  app.useBodyParser('json', { limit: '1mb' });
+
   // Serve static files from uploads directory
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads/',

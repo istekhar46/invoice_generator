@@ -4,13 +4,21 @@
  */
 
 import React from 'react'
-import type { Invoice, CompanyProfile, Customer } from '../../types/entities'
+import type { Invoice } from '../../types/entities'
+import type {
+  InvoiceCompany,
+  InvoiceCustomer,
+} from '../../utils/invoiceDocument'
 
 /**
  * PDF Generator Service interface
  */
 export interface PDFGeneratorService {
-  generateInvoicePDF(invoice: Invoice, company: CompanyProfile, customer: Customer): Promise<Blob>
+  generateInvoicePDF(
+    invoice: Invoice,
+    company: InvoiceCompany | null | undefined,
+    customer: InvoiceCustomer | null | undefined
+  ): Promise<Blob>
   downloadPDF(blob: Blob, filename: string): void
   previewPDF(blob: Blob): void
 }
@@ -29,19 +37,27 @@ export class PDFGeneratorServiceImpl implements PDFGeneratorService {
   /**
    * Generate PDF blob for an invoice
    */
-  async generateInvoicePDF(invoice: Invoice, company: CompanyProfile, customer: Customer): Promise<Blob> {
+  async generateInvoicePDF(
+    invoice: Invoice,
+    company: InvoiceCompany | null | undefined,
+    customer: InvoiceCustomer | null | undefined
+  ): Promise<Blob> {
     try {
       // Import the PDF template component dynamically to avoid SSR issues
       const [{ pdf }, { InvoicePDFTemplate }] = await Promise.all([
         import('@react-pdf/renderer'),
         import('./InvoicePDFTemplate'),
       ])
-      
+
       // Generate PDF using @react-pdf/renderer
       const pdfBlob = await pdf(
-        React.createElement(InvoicePDFTemplate, { invoice, company, customer }) as any
+        React.createElement(InvoicePDFTemplate, {
+          invoice,
+          company,
+          customer,
+        }) as any
       ).toBlob()
-      
+
       return pdfBlob
     } catch (error) {
       console.error('Error generating PDF:', error)
@@ -92,11 +108,15 @@ export const pdfGeneratorService = new PDFGeneratorServiceImpl()
  * Utility function to generate and download invoice PDF
  */
 export const downloadInvoicePDF = async (
-  invoice: Invoice, 
-  company: CompanyProfile, 
-  customer: Customer
+  invoice: Invoice,
+  company: InvoiceCompany | null | undefined,
+  customer: InvoiceCustomer | null | undefined
 ): Promise<void> => {
-  const pdfBlob = await pdfGeneratorService.generateInvoicePDF(invoice, company, customer)
+  const pdfBlob = await pdfGeneratorService.generateInvoicePDF(
+    invoice,
+    company,
+    customer
+  )
   const filename = generatePDFFilename(invoice.invoiceNumber)
   pdfGeneratorService.downloadPDF(pdfBlob, filename)
 }
@@ -105,10 +125,14 @@ export const downloadInvoicePDF = async (
  * Utility function to generate and preview invoice PDF
  */
 export const previewInvoicePDF = async (
-  invoice: Invoice, 
-  company: CompanyProfile, 
-  customer: Customer
+  invoice: Invoice,
+  company: InvoiceCompany | null | undefined,
+  customer: InvoiceCustomer | null | undefined
 ): Promise<void> => {
-  const pdfBlob = await pdfGeneratorService.generateInvoicePDF(invoice, company, customer)
+  const pdfBlob = await pdfGeneratorService.generateInvoicePDF(
+    invoice,
+    company,
+    customer
+  )
   pdfGeneratorService.previewPDF(pdfBlob)
 }

@@ -1,3 +1,4 @@
+import { money } from './invoiceCalculation.service'
 /**
  * Dashboard Statistics Service
  * Provides statistical calculations and data aggregation for the dashboard
@@ -10,6 +11,11 @@ import type { Invoice, InvoiceStatus } from '../types/entities'
  * Dashboard statistics interface
  */
 export interface DashboardStatistics {
+  currencyTotals?: {
+    currency: string
+    totalRevenue: number
+    averageInvoiceValue: number
+  }[]
   totalInvoices: number
   totalRevenue: number
   pendingInvoices: number
@@ -22,6 +28,7 @@ export interface DashboardStatistics {
  * Recent invoice summary for dashboard display
  */
 export interface RecentInvoiceSummary {
+  currency?: string
   id: string
   invoiceNumber: string
   customerName?: string
@@ -61,21 +68,29 @@ export class DashboardStatisticsService {
     )
 
     // Calculate total revenue from paid invoices only
-    const totalRevenue = invoices
+    const usdInvoices = invoices.filter(
+      invoice => !invoice.currency || invoice.currency === 'USD'
+    )
+    const totalRevenue = usdInvoices
       .filter(invoice => invoice.status === 'paid')
       .reduce((sum, invoice) => sum + invoice.total, 0)
 
     // Calculate average invoice value across all invoices
-    const totalValue = invoices.reduce((sum, invoice) => sum + invoice.total, 0)
-    const averageInvoiceValue = totalValue / invoices.length
+    const totalValue = usdInvoices.reduce(
+      (sum, invoice) => sum + invoice.total,
+      0
+    )
+    const averageInvoiceValue = usdInvoices.length
+      ? totalValue / usdInvoices.length
+      : 0
 
     return {
       totalInvoices: invoices.length,
-      totalRevenue: Math.round(totalRevenue * 100) / 100, // Round to 2 decimal places
+      totalRevenue: money(totalRevenue), // Round to 2 decimal places
       pendingInvoices: statusCounts.sent || 0,
       paidInvoices: statusCounts.paid || 0,
       draftInvoices: statusCounts.draft || 0,
-      averageInvoiceValue: Math.round(averageInvoiceValue * 100) / 100, // Round to 2 decimal places
+      averageInvoiceValue: money(averageInvoiceValue), // Round to 2 decimal places
     }
   }
 
@@ -86,7 +101,10 @@ export class DashboardStatisticsService {
   static getPendingInvoices(invoices: Invoice[]): Invoice[] {
     return invoices
       .filter(invoice => invoice.status === 'sent')
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
   }
 
   /**
@@ -94,8 +112,11 @@ export class DashboardStatisticsService {
    * Requirements: 10.4
    */
   static getRecentInvoices(invoices: Invoice[], limit: number = 5): Invoice[] {
-    return invoices
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    return [...invoices]
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
       .slice(0, limit)
   }
 
@@ -104,14 +125,17 @@ export class DashboardStatisticsService {
    * Requirements: 10.4
    */
   static getRecentInvoiceSummaries(
-    invoices: Invoice[], 
+    invoices: Invoice[],
     customerLookup: (customerId: string) => string | undefined,
     limit: number = 5
   ): RecentInvoiceSummary[] {
     return this.getRecentInvoices(invoices, limit).map(invoice => ({
       id: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
-      customerName: invoice.customerId ? customerLookup(invoice.customerId) : undefined,
+      customerName:
+        invoice.quickCustomerName ||
+        (invoice.customerId ? customerLookup(invoice.customerId) : undefined),
+      currency: invoice.currency,
       total: invoice.total,
       status: invoice.status,
       serviceDate: invoice.serviceDate,
@@ -131,8 +155,8 @@ export class DashboardStatisticsService {
    * Get invoices within a date range
    */
   static getInvoicesInDateRange(
-    invoices: Invoice[], 
-    startDate: Date, 
+    invoices: Invoice[],
+    startDate: Date,
     endDate: Date
   ): Invoice[] {
     return invoices.filter(invoice => {
@@ -145,15 +169,19 @@ export class DashboardStatisticsService {
    * Calculate revenue for a specific time period
    */
   static calculateRevenueForPeriod(
-    invoices: Invoice[], 
-    startDate: Date, 
+    invoices: Invoice[],
+    startDate: Date,
     endDate: Date
   ): number {
-    const periodInvoices = this.getInvoicesInDateRange(invoices, startDate, endDate)
+    const periodInvoices = this.getInvoicesInDateRange(
+      invoices,
+      startDate,
+      endDate
+    )
     const revenue = periodInvoices
       .filter(invoice => invoice.status === 'paid')
       .reduce((sum, invoice) => sum + invoice.total, 0)
-    
+
     return Math.round(revenue * 100) / 100
   }
 
@@ -161,14 +189,22 @@ export class DashboardStatisticsService {
    * Get top customers by revenue
    */
   static getTopCustomersByRevenue(
-    invoices: Invoice[], 
+    invoices: Invoice[],
     customerLookup: (customerId: string) => string | undefined,
     limit: number = 5
-  ): Array<{ customerId: string; customerName?: string; revenue: number; invoiceCount: number }> {
+  ): Array<{
+    customerId: string
+    customerName?: string
+    revenue: number
+    invoiceCount: number
+  }> {
     const customerStats = invoices
       .filter(invoice => invoice.status === 'paid' && invoice.customerId)
       .reduce((stats, invoice) => {
-        const existing = stats.get(invoice.customerId!) || { revenue: 0, invoiceCount: 0 }
+        const existing = stats.get(invoice.customerId!) || {
+          revenue: 0,
+          invoiceCount: 0,
+        }
         stats.set(invoice.customerId!, {
           revenue: existing.revenue + invoice.total,
           invoiceCount: existing.invoiceCount + 1,

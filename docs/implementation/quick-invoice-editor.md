@@ -1,0 +1,104 @@
+# Quick invoice editor implementation
+
+## A. Original requirements
+
+Replace Invoiceo's quick invoice generator with an improved version of the invoice-sheet editor in the user's screenshot of https://invoice-generator.com/. Create this implementation document before code changes. Continuously review this document against the code, resolve directly related stale/redundant behavior as it is encountered, and ask about consequential uncertainty before implementing it.
+
+Confirmed on 1 November 2026:
+
+- Full, single-page editor for guest and signed-in quick invoices: logo, sender/recipient, shipping address, invoice number, dates, payment terms, PO number, line items, currency, discounts, shipping charges, amount paid, notes/terms, save, and PDF download.
+- Guest editor appears inline on the homepage. Signed-in users use the same editor.
+- Discount applies before tax; shipping is added after tax. Amount paid cannot exceed total.
+- Invoice numbers become unique per account. Preserve existing numbers; generate a number when the field is blank.
+- Editing a Paid invoice to have a positive balance returns it to Sent / pending payment (confirmed during implementation).
+- Preserve existing saved subtotal, tax, total, and line amounts for detail-only edits. Recalculate when quantities, rates, tax, currency, discount, or shipping change; changing only amount paid updates the balance and enforces the saved total as its cap (confirmed during final verification).
+- Email delivery and online payment processing are deferred. Use accurate save/download action labels.
+
+Acceptance criteria:
+
+1. Responsive invoice-sheet layout with direct line-item editing, accessible labels/errors, visible live totals, and usable mobile actions, retaining Invoiceo branding.
+2. All new fields survive guest autosave/reload, signup/import, API save/reload/edit, preview, and PDF export.
+3. Guest creation/download requires no authenticated API calls. Import remains idempotent; failed saves/downloads preserve the draft and show an actionable error.
+4. Frontend/server/PDF calculations agree on discounts, tax, shipping, rounding, paid amount, and balance. Example: subtotal 1,000, discount 10%, zero tax, shipping 20, paid 300 gives total 920 and balance 620.
+5. Distinct accounts can use the same invoice number; duplicates in one account are rejected clearly.
+6. Existing standard invoices still open, edit, and export correctly. Mixed currencies are not added together in dashboard money totals.
+7. Relevant tests/builds and browser/PDF verification are recorded; no production deployment or database update is implied.
+
+## B. Technical assessment
+
+Architecture: React 19, React Hook Form 7, Zod 4, TanStack Query, and React PDF 4; NestJS 11, Prisma 7, PostgreSQL. Existing guest data uses a single localStorage draft; signup imports it into an idempotent quick-invoice API. The existing standard invoice builder remains a separate workflow.
+
+Verified pre-implementation issues in the affected path (resolved by the work below):
+
+- `QuickInvoiceBuilder.tsx` uses a five-step wizard, duplicates form/line-item state and calculations, reconstructs API responses manually, and inserts an artificial 1.5-second success delay.
+- The backend response exposes inline quick-invoice fields, but the frontend response type/transformer omits them. Reopening/exporting quick invoices can lose their identity/details.
+- `PDFActions` and `InvoicesPage` require a saved customer/company even for quick invoices. `QuickInvoicePage` hides PDF failures behind `window.print()`.
+- Calculations are repeated across builders and PDF paths; rounding assumptions differ. Existing calculation tests already expose incorrect negative half-value rounding.
+- Currency is not persisted; UI/PDF/dashboard paths assume USD. Schema has no discount/shipping/paid/terms/PO/shipping-address/logo snapshot fields.
+- Invoice numbers are globally unique. User approved account-scoped uniqueness.
+- No Prisma migration history exists in this checkout; preserve the established schema-push workflow and document the schema rollout explicitly.
+
+Approach:
+
+- Replace the wizard with one shared quick editor; use the existing form/validation/query/PDF stack, inline line items, and a compact actions/settings panel.
+- Extend the existing invoice contracts rather than creating another invoice persistence path. Preserve inline sender/customer snapshots and generated IDs/import keys.
+- Consolidate affected calculation and mapping paths. Keep directly related cleanups tied to the acceptance criteria; discuss unrelated architectural changes before making them.
+- Persist currency and currency-aware summaries. Update invoice viewing/editing/export so new data is not silently dropped.
+- Store a bounded PNG/JPEG logo snapshot for quick invoices and guest drafts; validate type/size before accepting it. Reuse existing saved company branding where applicable.
+- Provide real PDF output, with explicit errors and matching fields/totals. Use currency codes in PDFs where built-in fonts cannot render symbols reliably.
+
+Design direction: a light invoice sheet, clear blue Invoiceo accents, restrained borders, direct editable rows, and a sticky desktop action panel that reflows on mobile. No competitor marketing claims or advertisements.
+
+## C. Implementation checklist
+
+| ID    | Status | Task and completion evidence                                                                                                 | Dependencies |
+| ----- | ------ | ---------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| QI-01 | DONE   | Inspect architecture and confirm scope/calculation/numbering decisions                                                       | —            |
+| QI-02 | DONE   | Record baseline build and affected test results                                                                              | QI-01        |
+| QI-03 | DONE   | Shared pricing/snapshot preservation, DTOs/schema, account numbering, API mapping; pricing tests and PostgreSQL checks below | QI-01        |
+| QI-04 | DONE   | Shared invoice-sheet editor, inline homepage, local drafts/idempotent import; component and browser checks below             | QI-03        |
+| QI-05 | DONE   | Shared preview/PDF document mapping, quick edit/reopen, currency/metadata/logo output; actual PDF verification below         | QI-03, QI-04 |
+| QI-06 | DONE   | Currency-grouped dashboard and currency-aware list/recent invoices; tests and database aggregation checks below              | QI-03        |
+| QI-07 | DONE   | Builds, focused tests, baseline regression comparison, database, desktop/mobile, and rendered PDF checks below               | QI-03–QI-06  |
+| QI-08 | DONE   | Reviewed the affected diff; removed temporary captures; synchronized research, implementation, and rollout documentation     | QI-07        |
+
+## D. Work evidence
+
+### Baseline (before application changes)
+
+- `npm run build`: passed (Vite 7.3.0 resolved locally); existing large-bundle warning.
+- Affected tests: 64 passed, 1 failed across 5 files. Guest builder/import/clear tests, guest storage/PDF tests, and invoice form tests pass. Failure: `InvoiceCalculationService.roundCurrency(-10.555)` returns `-10.55`, while its test expects `-10.56`. Resolve in the calculation work; do not misreport as a regression.
+- Files inspected: quick builder/page, guest section/types/schemas/storage/PDF generation, standard invoice builder/list/preview, API DTOs/transformers/hooks, backend invoice service/controller/schema, and dashboard aggregation/display.
+- User answered both clarification requests; no pending scope or numbering question.
+
+### Implemented behavior (QI-03–QI-06)
+
+- `backend/src/invoice/invoice-calculation.ts` is the framework-free arithmetic source used by the API and browser. Currency precision, rounded line amounts, discount-before-tax, shipping-after-tax, and paid/balance validation now share one implementation. Saved financial snapshots are preserved for non-pricing edits; payment-only edits validate against the saved total. Pricing changes normalize every line and recalculate totals. Standard and quick editors, PDF mapping, and API updates use that rule.
+- Schema/DTO/service/transformer changes persist all editor fields and expose quick company/customer snapshots on reload. Numbers are unique per account; blank numbers use UUIDs. Database constraints handle concurrent duplicate/import collisions. Updates cannot change creation-only flags/import keys. PNG/JPEG logos are bounded to 256 KiB decoded and validated at upload/API boundaries.
+- `QuickInvoiceBuilder.tsx` replaces the wizard and duplicate state with one React Hook Form source and direct line-item editing. `GuestInvoiceSection`, `HomePage`, and `QuickInvoicePage` provide the inline guest flow and shared authenticated editor. Draft errors are visible; failed saves/downloads retain the draft. Guest Enter/submit downloads locally without calling the invoice API.
+- `invoiceDocument.ts`, `InvoicePreview`, and the shared PDF template retain sender/customer/shipping details, logo, terms, notes, PO, currency, and adjustments. Quick invoices can reopen/edit/export without a saved company profile. Removed duplicate guest PDF layout, preview scaffolding, fake placeholders, and print-on-error fallbacks. Standard invoices retain their separate builder and saved-profile workflow.
+- List/dashboard views display invoice currency and quick customer snapshots. Server dashboard amounts are grouped by currency; retained scalar money fields describe USD only. No exchange conversion is implied. Removed unsupported growth percentages.
+- Directly encountered defects fixed: public session refresh redirected guests to login; concurrent refreshes rotated the same cookie twice; the automatic API refresh read the wrong response envelope; signup could redirect before guest import; loading could remain stuck after mutation-cache clearing. Regression tests cover these paths. Prisma now owns/disposes its local pool, hourly auth housekeeping no longer keeps stopped processes alive, and Vitest excludes backend Jest tests. The affected standard editor also preserves empty notes, handles cleared dates/pricing errors, reuses typed customer responses, and avoids logging invoice form data.
+
+### Verification (QI-07)
+
+- Frontend and backend production builds passed. Vite retains its existing large-chunk warning.
+- Focused frontend run: **139 passed, 0 failed** across editor, pricing, session restore/refresh, draft storage/PDF, form, dashboard, routes, and homepage navigation tests. Includes the existing 39 calculation tests and actual PDF byte generation. Report: `/tmp/invoiceo-final-focused-tests.json`.
+- Full frontend run: **264 passed, 28 failed**. Every failing test name also fails on a clean HEAD archive at `/tmp/invoiceo-quick-editor-baseline`; no new failing names. Remaining failures concern old App/Header/Card/LineItemsTable assertions and localStorage mock isolation. Reports: `/tmp/invoiceo-final-all-frontend-tests.json`, `/tmp/invoiceo-baseline-tests.json`. These failures remain disclosed rather than expanding into unrelated component rewrites.
+- Backend Jest: **149 passed, 0 failed**, all 18 suites, exit 0. HTTP tests require local-port permission; an initial sandbox run's eight `listen EPERM` failures passed when rerun with that permission. Report: `/tmp/invoiceo-final-backend-tests.json`.
+- Scoped ESLint passes for new/replaced editor, preview, document/calculation, test, and backend pricing/DTO/dashboard code. Checking all changed frontend files also finds existing warnings and two `InvoicesPage` state-in-effect errors reproduced on clean HEAD. This is not a claim of a clean repository-wide lint run.
+- Disposable PostgreSQL upgrade from the exact pre-editor schema passed, including existing PAID backfill and account-specific number uniqueness. Repeatable `backend/test/quick-invoice.integration.cjs` passed with exit 0: fields, edit/clear, ownership, duplicate/overpayment errors, concurrent auto-numbering/imports, Paid→Sent edits, grouped currencies, and legacy saved-total preservation/repricing. The legacy fixture preserves 0.67 with unchanged 0.335 lines; changing tax to 10% recalculates subtotal 0.68, tax 0.07, total 0.75.
+- Browser checks: guest INR 1,000 less 10% discount plus 20 shipping with 300 paid displayed total 920/balance 620; autosave/reload and signup/import succeeded once. Signed-in invoices reopened without a profile, edited/saved shipping to 30, retained a real 205,830-character logo data URL, and downloaded with total 930/balance 630. Session reload/login checks passed. Desktop 1440 and mobile 390/320 layouts were checked; no horizontal overflow.
+- Downloaded guest and saved PDFs were rendered and inspected. A 30-row, three-page fixture retained all rows, logo, notes/terms, PO/shipping, totals, and all three page numbers. This exposed and resolved inherited footer line-height expansion during pagination. Final saved-editor PDF also rendered correctly with logo, terms, INR 930 total and 630 balance.
+
+### Rollout and limits
+
+- Prepared the one-time transactional SQL and [schema rollout instructions](../../backend/prisma/updates/README.md). No real application database, production environment, or deployment was changed. Existing databases require the documented coordinated schema/API/frontend rollout; use schema push only for a new empty database.
+- Email sending and online payments remain excluded as agreed. Templates/editable labels and estimates from the research are future proposals. PDFs use explicit currency codes because the built-in font cannot render every currency symbol.
+- Preserving legacy snapshots can retain their historical line/subtotal rounding discrepancy. Pricing edits switch the whole invoice to the corrected rounding; detail-only edits do not silently change issued amounts.
+
+## E. Recovery state
+
+All QI-01–QI-08 tasks are complete, including the final confirmed saved-total rule, diff review, and documentation/temporary-artifact cleanup. No unresolved product decision or implementation blocker.
+
+No implementation action remains. If resuming for deployment, follow the schema rollout document against the intended environment; deployment was not part of this work. Local QA uses API :3101, preview :5174, and disposable PostgreSQL :55432. QA captures were moved to `/tmp/invoiceo-quick-editor-qa-20261101-final`; reports are under `/tmp`. Recreate the disposable database with the schema and integration instructions if those temporary resources expire. Remaining limitations are the baseline test/lint failures and the unapplied real-database rollout documented above.

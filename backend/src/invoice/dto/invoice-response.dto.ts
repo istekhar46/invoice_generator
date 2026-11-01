@@ -30,7 +30,10 @@ export class InvoiceResponseDto {
   @Type(() => CustomerResponseDto)
   customer!: CustomerResponseDto | null;
 
-  @ApiProperty({ description: 'Date when the service was performed', example: '2023-12-01T00:00:00.000Z' })
+  @ApiProperty({
+    description: 'Date when the service was performed',
+    example: '2023-12-01T00:00:00.000Z',
+  })
   @Expose()
   serviceDate!: Date;
 
@@ -54,7 +57,11 @@ export class InvoiceResponseDto {
   @Expose()
   total!: number;
 
-  @ApiProperty({ description: 'Additional notes', example: 'Work completed on schedule', required: false })
+  @ApiProperty({
+    description: 'Additional notes',
+    example: 'Work completed on schedule',
+    required: false,
+  })
   @Expose()
   notes?: string;
 
@@ -62,7 +69,10 @@ export class InvoiceResponseDto {
   @Expose()
   status!: InvoiceStatus;
 
-  @ApiProperty({ description: 'Whether this is a quick invoice (inline company/customer details)', example: false })
+  @ApiProperty({
+    description: 'Whether this is a quick invoice (inline company/customer details)',
+    example: false,
+  })
   @Expose()
   isQuickInvoice!: boolean;
 
@@ -129,6 +139,46 @@ export class InvoiceResponseDto {
   @ApiProperty({ required: false, nullable: true })
   @Expose()
   quickCustomerZipCode?: string | null;
+
+  @ApiProperty({ required: false })
+  @Expose()
+  currency?: string;
+
+  @ApiProperty({ required: false })
+  @Expose()
+  discountType?: 'percentage' | 'fixed';
+
+  @ApiProperty({ required: false })
+  @Expose()
+  discountValue?: number;
+
+  @ApiProperty({ required: false })
+  @Expose()
+  shippingAmount?: number;
+
+  @ApiProperty({ required: false })
+  @Expose()
+  amountPaid?: number;
+
+  @ApiProperty({ required: false })
+  @Expose()
+  paymentTerms?: string;
+
+  @ApiProperty({ required: false })
+  @Expose()
+  terms?: string;
+
+  @ApiProperty({ required: false })
+  @Expose()
+  purchaseOrderNumber?: string;
+
+  @ApiProperty({ required: false })
+  @Expose()
+  shippingAddress?: string;
+
+  @ApiProperty({ required: false })
+  @Expose()
+  logoDataUrl?: string;
 
   // ─── Relations ────────────────────────────────────────────────────────────────
 

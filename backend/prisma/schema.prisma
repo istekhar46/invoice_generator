@@ -104,7 +104,7 @@ model Invoice {
   userId        String
   customerId    String?
   clientRequestId String?
-  invoiceNumber String        @unique
+  invoiceNumber String
   serviceDate   DateTime
   dueDate       DateTime
   subtotal      Float
@@ -112,6 +112,16 @@ model Invoice {
   taxAmount     Float
   total         Float
   notes         String?
+  currency      String @default("USD")
+  discountType  String @default("percentage")
+  discountValue Float @default(0)
+  shippingAmount Float @default(0)
+  amountPaid    Float @default(0)
+  paymentTerms  String?
+  terms         String?
+  purchaseOrderNumber String?
+  shippingAddress String?
+  logoDataUrl    String?
   status        InvoiceStatus @default(DRAFT)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -152,6 +162,7 @@ model Invoice {
   @@index([userId, status])
   @@index([userId, customerId])
   @@unique([userId, clientRequestId])
+  @@unique([userId, invoiceNumber])
   @@index([isQuickInvoice])
   @@map("invoices")
 }

@@ -8,12 +8,13 @@
  * @param currency - The currency code (default: 'USD')
  * @returns Formatted currency string
  */
-export function formatCurrency(amount: number, currency: string = 'USD'): string {
+export function formatCurrency(
+  amount: number,
+  currency: string = 'USD'
+): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
   }).format(amount)
 }
 
@@ -40,7 +41,7 @@ export function formatDate(
  * @returns Date string in YYYY-MM-DD format
  */
 export function formatDateForInput(date: Date): string {
-  return date.toISOString().split('T')[0]
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
 /**
@@ -51,14 +52,14 @@ export function formatDateForInput(date: Date): string {
 export function formatPhoneNumber(phone: string): string {
   // Remove all non-digit characters
   const digits = phone.replace(/\D/g, '')
-  
+
   // Handle different lengths
   if (digits.length === 10) {
     return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
   } else if (digits.length === 11 && digits[0] === '1') {
     return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
   }
-  
+
   // Return original if format is not recognized
   return phone
 }
@@ -71,14 +72,14 @@ export function formatPhoneNumber(phone: string): string {
 export function formatZipCode(zipCode: string): string {
   // Remove all non-digit characters
   const digits = zipCode.replace(/\D/g, '')
-  
+
   // Format as XXXXX or XXXXX-XXXX
   if (digits.length === 5) {
     return digits
   } else if (digits.length === 9) {
     return `${digits.slice(0, 5)}-${digits.slice(5)}`
   }
-  
+
   // Return original if format is not recognized
   return zipCode
 }

@@ -4,6 +4,11 @@ import { apiClient } from './apiClient'
  * Dashboard Statistics DTO
  */
 export interface DashboardStatisticsDto {
+  currencyTotals?: {
+    currency: string
+    totalRevenue: number
+    averageInvoiceValue: number
+  }[]
   totalInvoices: number
   totalRevenue: number
   pendingInvoices: number

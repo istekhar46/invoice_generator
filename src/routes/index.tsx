@@ -38,7 +38,7 @@ export const router = createBrowserRouter([
           </PublicRoute>
         ),
       },
-      
+
       // Public routes (only accessible when NOT authenticated)
       {
         path: 'login',
@@ -56,7 +56,7 @@ export const router = createBrowserRouter([
           </PublicRoute>
         ),
       },
-      
+
       // Protected routes (only accessible when authenticated)
       {
         path: 'dashboard',
@@ -80,9 +80,7 @@ export const router = createBrowserRouter([
         path: 'invoices',
         element: (
           <ProtectedRoute>
-            <CompanySetupGuard>
-              <InvoicesPage />
-            </CompanySetupGuard>
+            <InvoicesPage />
           </ProtectedRoute>
         ),
       },
@@ -104,7 +102,7 @@ export const router = createBrowserRouter([
       },
       // Settings route is temporarily disabled. SettingsPage remains available in
       // src/pages/SettingsPage.tsx and can be restored here when it is ready.
-      
+
       // OAuth callback route — must NOT be wrapped in PublicRoute or ProtectedRoute
       // because the access token hasn't been stored in memory yet on first load
       {
