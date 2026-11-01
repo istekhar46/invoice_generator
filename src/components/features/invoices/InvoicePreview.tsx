@@ -1,17 +1,16 @@
-/**
- * Invoice Preview Component
- * Real-time preview of invoice with company and customer information
- */
-
 import React from 'react'
-import type { Invoice, CompanyProfile, Customer } from '../../../types/entities'
-import { Card, CardHeader, CardTitle, CardContent } from '../../ui/Card'
+import type { Invoice } from '../../../types/entities'
+import { invoiceParties, documentTotals } from '../../../utils/invoiceDocument'
+import type {
+  InvoiceCompany,
+  InvoiceCustomer,
+} from '../../../utils/invoiceDocument'
 import { formatCurrency, formatDate } from '../../../utils/formatters'
 
 interface InvoicePreviewProps {
   invoice: Partial<Invoice>
-  company?: CompanyProfile | null
-  customer?: Customer | null
+  company?: InvoiceCompany | null
+  customer?: InvoiceCustomer | null
   className?: string
 }
 
@@ -19,214 +18,148 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
   invoice,
   company,
   customer,
-  className,
+  className = '',
 }) => {
-  // Early return if essential data is missing
-  if (!invoice) {
-    return (
-      <Card className={className}>
-        <CardContent className="text-center py-8">
-          <p className="text-gray-500">No invoice data available for preview.</p>
-        </CardContent>
-      </Card>
+  const parties = invoiceParties(invoice, company, customer || invoice.customer)
+  const currency = invoice.currency || 'USD'
+  const amount = (value = 0) => formatCurrency(value, currency)
+  const totals = documentTotals(invoice)
+  const address = (party?: InvoiceCompany | InvoiceCustomer | null) =>
+    party && (
+      <div className="whitespace-pre-line text-sm leading-relaxed text-slate-500">
+        <p>{party.address}</p>
+        <p>
+          {[party.city, party.state, party.zipCode].filter(Boolean).join(', ')}
+        </p>
+        <p>{party.email}</p>
+        <p>{party.phone}</p>
+      </div>
     )
-  }
-
-  const getStatusBadge = (status?: string) => {
-    if (!status) return null
-
-    const styles: Record<string, string> = {
-      DRAFT: 'bg-gray-100 text-gray-800',
-      SENT: 'bg-yellow-100 text-yellow-800',
-      PAID: 'bg-green-100 text-green-800',
-    }
-
-    const label = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
-
-    return (
-      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${styles[status.toUpperCase()] || styles.DRAFT}`}>
-        {label}
-      </span>
-    )
-  }
-
+  const row = (label: string, value: number) => (
+    <div className="flex justify-between gap-4">
+      <span className="text-slate-500">{label}</span>
+      <span>{amount(value)}</span>
+    </div>
+  )
   return (
-    <Card className={className} padding='none'>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Invoice Preview</CardTitle>
-          {invoice.status && getStatusBadge(invoice.status)}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-8">
-          {/* Header Section */}
-          <div className="flex justify-between items-start">
-            {/* Company Information */}
-            <div className="space-y-2">
-              {company?.logoUrl && (
-                <img
-                  src={company.logoUrl}
-                  alt={`${company.businessName} logo`}
-                  className="h-16 w-auto object-contain"
-                />
-              )}
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">
-                  {company?.businessName || 'Your Company Name'}
-                </h2>
-                <div className="text-sm text-gray-600 space-y-1">
-                  <p>{company?.address || 'Company Address'}</p>
-                  <p>
-                    {company?.city || 'City'}, {company?.state || 'ST'} {company?.zipCode || '00000'}
-                  </p>
-                  <p>{company?.phone || 'Phone Number'}</p>
-                  <p>{company?.email || 'email@company.com'}</p>
-                  {company?.taxNumber && <p>Tax ID: {company.taxNumber}</p>}
-                </div>
-              </div>
-            </div>
-
-            {/* Invoice Information */}
-            <div className="text-right space-y-2">
-              <h1 className="text-3xl font-bold text-gray-900">INVOICE</h1>
-              <div className="text-sm text-gray-600 space-y-1">
-                <p>
-                  <span className="font-medium">Invoice #:</span>{' '}
-                  {invoice.invoiceNumber || 'INV-XXXX-XXXXXX'}
-                </p>
-                <p>
-                  <span className="font-medium">Service Date:</span>{' '}
-                  {invoice.serviceDate ? formatDate(invoice.serviceDate) : 'MM/DD/YYYY'}
-                </p>
-                <p>
-                  <span className="font-medium">Due Date:</span>{' '}
-                  {invoice.dueDate ? formatDate(invoice.dueDate) : 'MM/DD/YYYY'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Customer Information */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Bill To:</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-900 space-y-1">
-                <p className="font-medium text-base">
-                  {customer?.name || 'Customer Name'}
-                </p>
-                <p>{customer?.address || 'Customer Address'}</p>
-                <p>
-                  {customer?.city || 'City'}, {customer?.state || 'ST'} {customer?.zipCode || '00000'}
-                </p>
-                <p>{customer?.email || 'customer@email.com'}</p>
-                <p>{customer?.phone || 'Phone Number'}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Line Items */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Services & Materials:</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full border border-gray-200 rounded-lg">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
-                      Item Name
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
-                      Rate
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
-                      Qty
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
-                      Total Amount
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {invoice.lineItems && invoice.lineItems.length > 0 ? (
-                    invoice.lineItems.map((item, index) => (
-                      <tr key={item.id || index}>
-                        <td className="px-4 py-3 text-sm text-gray-900">
-                          {item.description}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                          {formatCurrency(item.rate)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900 text-center">
-                          {item.quantity} {item.unit || ''}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
-                          {formatCurrency(item.amount)}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
-                        No line items added yet
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Totals */}
-          <div className="flex justify-end">
-            <div className="w-64 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Subtotal:</span>
-                <span className="text-gray-900 font-medium">
-                  {formatCurrency(invoice.subtotal || 0)}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">
-                  Tax ({((invoice.taxRate || 0) * 100).toFixed(1)}%):
-                </span>
-                <span className="text-gray-900 font-medium">
-                  {formatCurrency(invoice.taxAmount || 0)}
-                </span>
-              </div>
-              <div className="border-t border-gray-200 pt-2">
-                <div className="flex justify-between text-lg font-bold">
-                  <span className="text-gray-900">Total:</span>
-                  <span className="text-gray-900">
-                    {formatCurrency(invoice.total || 0)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Notes */}
-          {invoice.notes && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Notes:</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                  {invoice.notes}
-                </p>
-              </div>
-            </div>
+    <article
+      className={`rounded-xl border border-slate-200 bg-white p-5 sm:p-8 ${className}`}
+      aria-label="Invoice preview"
+    >
+      <div className="mb-8 flex flex-wrap justify-between gap-6">
+        <div>
+          {parties.company?.logoUrl && (
+            <img
+              src={parties.company.logoUrl}
+              alt="Company logo"
+              className="mb-4 h-16 max-w-48 object-contain"
+            />
           )}
-
-          {/* Footer */}
-          <div className="border-t border-gray-200 pt-6 text-center text-sm text-gray-500">
-            <p>Thank you for your business!</p>
-            {invoice.dueDate && (
-              <p className="mt-1">
-                Payment is due by {formatDate(invoice.dueDate)}
-              </p>
-            )}
+          <h2 className="text-xl font-bold text-slate-900">
+            {parties.company?.businessName}
+          </h2>
+          {address(parties.company)}
+          {parties.company?.taxNumber && (
+            <p className="text-sm text-slate-500">
+              Tax / VAT / GST ID: {parties.company.taxNumber}
+            </p>
+          )}
+        </div>
+        <div className="space-y-1 text-sm sm:text-right">
+          <h1 className="mb-3 text-3xl font-bold text-slate-900">INVOICE</h1>
+          <p>{invoice.invoiceNumber || 'Preview'}</p>
+          {invoice.serviceDate && (
+            <p>Invoice date: {formatDate(invoice.serviceDate)}</p>
+          )}
+          {invoice.dueDate && <p>Due date: {formatDate(invoice.dueDate)}</p>}
+          {invoice.paymentTerms && <p>Payment terms: {invoice.paymentTerms}</p>}
+          {invoice.purchaseOrderNumber && (
+            <p>PO number: {invoice.purchaseOrderNumber}</p>
+          )}
+          <p>Currency: {currency}</p>
+        </div>
+      </div>
+      <div className="mb-8 grid gap-6 sm:grid-cols-2">
+        <div>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Bill to
+          </h3>
+          <p className="font-semibold">{parties.customer?.name}</p>
+          {address(parties.customer)}
+        </div>
+        {invoice.shippingAddress && (
+          <div>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Ship to
+            </h3>
+            <p className="whitespace-pre-line text-sm">
+              {invoice.shippingAddress}
+            </p>
+          </div>
+        )}
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-900 text-white">
+            <tr>
+              <th className="p-3 text-left">Item / service</th>
+              <th className="p-3 text-right">Quantity</th>
+              <th className="p-3 text-right">Rate</th>
+              <th className="p-3 text-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {invoice.lineItems?.map(item => (
+              <tr key={item.id} className="border-b border-slate-100">
+                <td className="whitespace-pre-line p-3">{item.description}</td>
+                <td className="p-3 text-right">
+                  {item.quantity} {item.unit}
+                </td>
+                <td className="p-3 text-right">{amount(item.rate)}</td>
+                <td className="p-3 text-right font-medium">
+                  {amount(item.amount)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-8 grid gap-8 sm:grid-cols-2">
+        <div className="space-y-5">
+          {invoice.notes && (
+            <section>
+              <h3 className="mb-2 text-xs font-semibold uppercase text-slate-400">
+                Notes
+              </h3>
+              <p className="whitespace-pre-line text-sm">{invoice.notes}</p>
+            </section>
+          )}
+          {invoice.terms && (
+            <section>
+              <h3 className="mb-2 text-xs font-semibold uppercase text-slate-400">
+                Terms & payment instructions
+              </h3>
+              <p className="whitespace-pre-line text-sm">{invoice.terms}</p>
+            </section>
+          )}
+        </div>
+        <div className="space-y-3 text-sm">
+          {row('Subtotal', invoice.subtotal || 0)}
+          {totals.discountAmount > 0 && row('Discount', -totals.discountAmount)}
+          {row(
+            `Tax (${Number(((invoice.taxRate || 0) * 100).toFixed(4))}%)`,
+            invoice.taxAmount || 0
+          )}
+          {row('Shipping', invoice.shippingAmount || 0)}
+          <div className="border-t pt-3 font-bold">
+            {row('Total', invoice.total || 0)}
+          </div>
+          {row('Amount paid', invoice.amountPaid || 0)}
+          <div className="rounded-lg bg-blue-50 p-3 font-bold">
+            {row('Balance due', totals.balanceDue)}
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </article>
   )
 }

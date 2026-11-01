@@ -1,62 +1,46 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { DashboardStatisticsDto } from './dto';
+import { DashboardStatisticsDto } from './dto/dashboard-statistics.dto';
+import { money } from '../invoice/invoice-calculation';
 
 @Injectable()
 export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
   async getStatistics(userId: string): Promise<DashboardStatisticsDto> {
-    // Validate user exists
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
+    if (!(await this.prisma.user.findUnique({ where: { id: userId } })))
       throw new NotFoundException('User not found');
+    const groups = await this.prisma.invoice.groupBy({
+      by: ['currency', 'status'],
+      where: { userId },
+      _count: true,
+      _sum: { total: true },
+    });
+    const counts = { DRAFT: 0, SENT: 0, PAID: 0 };
+    const currencies = new Map<string, { count: number; total: number; revenue: number }>();
+    for (const group of groups) {
+      counts[group.status] += group._count;
+      const value = currencies.get(group.currency) ?? { count: 0, total: 0, revenue: 0 };
+      value.count += group._count;
+      value.total += group._sum.total ?? 0;
+      if (group.status === 'PAID') value.revenue += group._sum.total ?? 0;
+      currencies.set(group.currency, value);
     }
-
-    // Get total count and sum of all invoices
-    const totalStats = await this.prisma.invoice.aggregate({
-      where: { userId },
-      _count: true,
-      _sum: { total: true },
-    });
-
-    // Group invoices by status to get counts
-    const statusStats = await this.prisma.invoice.groupBy({
-      by: ['status'],
-      where: { userId },
-      _count: true,
-      _sum: { total: true },
-    });
-
-    // Build status counts map
-    const statusMap: Record<string, { count: number; total: number }> = {};
-    statusStats.forEach((stat) => {
-      statusMap[stat.status] = {
-        count: stat._count,
-        total: stat._sum.total || 0,
-      };
-    });
-
-    // Calculate statistics
-    const totalInvoices = totalStats._count;
-    const totalValue = totalStats._sum.total || 0;
-    const averageInvoiceValue =
-      totalInvoices > 0 ? Math.round((totalValue / totalInvoices) * 100) / 100 : 0;
-
-    // Revenue is only from paid invoices
-    const paidStats = statusMap.PAID || { count: 0, total: 0 };
-    const totalRevenue = Math.round(paidStats.total * 100) / 100;
-
+    const currencyTotals = Array.from(currencies, ([currency, values]) => ({
+      currency,
+      totalRevenue: money(values.revenue, currency),
+      averageInvoiceValue: money(values.total / values.count, currency),
+    })).sort((a, b) => a.currency.localeCompare(b.currency));
+    const usd = currencyTotals.find((value) => value.currency === 'USD');
     return {
-      totalInvoices,
-      totalRevenue,
-      pendingInvoices: statusMap.SENT?.count || 0,
-      paidInvoices: statusMap.PAID?.count || 0,
-      draftInvoices: statusMap.DRAFT?.count || 0,
-      averageInvoiceValue,
+      totalInvoices: counts.DRAFT + counts.SENT + counts.PAID,
+      pendingInvoices: counts.SENT,
+      paidInvoices: counts.PAID,
+      draftInvoices: counts.DRAFT,
+      // Retained scalar fields describe USD only; all currency amounts are separate.
+      totalRevenue: usd?.totalRevenue ?? 0,
+      averageInvoiceValue: usd?.averageInvoiceValue ?? 0,
+      currencyTotals,
     };
   }
 }

@@ -14,8 +14,9 @@ import {
   IsBoolean,
 } from 'class-validator';
 import { CreateLineItemDto } from './create-line-item.dto';
+import { InvoiceOptionsDto } from './invoice-options.dto';
 
-export class CreateQuickInvoiceDto {
+export class CreateQuickInvoiceDto extends InvoiceOptionsDto {
   @ApiProperty({
     description: 'Flag to identify this as a quick invoice',
     example: true,

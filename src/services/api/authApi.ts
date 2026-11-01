@@ -29,6 +29,7 @@ export interface AuthResponseDto {
 
 // Authentication API service
 export class AuthApi {
+  private refreshRequest: Promise<AuthResponseDto> | null = null
   /**
    * Login user with email and password
    */
@@ -64,19 +65,29 @@ export class AuthApi {
   /**
    * Refresh access token using refresh token from HttpOnly cookie
    */
-  async refreshToken(): Promise<AuthResponseDto> {
-    return apiClient.post<AuthResponseDto>('/auth/refresh', {}, {
-      skipAuth: true, // Don't include auth token for refresh
-    })
+  refreshToken(): Promise<AuthResponseDto> {
+    // Header and route guards restore the same session concurrently on reload.
+    if (!this.refreshRequest) {
+      this.refreshRequest = apiClient
+        .post<AuthResponseDto>('/auth/refresh', {}, { skipAuth: true })
+        .finally(() => {
+          this.refreshRequest = null
+        })
+    }
+    return this.refreshRequest
   }
 
   /**
    * Google OAuth login callback
    */
   async googleLogin(code: string): Promise<AuthResponseDto> {
-    return apiClient.post<AuthResponseDto>('/auth/google', { code }, {
-      skipAuth: true,
-    })
+    return apiClient.post<AuthResponseDto>(
+      '/auth/google',
+      { code },
+      {
+        skipAuth: true,
+      }
+    )
   }
 }
 

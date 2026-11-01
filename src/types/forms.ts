@@ -5,6 +5,7 @@
 
 import { z } from 'zod'
 import type { LineItemType, InvoiceStatus } from './entities'
+import { invoiceOptionFields } from './invoiceOptions'
 
 // Shared API constraints for international phone and postal formats.
 const PHONE_REGEX = /^\+?[\d\s().-]{7,30}$/
@@ -114,17 +115,20 @@ export const lineItemSchema = z.object({
   rate: z
     .number()
     .min(0, 'Rate must be positive')
-    .max(100000, 'Rate cannot exceed $100,000'),
+    .max(100000, 'Rate cannot exceed 100,000'),
   amount: z.number(),
 })
 
 export type LineItemFormData = z.infer<typeof lineItemSchema>
 
 const invoiceFields = {
+  ...invoiceOptionFields,
   serviceDate: z.date(),
   dueDate: z.date(),
-  lineItems: z.array(lineItemSchema).min(1, 'At least one line item is required'),
-  notes: z.string().optional(),
+  lineItems: z
+    .array(lineItemSchema)
+    .min(1, 'At least one line item is required'),
+  notes: z.string().max(1000).optional(),
   taxRate: z
     .number()
     .min(0, 'Tax rate must be positive')
@@ -142,13 +146,10 @@ export const invoiceSchema = z
     customerId: z.string().min(1, 'Customer is required'),
     ...invoiceFields,
   })
-  .refine(
-    hasValidInvoiceDateRange,
-    {
-      message: 'Due date must be on or after the service date',
-      path: ['dueDate'],
-    }
-  )
+  .refine(hasValidInvoiceDateRange, {
+    message: 'Due date must be on or after the service date',
+    path: ['dueDate'],
+  })
 
 export type InvoiceFormData = z.infer<typeof invoiceSchema>
 
@@ -176,12 +177,20 @@ export const quickInvoiceSchema = z
       .regex(PHONE_REGEX, 'Invalid phone number')
       .optional()
       .or(z.literal('')),
-    quickCompanyEmail: z.string().email('Invalid email address').optional().or(z.literal('')),
+    quickCompanyEmail: z
+      .string()
+      .email('Invalid email address')
+      .optional()
+      .or(z.literal('')),
     quickCompanyTaxNumber: z.string().optional(),
 
     // Inline customer details (all optional)
     quickCustomerName: z.string().optional(),
-    quickCustomerEmail: z.string().email('Invalid email address').optional().or(z.literal('')),
+    quickCustomerEmail: z
+      .string()
+      .email('Invalid email address')
+      .optional()
+      .or(z.literal('')),
     quickCustomerPhone: z
       .string()
       .regex(PHONE_REGEX, 'Invalid phone number')
@@ -198,13 +207,10 @@ export const quickInvoiceSchema = z
 
     ...invoiceFields,
   })
-  .refine(
-    hasValidInvoiceDateRange,
-    {
-      message: 'Due date must be on or after the service date',
-      path: ['dueDate'],
-    }
-  )
+  .refine(hasValidInvoiceDateRange, {
+    message: 'Due date must be on or after the service date',
+    path: ['dueDate'],
+  })
   .refine(
     data => {
       // Either customerId OR quick customer details must be provided

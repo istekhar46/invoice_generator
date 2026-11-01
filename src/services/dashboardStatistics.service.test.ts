@@ -30,7 +30,7 @@ describe('DashboardStatisticsService', () => {
   describe('calculateStatistics', () => {
     it('should return zero statistics for empty invoice array', () => {
       const statistics = DashboardStatisticsService.calculateStatistics([])
-      
+
       expect(statistics).toEqual({
         totalInvoices: 0,
         totalRevenue: 0,
@@ -49,8 +49,9 @@ describe('DashboardStatisticsService', () => {
         createMockInvoice({ status: 'draft', total: 75 }),
       ]
 
-      const statistics = DashboardStatisticsService.calculateStatistics(invoices)
-      
+      const statistics =
+        DashboardStatisticsService.calculateStatistics(invoices)
+
       expect(statistics.totalInvoices).toBe(4)
       expect(statistics.totalRevenue).toBe(300) // Only paid invoices
       expect(statistics.paidInvoices).toBe(2)
@@ -65,9 +66,10 @@ describe('DashboardStatisticsService', () => {
         createMockInvoice({ status: 'paid', total: 200.666 }),
       ]
 
-      const statistics = DashboardStatisticsService.calculateStatistics(invoices)
-      
-      expect(statistics.totalRevenue).toBe(300.33) // Rounded
+      const statistics =
+        DashboardStatisticsService.calculateStatistics(invoices)
+
+      expect(statistics.totalRevenue).toBe(301) // Rounded
       expect(statistics.averageInvoiceValue).toBe(150.5) // Rounded
     })
   })
@@ -82,32 +84,32 @@ describe('DashboardStatisticsService', () => {
       ]
 
       const pending = DashboardStatisticsService.getPendingInvoices(invoices)
-      
+
       expect(pending).toHaveLength(2)
       expect(pending.every(invoice => invoice.status === 'sent')).toBe(true)
     })
 
     it('should sort pending invoices by creation date descending', () => {
       const invoices = [
-        createMockInvoice({ 
-          status: 'sent', 
+        createMockInvoice({
+          status: 'sent',
           invoiceNumber: 'INV-001',
-          createdAt: new Date('2024-01-01')
+          createdAt: new Date('2024-01-01'),
         }),
-        createMockInvoice({ 
-          status: 'sent', 
+        createMockInvoice({
+          status: 'sent',
           invoiceNumber: 'INV-002',
-          createdAt: new Date('2024-01-03')
+          createdAt: new Date('2024-01-03'),
         }),
-        createMockInvoice({ 
-          status: 'sent', 
+        createMockInvoice({
+          status: 'sent',
           invoiceNumber: 'INV-003',
-          createdAt: new Date('2024-01-02')
+          createdAt: new Date('2024-01-02'),
         }),
       ]
 
       const pending = DashboardStatisticsService.getPendingInvoices(invoices)
-      
+
       expect(pending[0].invoiceNumber).toBe('INV-002') // Most recent
       expect(pending[1].invoiceNumber).toBe('INV-003')
       expect(pending[2].invoiceNumber).toBe('INV-001') // Oldest
@@ -117,37 +119,37 @@ describe('DashboardStatisticsService', () => {
   describe('getRecentInvoices', () => {
     it('should return invoices sorted by creation date descending', () => {
       const invoices = [
-        createMockInvoice({ 
+        createMockInvoice({
           invoiceNumber: 'INV-001',
-          createdAt: new Date('2024-01-01')
+          createdAt: new Date('2024-01-01'),
         }),
-        createMockInvoice({ 
+        createMockInvoice({
           invoiceNumber: 'INV-002',
-          createdAt: new Date('2024-01-03')
+          createdAt: new Date('2024-01-03'),
         }),
-        createMockInvoice({ 
+        createMockInvoice({
           invoiceNumber: 'INV-003',
-          createdAt: new Date('2024-01-02')
+          createdAt: new Date('2024-01-02'),
         }),
       ]
 
       const recent = DashboardStatisticsService.getRecentInvoices(invoices, 5)
-      
+
       expect(recent[0].invoiceNumber).toBe('INV-002') // Most recent
       expect(recent[1].invoiceNumber).toBe('INV-003')
       expect(recent[2].invoiceNumber).toBe('INV-001') // Oldest
     })
 
     it('should limit results to specified count', () => {
-      const invoices = Array.from({ length: 10 }, (_, i) => 
-        createMockInvoice({ 
+      const invoices = Array.from({ length: 10 }, (_, i) =>
+        createMockInvoice({
           invoiceNumber: `INV-${i.toString().padStart(3, '0')}`,
-          createdAt: new Date(`2024-01-${(i + 1).toString().padStart(2, '0')}`)
+          createdAt: new Date(`2024-01-${(i + 1).toString().padStart(2, '0')}`),
         })
       )
 
       const recent = DashboardStatisticsService.getRecentInvoices(invoices, 3)
-      
+
       expect(recent).toHaveLength(3)
       expect(recent[0].invoiceNumber).toBe('INV-009') // Most recent
     })
@@ -156,20 +158,22 @@ describe('DashboardStatisticsService', () => {
   describe('getRecentInvoiceSummaries', () => {
     it('should include customer names from lookup function', () => {
       const invoices = [
-        createMockInvoice({ 
+        createMockInvoice({
           customerId: 'customer_1',
-          invoiceNumber: 'INV-001'
+          createdAt: new Date('2024-01-14'),
+          invoiceNumber: 'INV-001',
         }),
-        createMockInvoice({ 
+        createMockInvoice({
           customerId: 'customer_2',
-          invoiceNumber: 'INV-002'
+          createdAt: new Date('2024-01-15'),
+          invoiceNumber: 'INV-002',
         }),
       ]
 
       const customerLookup = (customerId: string) => {
         const customers: Record<string, string> = {
-          'customer_1': 'John Doe',
-          'customer_2': 'Jane Smith',
+          customer_1: 'John Doe',
+          customer_2: 'Jane Smith',
         }
         return customers[customerId]
       }
@@ -179,7 +183,7 @@ describe('DashboardStatisticsService', () => {
         customerLookup,
         5
       )
-      
+
       expect(summaries).toHaveLength(2)
       expect(summaries[0].customerName).toBe('Jane Smith')
       expect(summaries[1].customerName).toBe('John Doe')
@@ -187,9 +191,9 @@ describe('DashboardStatisticsService', () => {
 
     it('should handle missing customer names gracefully', () => {
       const invoices = [
-        createMockInvoice({ 
+        createMockInvoice({
           customerId: 'nonexistent_customer',
-          invoiceNumber: 'INV-001'
+          invoiceNumber: 'INV-001',
         }),
       ]
 
@@ -200,7 +204,7 @@ describe('DashboardStatisticsService', () => {
         customerLookup,
         5
       )
-      
+
       expect(summaries).toHaveLength(1)
       expect(summaries[0].customerName).toBeUndefined()
     })
@@ -215,17 +219,32 @@ describe('DashboardStatisticsService', () => {
         createMockInvoice({ status: 'paid' }),
       ]
 
-      const paidInvoices = DashboardStatisticsService.filterByStatus(invoices, 'paid')
-      const sentInvoices = DashboardStatisticsService.filterByStatus(invoices, 'sent')
-      const draftInvoices = DashboardStatisticsService.filterByStatus(invoices, 'draft')
-      
+      const paidInvoices = DashboardStatisticsService.filterByStatus(
+        invoices,
+        'paid'
+      )
+      const sentInvoices = DashboardStatisticsService.filterByStatus(
+        invoices,
+        'sent'
+      )
+      const draftInvoices = DashboardStatisticsService.filterByStatus(
+        invoices,
+        'draft'
+      )
+
       expect(paidInvoices).toHaveLength(2)
       expect(sentInvoices).toHaveLength(1)
       expect(draftInvoices).toHaveLength(1)
-      
-      expect(paidInvoices.every(invoice => invoice.status === 'paid')).toBe(true)
-      expect(sentInvoices.every(invoice => invoice.status === 'sent')).toBe(true)
-      expect(draftInvoices.every(invoice => invoice.status === 'draft')).toBe(true)
+
+      expect(paidInvoices.every(invoice => invoice.status === 'paid')).toBe(
+        true
+      )
+      expect(sentInvoices.every(invoice => invoice.status === 'sent')).toBe(
+        true
+      )
+      expect(draftInvoices.every(invoice => invoice.status === 'draft')).toBe(
+        true
+      )
     })
   })
 })

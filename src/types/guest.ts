@@ -1,3 +1,5 @@
+import type { InvoiceOptions } from './entities'
+
 /**
  * Guest invoice type definitions
  * Types for anonymous users creating invoices without authentication
@@ -46,7 +48,8 @@ export interface GuestCustomerDetails {
 /**
  * Invoice details for guest invoices
  */
-export interface GuestInvoiceDetails {
+export interface GuestInvoiceDetails extends InvoiceOptions {
+  invoiceNumber?: string
   serviceDate: Date
   dueDate: Date
   taxRate: number

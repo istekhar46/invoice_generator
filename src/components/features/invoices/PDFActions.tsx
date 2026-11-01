@@ -8,11 +8,10 @@ import { Download, Eye, Loader2 } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { usePDFGeneration } from '../../../hooks/usePDFGeneration'
 import { useCompanyProfile } from '../../../hooks/useCompany'
-import { transformCustomerResponse } from '../../../utils/apiTransformers'
 import type { Invoice } from '../../../types/entities'
 
 interface PDFActionsProps {
-  invoice?: Invoice | any
+  invoice?: Invoice
   variant?: 'default' | 'compact'
   className?: string
   onError?: (error: string) => void
@@ -37,12 +36,10 @@ export const PDFActions: React.FC<PDFActionsProps> = ({
 
   // Get company profile
   const { data: companyProfile } = useCompanyProfile()
-  
-  // Extract customer from invoice response (API already includes it)
-  // The customer is embedded in the invoice response from the API
-  const customer = invoice?.customer 
-    ? transformCustomerResponse(invoice.customer) 
-    : null
+
+  const customer = invoice?.customer || null
+  const hasDocumentData =
+    !!invoice && (invoice.isQuickInvoice || (!!customer && !!companyProfile))
 
   // Handle errors
   React.useEffect(() => {
@@ -53,7 +50,7 @@ export const PDFActions: React.FC<PDFActionsProps> = ({
   }, [error, onError, clearError])
 
   const handleDownload = async () => {
-    if (!invoice || !customer || !companyProfile) {
+    if (!invoice || !hasDocumentData) {
       onError?.('Missing required data for PDF generation')
       return
     }
@@ -67,7 +64,7 @@ export const PDFActions: React.FC<PDFActionsProps> = ({
   }
 
   const handlePreview = async () => {
-    if (!invoice || !customer || !companyProfile) {
+    if (!invoice || !hasDocumentData) {
       onError?.('Missing required data for PDF generation')
       return
     }
@@ -80,7 +77,7 @@ export const PDFActions: React.FC<PDFActionsProps> = ({
     }
   }
 
-  const isDisabled = isGenerating || !invoice || !customer || !companyProfile
+  const isDisabled = isGenerating || !invoice || !hasDocumentData
 
   if (variant === 'compact') {
     return (
@@ -89,7 +86,7 @@ export const PDFActions: React.FC<PDFActionsProps> = ({
           type="button"
           variant="ghost"
           size="sm"
-          onClick={(event) => {
+          onClick={event => {
             event.stopPropagation()
             void handleDownload()
           }}

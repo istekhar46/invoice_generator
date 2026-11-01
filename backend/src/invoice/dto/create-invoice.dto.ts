@@ -14,8 +14,9 @@ import {
   MaxLength,
 } from 'class-validator';
 import { CreateLineItemDto } from './create-line-item.dto';
+import { InvoiceOptionsDto } from './invoice-options.dto';
 
-export class CreateInvoiceDto {
+export class CreateInvoiceDto extends InvoiceOptionsDto {
   @ApiProperty({
     description: 'Customer ID for the invoice',
     example: 'cuid123456789',

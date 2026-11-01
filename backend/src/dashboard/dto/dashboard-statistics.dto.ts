@@ -2,6 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 
 export class DashboardStatisticsDto {
+  @ApiProperty({ description: 'Revenue and average invoice value grouped by currency' })
+  @Expose()
+  currencyTotals!: { currency: string; totalRevenue: number; averageInvoiceValue: number }[];
+
   @ApiProperty({
     description: 'Total number of invoices',
     example: 150,
@@ -10,7 +14,7 @@ export class DashboardStatisticsDto {
   totalInvoices!: number;
 
   @ApiProperty({
-    description: 'Total revenue from paid invoices',
+    description: 'USD revenue from paid invoices',
     example: 45000.5,
   })
   @Expose()
@@ -38,7 +42,7 @@ export class DashboardStatisticsDto {
   draftInvoices!: number;
 
   @ApiProperty({
-    description: 'Average invoice value across all invoices',
+    description: 'Average USD invoice value',
     example: 300.0,
   })
   @Expose()

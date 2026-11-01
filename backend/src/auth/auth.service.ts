@@ -34,7 +34,7 @@ export class AuthService {
         this.cleanupDeletedTokensCache();
       },
       60 * 60 * 1000,
-    ); // Every hour
+    ).unref(); // Hourly housekeeping must not keep a stopped API or test process alive.
   }
 
   async register(

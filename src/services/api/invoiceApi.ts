@@ -1,3 +1,5 @@
+import type { CustomerResponseDto } from './customerApi'
+import type { InvoiceOptions } from '../../types/entities'
 import { apiClient } from './apiClient'
 
 // Invoice API DTOs based on backend structure
@@ -9,7 +11,8 @@ export interface CreateLineItemDto {
   rate: number
 }
 
-export interface CreateInvoiceDto {
+export interface CreateInvoiceDto extends InvoiceOptions {
+  invoiceNumber?: string
   customerId: string
   serviceDate: Date
   dueDate: Date
@@ -18,7 +21,8 @@ export interface CreateInvoiceDto {
   taxRate: number
 }
 
-export interface CreateQuickInvoiceDto {
+export interface CreateQuickInvoiceDto extends InvoiceOptions {
+  invoiceNumber?: string
   isQuickInvoice: true
   clientRequestId?: string
   customerId?: string
@@ -44,14 +48,9 @@ export interface CreateQuickInvoiceDto {
   taxRate: number
 }
 
-export interface UpdateInvoiceDto {
-  customerId?: string
-  serviceDate?: string | Date  // Accept both for flexibility, but will be serialized to string
-  dueDate?: string | Date      // Accept both for flexibility, but will be serialized to string
-  lineItems?: CreateLineItemDto[]
-  notes?: string
-  taxRate?: number
-}
+export type UpdateInvoiceDto = Partial<
+  Omit<CreateQuickInvoiceDto, 'isQuickInvoice' | 'clientRequestId'>
+>
 
 export interface UpdateInvoiceStatusDto {
   status: 'DRAFT' | 'SENT' | 'PAID'
@@ -67,19 +66,28 @@ export interface LineItemResponseDto {
   amount: number
 }
 
-export interface InvoiceResponseDto {
+export interface InvoiceResponseDto extends InvoiceOptions {
+  customerId?: string | null
+  isQuickInvoice?: boolean
+  quickCompanyName?: string | null
+  quickCompanyAddress?: string | null
+  quickCompanyCity?: string | null
+  quickCompanyState?: string | null
+  quickCompanyZipCode?: string | null
+  quickCompanyPhone?: string | null
+  quickCompanyEmail?: string | null
+  quickCompanyTaxNumber?: string | null
+  quickCustomerName?: string | null
+  quickCustomerEmail?: string | null
+  quickCustomerPhone?: string | null
+  quickCustomerAddress?: string | null
+  quickCustomerCity?: string | null
+  quickCustomerState?: string | null
+  quickCustomerZipCode?: string | null
+
   id: string
   invoiceNumber: string
-  customer: {
-    id: string
-    name: string
-    email: string
-    phone: string
-    address: string
-    city: string
-    state: string
-    zipCode: string
-  } | null
+  customer: CustomerResponseDto | null
   serviceDate: Date
   dueDate: Date
   subtotal: number
@@ -126,19 +134,22 @@ export class InvoiceApi {
    * Get paginated list of invoices with optional filtering and sorting
    * Supports filtering by status, customer, and date range
    */
-  async getInvoices(params: InvoiceQueryParams = {}): Promise<PaginatedInvoiceResponse> {
+  async getInvoices(
+    params: InvoiceQueryParams = {}
+  ): Promise<PaginatedInvoiceResponse> {
     const queryParams = new URLSearchParams()
-    
+
     if (params.status) queryParams.append('status', params.status)
     if (params.customerId) queryParams.append('customerId', params.customerId)
-    if (params.dateFrom) queryParams.append('dateFrom', params.dateFrom.toISOString())
+    if (params.dateFrom)
+      queryParams.append('dateFrom', params.dateFrom.toISOString())
     if (params.dateTo) queryParams.append('dateTo', params.dateTo.toISOString())
     if (params.sortBy) queryParams.append('sortBy', params.sortBy)
     if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder)
     if (params.page) queryParams.append('page', params.page.toString())
     if (params.limit) queryParams.append('limit', params.limit.toString())
 
-    const url = queryParams.toString() 
+    const url = queryParams.toString()
       ? `${this.basePath}?${queryParams.toString()}`
       : this.basePath
 
@@ -164,7 +175,9 @@ export class InvoiceApi {
    * Create a quick invoice with inline company and customer details
    * Allows creating invoices without saving company or customer details
    */
-  async createQuickInvoice(data: CreateQuickInvoiceDto): Promise<InvoiceResponseDto> {
+  async createQuickInvoice(
+    data: CreateQuickInvoiceDto
+  ): Promise<InvoiceResponseDto> {
     return apiClient.post<InvoiceResponseDto>(`${this.basePath}/quick`, data)
   }
 
@@ -173,46 +186,26 @@ export class InvoiceApi {
    * Supports partial updates of invoice data and line items
    * Transforms dates to ISO strings before sending to backend
    */
-  async updateInvoice(id: string, data: UpdateInvoiceDto): Promise<InvoiceResponseDto> {
-    // Transform the data before sending
-    const transformedData: any = {}
-    
-    // Only include fields that are explicitly provided
-    if (data.customerId !== undefined) {
-      transformedData.customerId = data.customerId
+  async updateInvoice(
+    id: string,
+    data: UpdateInvoiceDto
+  ): Promise<InvoiceResponseDto> {
+    const transformedData = {
+      ...data,
+      ...(data.serviceDate !== undefined && {
+        serviceDate: new Date(data.serviceDate).toISOString(),
+      }),
+      ...(data.dueDate !== undefined && {
+        dueDate: new Date(data.dueDate).toISOString(),
+      }),
     }
-    
-    // Transform Date objects to ISO strings
-    if (data.serviceDate !== undefined) {
-      transformedData.serviceDate = data.serviceDate instanceof Date
-        ? data.serviceDate.toISOString()
-        : new Date(data.serviceDate).toISOString()
-    }
-    
-    if (data.dueDate !== undefined) {
-      transformedData.dueDate = data.dueDate instanceof Date
-        ? data.dueDate.toISOString()
-        : new Date(data.dueDate).toISOString()
-    }
-    
-    // Include line items if provided (already transformed to uppercase enums)
-    if (data.lineItems !== undefined) {
-      transformedData.lineItems = data.lineItems
-    }
-    
-    // Handle optional notes (omit undefined, preserve empty string and null)
-    if (data.notes !== undefined) {
-      transformedData.notes = data.notes || undefined
-    }
-    
-    // Include tax rate if provided
-    if (data.taxRate !== undefined) {
-      transformedData.taxRate = data.taxRate
-    }
-    
+
     // Send PUT request with transformed data
-    const responseDto = await apiClient.put<InvoiceResponseDto>(`${this.basePath}/${id}`, transformedData)
-    
+    const responseDto = await apiClient.put<InvoiceResponseDto>(
+      `${this.basePath}/${id}`,
+      transformedData
+    )
+
     // Return the response DTO directly (caller can transform if needed)
     return responseDto
   }
@@ -221,8 +214,14 @@ export class InvoiceApi {
    * Update invoice status (DRAFT -> SENT -> PAID)
    * Dedicated endpoint for status changes
    */
-  async updateInvoiceStatus(id: string, status: 'DRAFT' | 'SENT' | 'PAID'): Promise<InvoiceResponseDto> {
-    return apiClient.patch<InvoiceResponseDto>(`${this.basePath}/${id}/status`, { status })
+  async updateInvoiceStatus(
+    id: string,
+    status: 'DRAFT' | 'SENT' | 'PAID'
+  ): Promise<InvoiceResponseDto> {
+    return apiClient.patch<InvoiceResponseDto>(
+      `${this.basePath}/${id}/status`,
+      { status }
+    )
   }
 
   /**
@@ -240,7 +239,7 @@ export class InvoiceApi {
    * Convenience method for status-only filtering
    */
   async getInvoicesByStatus(
-    status: 'DRAFT' | 'SENT' | 'PAID', 
+    status: 'DRAFT' | 'SENT' | 'PAID',
     params: Omit<InvoiceQueryParams, 'status'> = {}
   ): Promise<PaginatedInvoiceResponse> {
     return this.getInvoices({ ...params, status })
@@ -251,7 +250,7 @@ export class InvoiceApi {
    * Convenience method for customer-specific invoices
    */
   async getInvoicesByCustomer(
-    customerId: string, 
+    customerId: string,
     params: Omit<InvoiceQueryParams, 'customerId'> = {}
   ): Promise<PaginatedInvoiceResponse> {
     return this.getInvoices({ ...params, customerId })
@@ -262,8 +261,8 @@ export class InvoiceApi {
    * Convenience method for date range filtering
    */
   async getInvoicesByDateRange(
-    dateFrom: Date, 
-    dateTo: Date, 
+    dateFrom: Date,
+    dateTo: Date,
     params: Omit<InvoiceQueryParams, 'dateFrom' | 'dateTo'> = {}
   ): Promise<PaginatedInvoiceResponse> {
     return this.getInvoices({ ...params, dateFrom, dateTo })

@@ -1,3 +1,4 @@
+import { transformInvoiceResponse } from '../../../utils/apiTransformers'
 /**
  * Invoice List Component
  * Displays list of invoices with modern card design, status filtering and sorting capabilities
@@ -5,20 +6,32 @@
 
 import React, { useState, useMemo, useEffect } from 'react'
 import type { Invoice, InvoiceStatus } from '../../../types/entities'
-import { usePaginatedInvoices, useDeleteInvoice, useUpdateInvoiceStatus } from '../../../hooks/useInvoices'
-import { usePrefetchOnHover, usePrefetchRelated, useAutoPrefetch } from '../../../hooks/usePrefetch'
+import {
+  usePaginatedInvoices,
+  useDeleteInvoice,
+  useUpdateInvoiceStatus,
+} from '../../../hooks/useInvoices'
+import {
+  usePrefetchOnHover,
+  usePrefetchRelated,
+  useAutoPrefetch,
+} from '../../../hooks/usePrefetch'
 import { Button } from '../../ui/Button'
 import { Card } from '../../ui/Card'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { Modal } from '../../ui/Modal'
 import { Pagination } from '../../ui/Pagination'
-import { InvoiceListSkeleton, InvoiceCardSkeleton, SkeletonGrid } from '../../ui/SkeletonLoading'
+import {
+  InvoiceListSkeleton,
+  InvoiceCardSkeleton,
+  SkeletonGrid,
+} from '../../ui/SkeletonLoading'
 import { ErrorDisplay } from '../../shared/ErrorDisplay'
 import { PDFActions } from './PDFActions'
 import { ResponsiveGrid, ResponsiveStack } from '../../layout/ResponsiveLayout'
-import { 
-  FileText, 
-  Plus, 
+import {
+  FileText,
+  Plus,
   Filter,
   Eye,
   Edit,
@@ -31,7 +44,7 @@ import {
   DollarSign,
   User,
   Grid3x3,
-  List
+  List,
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '../../../utils/formatters'
 import { cn } from '../../../utils/classNames'
@@ -49,7 +62,9 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
   onCreateInvoice,
 }) => {
   // State for filtering, pagination, and modals
-  const [selectedStatus, setSelectedStatus] = useState<InvoiceStatus | 'all'>('all')
+  const [selectedStatus, setSelectedStatus] = useState<InvoiceStatus | 'all'>(
+    'all'
+  )
   const [currentPage, setCurrentPage] = useState(1)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deletingInvoice, setDeletingInvoice] = useState<Invoice | null>(null)
@@ -59,21 +74,30 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
 
   // Build query parameters
-  const queryParams: Omit<InvoiceQueryParams, 'page' | 'limit'> = useMemo(() => ({
-    status: selectedStatus !== 'all' ? (selectedStatus.toUpperCase() as 'DRAFT' | 'SENT' | 'PAID') : undefined,
-  }), [selectedStatus])
+  const queryParams: Omit<InvoiceQueryParams, 'page' | 'limit'> = useMemo(
+    () => ({
+      status:
+        selectedStatus !== 'all'
+          ? (selectedStatus.toUpperCase() as 'DRAFT' | 'SENT' | 'PAID')
+          : undefined,
+    }),
+    [selectedStatus]
+  )
 
   // Use paginated invoices hook
-  const { 
-    data: invoicesResponse, 
-    isLoading: invoicesLoading, 
+  const {
+    data: invoicesResponse,
+    isLoading: invoicesLoading,
     error: invoicesError,
     refetch: refetchInvoices,
-    pagination
+    pagination,
   } = usePaginatedInvoices(currentPage, 20, queryParams)
 
   // Extract data from responses
-  const invoices = invoicesResponse?.data || []
+  const invoices = useMemo(
+    () => (invoicesResponse?.data || []).map(transformInvoiceResponse),
+    [invoicesResponse]
+  )
   const isLoading = invoicesLoading
 
   const deleteInvoiceMutation = useDeleteInvoice()
@@ -111,11 +135,14 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
     setShowDeleteConfirm(true)
   }
 
-  const handleStatusChange = async (invoice: Invoice, newStatus: InvoiceStatus) => {
+  const handleStatusChange = async (
+    invoice: Invoice,
+    newStatus: InvoiceStatus
+  ) => {
     try {
-      await updateStatusMutation.mutateAsync({ 
-        id: invoice.id, 
-        status: newStatus.toUpperCase() as 'DRAFT' | 'SENT' | 'PAID'
+      await updateStatusMutation.mutateAsync({
+        id: invoice.id,
+        status: newStatus.toUpperCase() as 'DRAFT' | 'SENT' | 'PAID',
       })
       setShowActionsMenu(null)
     } catch (error) {
@@ -142,7 +169,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
 
   const confirmDelete = async () => {
     if (!deletingInvoice) return
-    
+
     try {
       setDeleteError(null)
       await deleteInvoiceMutation.mutateAsync(deletingInvoice.id)
@@ -150,14 +177,16 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       setDeletingInvoice(null)
     } catch (error: any) {
       console.error('Delete failed:', error)
-      
+
       // Set specific error message based on error type
       if (error?.status === 403) {
         setDeleteError('You do not have permission to delete this invoice.')
       } else if (error?.status === 404) {
         setDeleteError('Invoice not found. It may have already been deleted.')
       } else if (error?.status === 0) {
-        setDeleteError('Network error. Please check your internet connection and try again.')
+        setDeleteError(
+          'Network error. Please check your internet connection and try again.'
+        )
       } else if (error?.message) {
         setDeleteError(error.message)
       } else {
@@ -168,7 +197,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
 
   const getCustomerName = (invoice: any) => {
     // API response has customer object, not customerId
-    return invoice.customer?.name || 'Unknown Customer'
+    return invoice.quickCustomerName || invoice.customer?.name || 'Customer'
   }
 
   if (isLoading && invoices.length === 0) {
@@ -186,13 +215,14 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
           <div>
             <h1 className="heading-2 text-gray-900">Invoices</h1>
             <p className="text-body-sm text-gray-600">
-              {pagination.total} {pagination.total === 1 ? 'invoice' : 'invoices'}
+              {pagination.total}{' '}
+              {pagination.total === 1 ? 'invoice' : 'invoices'}
             </p>
           </div>
         </div>
-        
-        <Button 
-          onClick={onCreateInvoice} 
+
+        <Button
+          onClick={onCreateInvoice}
           variant="primary"
           size="lg"
           className="group shadow-glow"
@@ -210,7 +240,9 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex items-center space-x-2">
               <Filter className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-semibold text-gray-700">Filter by Status:</span>
+              <span className="text-sm font-semibold text-gray-700">
+                Filter by Status:
+              </span>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -270,8 +302,8 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
 
       {/* Error Display */}
       {invoicesError && (
-        <ErrorDisplay 
-          error={invoicesError} 
+        <ErrorDisplay
+          error={invoicesError}
           onRetry={() => refetchInvoices()}
           title="Failed to load invoices"
         />
@@ -286,13 +318,16 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                 <FileText className="h-5 w-5 text-danger-600" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-danger-800">PDF Generation Failed</h3>
+                <h3 className="text-sm font-semibold text-danger-800">
+                  PDF Generation Failed
+                </h3>
                 <p className="text-sm text-danger-700 mt-1" role="alert">
                   {pdfError}
                 </p>
                 {pdfError.includes('Company profile is required') && (
                   <p className="text-sm text-danger-700 mt-2">
-                    <strong>Next steps:</strong> Go to Settings → Company Profile to set up your business information.
+                    <strong>Next steps:</strong> Go to Settings → Company
+                    Profile to set up your business information.
                   </p>
                 )}
               </div>
@@ -305,7 +340,11 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
             >
               <span className="sr-only">Close</span>
               <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                <path
+                  fillRule="evenodd"
+                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
               </svg>
             </Button>
           </div>
@@ -321,7 +360,9 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                 <Trash2 className="h-5 w-5 text-danger-600" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-danger-800">Delete Failed</h3>
+                <h3 className="text-sm font-semibold text-danger-800">
+                  Delete Failed
+                </h3>
                 <p className="text-sm text-danger-700 mt-1" role="alert">
                   {deleteError}
                 </p>
@@ -335,7 +376,11 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
             >
               <span className="sr-only">Close</span>
               <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                <path
+                  fillRule="evenodd"
+                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
               </svg>
             </Button>
           </div>
@@ -344,22 +389,31 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
 
       {/* Invoice Cards Grid */}
       {invoices.length === 0 ? (
-        <Card padding="lg" className="text-center bg-linear-to-r from-white to-gray-50/50">
+        <Card
+          padding="lg"
+          className="text-center bg-linear-to-r from-white to-gray-50/50"
+        >
           <div className="py-12">
             <div className="p-4 bg-gradient-to- from-gray-100 to-gray-200 rounded-2xl w-fit mx-auto mb-6">
               <FileText className="h-12 w-12 text-gray-400" />
             </div>
             <h3 className="heading-3 text-gray-900 mb-2">
-              {selectedStatus !== 'all' ? `No ${selectedStatus} invoices` : 'No invoices yet'}
+              {selectedStatus !== 'all'
+                ? `No ${selectedStatus} invoices`
+                : 'No invoices yet'}
             </h3>
             <p className="text-body text-gray-600 mb-6 max -w- md mx-auto">
               {selectedStatus !== 'all'
                 ? `You don't have any ${selectedStatus} invoices. Try changing the filter.`
-                : 'Get started by creating your first invoice and managing your business professionally.'
-              }
+                : 'Get started by creating your first invoice and managing your business professionally.'}
             </p>
             {selectedStatus === 'all' && (
-              <Button onClick={onCreateInvoice} variant="primary" size="lg" className="group">
+              <Button
+                onClick={onCreateInvoice}
+                variant="primary"
+                size="lg"
+                className="group"
+              >
                 <Plus className="w-5 h-5 mr-2" />
                 Create Your First Invoice
                 <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
@@ -377,9 +431,12 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
               </div>
             </div>
           )}
-          
+
           {viewMode === 'grid' ? (
-            <ResponsiveGrid columns={{ mobile: 1, tablet: 2, desktop: 3 }} gap="lg">
+            <ResponsiveGrid
+              columns={{ mobile: 1, tablet: 2, desktop: 3 }}
+              gap="lg"
+            >
               {invoices.map((invoice, index) => (
                 <InvoiceCard
                   key={invoice.id}
@@ -388,7 +445,9 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                   onSelect={() => onInvoiceSelect?.(invoice as any)}
                   onEdit={() => handleEditInvoice(invoice as any)}
                   onDelete={() => handleDeleteInvoice(invoice as any)}
-                  onStatusChange={(status) => handleStatusChange(invoice as any, status)}
+                  onStatusChange={status =>
+                    handleStatusChange(invoice as any, status)
+                  }
                   onPdfError={handlePdfError}
                   index={index}
                 />
@@ -396,7 +455,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
             </ResponsiveGrid>
           ) : (
             <div className="space-y-3">
-              {invoices.map((invoice) => (
+              {invoices.map(invoice => (
                 <InvoiceListRow
                   key={invoice.id}
                   invoice={invoice as any}
@@ -404,7 +463,9 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                   onSelect={() => onInvoiceSelect?.(invoice as any)}
                   onEdit={() => handleEditInvoice(invoice as any)}
                   onDelete={() => handleDeleteInvoice(invoice as any)}
-                  onStatusChange={(status) => handleStatusChange(invoice as any, status)}
+                  onStatusChange={status =>
+                    handleStatusChange(invoice as any, status)
+                  }
                   onPdfError={handlePdfError}
                 />
               ))}
@@ -447,12 +508,13 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
               </p>
             </div>
           )}
-          
+
           <p className="text-sm text-gray-600">
-            Are you sure you want to delete invoice <strong>{deletingInvoice?.invoiceNumber}</strong>? 
-            This action cannot be undone.
+            Are you sure you want to delete invoice{' '}
+            <strong>{deletingInvoice?.invoiceNumber}</strong>? This action
+            cannot be undone.
           </p>
-          
+
           <div className="flex justify-end space-x-2">
             <Button
               variant="secondary"
@@ -470,7 +532,9 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
               loading={deleteInvoiceMutation.isPending}
               disabled={deleteInvoiceMutation.isPending}
             >
-              {deleteInvoiceMutation.isPending ? 'Deleting...' : 'Delete Invoice'}
+              {deleteInvoiceMutation.isPending
+                ? 'Deleting...'
+                : 'Delete Invoice'}
             </Button>
           </div>
         </div>
@@ -501,7 +565,7 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
   onDelete,
   onStatusChange,
   onPdfError,
-  index
+  index,
 }) => {
   const [showActionsMenu, setShowActionsMenu] = useState(false)
   const { prefetchInvoice, cancelPrefetch } = usePrefetchOnHover()
@@ -523,12 +587,12 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
   }
 
   return (
-    <Card 
-      padding="lg" 
+    <Card
+      padding="lg"
       hover={true}
       className={cn(
-        "cursor-pointer transition-all duration-300 animate-slide-up bg-linear-to-r from-white to-gray-50/50",
-        "hover:shadow-glow hover:-translate-y-1"
+        'cursor-pointer transition-all duration-300 animate-slide-up bg-linear-to-r from-white to-gray-50/50',
+        'hover:shadow-glow hover:-translate-y-1'
       )}
       style={{ animationDelay: `${index * 100}ms` } as React.CSSProperties}
       onClick={onSelect}
@@ -553,7 +617,8 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={(e) => {
+                aria-label={`Actions for ${invoice.invoiceNumber}`}
+                onClick={e => {
                   e.stopPropagation()
                   setShowActionsMenu(!showActionsMenu)
                 }}
@@ -561,12 +626,12 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
               >
                 <MoreVertical className="h-4 w-4" />
               </Button>
-              
+
               {showActionsMenu && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-medium border border-gray-200 z-10 py-2">
                   <button
                     className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                    onClick={(e) => {
+                    onClick={e => {
                       e.stopPropagation()
                       onEdit()
                       setShowActionsMenu(false)
@@ -575,11 +640,11 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
                     <Edit className="h-4 w-4 mr-3 text-gray-400" />
                     Edit Invoice
                   </button>
-                  
+
                   {invoice.status !== 'sent' && (
                     <button
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      onClick={(e) => {
+                      onClick={e => {
                         e.stopPropagation()
                         onStatusChange('sent')
                         setShowActionsMenu(false)
@@ -589,11 +654,11 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
                       Mark as Sent
                     </button>
                   )}
-                  
+
                   {invoice.status !== 'paid' && (
                     <button
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      onClick={(e) => {
+                      onClick={e => {
                         e.stopPropagation()
                         onStatusChange('paid')
                         setShowActionsMenu(false)
@@ -603,12 +668,12 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
                       Mark as Paid
                     </button>
                   )}
-                  
+
                   <div className="border-t border-gray-100 my-2" />
-                  
+
                   <button
                     className="flex items-center w-full px-4 py-2 text-sm text-danger-600 hover:bg-danger-50 transition-colors"
-                    onClick={(e) => {
+                    onClick={e => {
                       e.stopPropagation()
                       onDelete()
                       setShowActionsMenu(false)
@@ -631,18 +696,19 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
           </div>
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <DollarSign className="w-4 h-4" />
-            <span className="font-semibold text-gray-900">{formatCurrency(invoice.total)}</span>
+            <span className="font-semibold text-gray-900">
+              {formatCurrency(invoice.total, invoice.currency)}
+            </span>
           </div>
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-         
           <div className="flex items-center space-x-2">
             <Button
               variant="ghost"
               size="sm"
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation()
                 onSelect()
               }}
@@ -657,11 +723,10 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
               onError={onPdfError}
             />
           </div>
-           
         </div>
         <div className="text-xs text-gray-500">
-            Due: {formatDate(invoice.dueDate)}
-          </div>
+          Due: {formatDate(invoice.dueDate)}
+        </div>
       </div>
     </Card>
   )
@@ -691,12 +756,12 @@ const InvoiceListRow: React.FC<InvoiceListRowProps> = ({
   const [showActionsMenu, setShowActionsMenu] = useState(false)
 
   return (
-    <Card 
-      padding="lg" 
+    <Card
+      padding="lg"
       hover={true}
       className={cn(
-        "cursor-pointer transition-all duration-300 bg-linear-to-r from-white to-gray-50/50",
-        "hover:shadow-glow hover:border-primary-200"
+        'cursor-pointer transition-all duration-300 bg-linear-to-r from-white to-gray-50/50',
+        'hover:shadow-glow hover:border-primary-200'
       )}
       onClick={onSelect}
     >
@@ -710,17 +775,17 @@ const InvoiceListRow: React.FC<InvoiceListRowProps> = ({
               </h3>
               <p className="text-xs text-gray-600 mt-1">{customerName}</p>
             </div>
-            
+
             {/* Middle Section - Dates and Amount */}
             <div className="hidden sm:flex items-center gap-6">
               <div className="flex items-center space-x-2 text-xs text-gray-600">
                 <Calendar className="w-4 h-4 text-gray-400" />
                 <span>{formatDate(invoice.serviceDate)}</span>
               </div>
-              
+
               <div className="flex items-center space-x-2 text-sm font-semibold text-gray-900">
                 <DollarSign className="w-4 h-4 text-gray-400" />
-                <span>{formatCurrency(invoice.total)}</span>
+                <span>{formatCurrency(invoice.total, invoice.currency)}</span>
               </div>
             </div>
           </div>
@@ -729,18 +794,19 @@ const InvoiceListRow: React.FC<InvoiceListRowProps> = ({
         {/* Right Section - Status and Actions */}
         <div className="flex items-center gap-3">
           <StatusBadge status={invoice.status} />
-          
+
           <PDFActions
             invoice={invoice}
             variant="compact"
             onError={onPdfError}
           />
-          
+
           <div className="relative">
             <Button
               variant="ghost"
               size="sm"
-              onClick={(e) => {
+              aria-label={`Actions for ${invoice.invoiceNumber}`}
+              onClick={e => {
                 e.stopPropagation()
                 setShowActionsMenu(!showActionsMenu)
               }}
@@ -748,12 +814,12 @@ const InvoiceListRow: React.FC<InvoiceListRowProps> = ({
             >
               <MoreVertical className="h-4 w-4" />
             </Button>
-            
+
             {showActionsMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-medium border border-gray-200 z-10 py-2">
                 <button
                   className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                  onClick={(e) => {
+                  onClick={e => {
                     e.stopPropagation()
                     onEdit()
                     setShowActionsMenu(false)
@@ -762,11 +828,11 @@ const InvoiceListRow: React.FC<InvoiceListRowProps> = ({
                   <Edit className="h-4 w-4 mr-3 text-gray-400" />
                   Edit Invoice
                 </button>
-                
+
                 {invoice.status !== 'sent' && (
                   <button
                     className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                    onClick={(e) => {
+                    onClick={e => {
                       e.stopPropagation()
                       onStatusChange('sent')
                       setShowActionsMenu(false)
@@ -776,11 +842,11 @@ const InvoiceListRow: React.FC<InvoiceListRowProps> = ({
                     Mark as Sent
                   </button>
                 )}
-                
+
                 {invoice.status !== 'paid' && (
                   <button
                     className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                    onClick={(e) => {
+                    onClick={e => {
                       e.stopPropagation()
                       onStatusChange('paid')
                       setShowActionsMenu(false)
@@ -790,12 +856,12 @@ const InvoiceListRow: React.FC<InvoiceListRowProps> = ({
                     Mark as Paid
                   </button>
                 )}
-                
+
                 <div className="border-t border-gray-100 my-2" />
-                
+
                 <button
                   className="flex items-center w-full px-4 py-2 text-sm text-danger-600 hover:bg-danger-50 transition-colors"
-                  onClick={(e) => {
+                  onClick={e => {
                     e.stopPropagation()
                     onDelete()
                     setShowActionsMenu(false)

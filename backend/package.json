@@ -22,7 +22,8 @@
     "db:push": "prisma db push",
     "db:push:url": "node scripts/push-schema.mjs",
     "db:migrate": "prisma migrate deploy",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "test:invoice-integration": "node test/quick-invoice.integration.cjs"
   },
   "dependencies": {
     "@nestjs/cli": "^11.0.14",

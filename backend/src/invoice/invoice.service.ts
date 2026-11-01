@@ -1,4 +1,18 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
+import {
+  calculateInvoiceForEdit,
+  invoicePricingChanged,
+  money,
+  type InvoicePricing,
+  type InvoiceSnapshot,
+} from './invoice-calculation';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+  Logger,
+} from '@nestjs/common';
 import { Invoice, LineItem, InvoiceStatus, Prisma } from '@prisma/client';
 import { BaseUserService } from '../common/services/base-user-service';
 import {
@@ -29,7 +43,7 @@ export interface InvoiceWithRelations extends Invoice {
     zipCode: string;
     createdAt: Date;
     updatedAt: Date;
-  };
+  } | null;
   lineItems: LineItem[];
 }
 
@@ -48,47 +62,63 @@ export class InvoiceService extends BaseUserService {
     this.validateInvoiceDates(createInvoiceDto.serviceDate, createInvoiceDto.dueDate);
 
     // Calculate totals
-    const totals = this.calculateTotals(createInvoiceDto.lineItems, createInvoiceDto.taxRate);
+    const totals = this.calculateTotals(
+      createInvoiceDto.lineItems,
+      createInvoiceDto.taxRate,
+      createInvoiceDto,
+    );
 
     // Generate unique invoice number
-    const invoiceNumber = await this.generateInvoiceNumber();
+    const invoiceNumber =
+      createInvoiceDto.invoiceNumber?.trim() || (await this.generateInvoiceNumber());
+    await this.ensureInvoiceNumberAvailable(userId, invoiceNumber);
 
     // Create invoice with line items in a transaction
-    const invoice = await this.prisma.$transaction(async (tx) => {
-      // Create the invoice
-      const newInvoice = await tx.invoice.create({
-        data: {
-          userId,
-          customerId: createInvoiceDto.customerId,
-          invoiceNumber,
-          serviceDate: createInvoiceDto.serviceDate,
-          dueDate: createInvoiceDto.dueDate,
-          subtotal: totals.subtotal,
-          taxRate: createInvoiceDto.taxRate,
-          taxAmount: totals.taxAmount,
-          total: totals.total,
-          notes: createInvoiceDto.notes ?? null,
-          status: InvoiceStatus.DRAFT,
-        },
+    const invoice = await this.prisma
+      .$transaction(async (tx) => {
+        // Create the invoice
+        const newInvoice = await tx.invoice.create({
+          data: {
+            ...this.optionData(createInvoiceDto),
+            userId,
+            customerId: createInvoiceDto.customerId,
+            invoiceNumber,
+            serviceDate: createInvoiceDto.serviceDate,
+            dueDate: createInvoiceDto.dueDate,
+            subtotal: totals.subtotal,
+            taxRate: createInvoiceDto.taxRate,
+            taxAmount: totals.taxAmount,
+            total: totals.total,
+            notes: createInvoiceDto.notes ?? null,
+            status: InvoiceStatus.DRAFT,
+          },
+        });
+
+        // Create line items
+        const lineItemsData = createInvoiceDto.lineItems.map((item) => ({
+          invoiceId: newInvoice.id,
+          type: item.type,
+          description: item.description,
+          unit: item.unit.trim(),
+          quantity: item.quantity,
+          rate: item.rate,
+          amount: money(item.quantity * item.rate, createInvoiceDto.currency),
+        }));
+
+        await tx.lineItem.createMany({
+          data: lineItemsData,
+        });
+
+        return newInvoice;
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+          throw new ConflictException(
+            'An invoice with this number already exists in your account.',
+          );
+        }
+        throw error;
       });
-
-      // Create line items
-      const lineItemsData = createInvoiceDto.lineItems.map((item) => ({
-        invoiceId: newInvoice.id,
-        type: item.type,
-        description: item.description,
-        unit: item.unit.trim(),
-        quantity: item.quantity,
-        rate: item.rate,
-        amount: item.quantity * item.rate,
-      }));
-
-      await tx.lineItem.createMany({
-        data: lineItemsData,
-      });
-
-      return newInvoice;
-    });
 
     // Return invoice with relations
     return await this.findById(userId, invoice.id);
@@ -125,10 +155,15 @@ export class InvoiceService extends BaseUserService {
     const totals = this.calculateTotals(
       createQuickInvoiceDto.lineItems,
       createQuickInvoiceDto.taxRate,
+      createQuickInvoiceDto,
     );
 
     // Generate unique invoice number
-    const invoiceNumber = await this.generateInvoiceNumber();
+    const invoiceNumber =
+      createQuickInvoiceDto.invoiceNumber?.trim() || (await this.generateInvoiceNumber());
+    if (!createQuickInvoiceDto.customerId && !createQuickInvoiceDto.quickCustomerName?.trim()) {
+      throw new BadRequestException('Customer name is required.');
+    }
 
     // Create invoice with line items in a transaction
     let invoice: Invoice;
@@ -137,6 +172,7 @@ export class InvoiceService extends BaseUserService {
         // Create the invoice with inline details
         const newInvoice = await tx.invoice.create({
           data: {
+            ...this.optionData(createQuickInvoiceDto),
             userId,
             customerId: createQuickInvoiceDto.customerId ?? null,
             clientRequestId: clientRequestId ?? null,
@@ -178,7 +214,7 @@ export class InvoiceService extends BaseUserService {
           unit: item.unit.trim(),
           quantity: item.quantity,
           rate: item.rate,
-          amount: item.quantity * item.rate,
+          amount: money(item.quantity * item.rate, createQuickInvoiceDto.currency),
         }));
 
         await tx.lineItem.createMany({
@@ -203,6 +239,9 @@ export class InvoiceService extends BaseUserService {
         }
       }
 
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('An invoice with this number already exists in your account.');
+      }
       throw error;
     }
 
@@ -324,164 +363,95 @@ export class InvoiceService extends BaseUserService {
     return invoice as InvoiceWithRelations;
   }
 
-  async update(
-    userId: string,
-    id: string,
-    updateInvoiceDto: UpdateInvoiceDto,
-  ): Promise<InvoiceWithRelations> {
-    this.logger.log(
-      `Update invoice request - userId: ${userId}, invoiceId: ${id}, fields: ${Object.keys(updateInvoiceDto).join(', ')}`,
-    );
-
-    // Validate that at least one field is being updated
-    if (Object.keys(updateInvoiceDto).length === 0) {
-      this.logger.warn(`Update failed - no fields provided - userId: ${userId}, invoiceId: ${id}`);
-      throw new BadRequestException('At least one field must be provided for update');
+  async update(userId: string, id: string, dto: UpdateInvoiceDto): Promise<InvoiceWithRelations> {
+    const existing = await this.findById(userId, id);
+    if (dto.customerId) await this.validateCustomerOwnership(dto.customerId, userId);
+    const serviceDate = dto.serviceDate ?? existing.serviceDate;
+    const dueDate = dto.dueDate ?? existing.dueDate;
+    this.validateInvoiceDates(serviceDate, dueDate);
+    const invoiceNumber = dto.invoiceNumber?.trim() || existing.invoiceNumber;
+    await this.ensureInvoiceNumberAvailable(userId, invoiceNumber, id);
+    const options = this.optionData(dto, dto.currency || existing.currency);
+    const pricing = { ...existing, ...options };
+    const lineItems = dto.lineItems ?? existing.lineItems;
+    const taxRate = dto.taxRate ?? existing.taxRate;
+    const totals = this.calculateTotals(lineItems, taxRate, pricing, existing);
+    const pricingChanged = invoicePricingChanged(lineItems, taxRate, pricing, existing);
+    const inlineFields = [
+      'quickCompanyName',
+      'quickCompanyAddress',
+      'quickCompanyCity',
+      'quickCompanyState',
+      'quickCompanyZipCode',
+      'quickCompanyPhone',
+      'quickCompanyEmail',
+      'quickCompanyTaxNumber',
+      'quickCustomerName',
+      'quickCustomerEmail',
+      'quickCustomerPhone',
+      'quickCustomerAddress',
+      'quickCustomerCity',
+      'quickCustomerState',
+      'quickCustomerZipCode',
+    ] as const;
+    if (
+      existing.isQuickInvoice &&
+      !(dto.customerId ?? existing.customerId) &&
+      !(dto.quickCustomerName ?? existing.quickCustomerName)?.trim()
+    ) {
+      throw new BadRequestException('Customer name is required.');
     }
-
-    // Validate invoice ownership
+    const inline = Object.fromEntries(
+      inlineFields
+        .filter((field) => existing.isQuickInvoice && dto[field] !== undefined)
+        .map((field) => [field, dto[field]]),
+    );
     try {
-      await this.validateInvoiceOwnership(id, userId);
+      await this.prisma.$transaction(async (tx) => {
+        await tx.invoice.update({
+          where: { id },
+          data: {
+            ...options,
+            ...inline,
+            invoiceNumber,
+            serviceDate,
+            dueDate,
+            taxRate,
+            ...(dto.customerId !== undefined && { customerId: dto.customerId }),
+            ...(dto.notes !== undefined && { notes: dto.notes }),
+            subtotal: totals.subtotal,
+            taxAmount: totals.taxAmount,
+            total: totals.total,
+            ...(existing.status === InvoiceStatus.PAID &&
+              totals.total > money(pricing.amountPaid, pricing.currency) && {
+                status: InvoiceStatus.SENT,
+              }),
+          },
+        });
+        if (dto.lineItems || pricingChanged) {
+          await tx.lineItem.deleteMany({ where: { invoiceId: id } });
+          await tx.lineItem.createMany({
+            data: lineItems.map((item, index) => ({
+              invoiceId: id,
+              type: item.type,
+              description: item.description,
+              unit: item.unit.trim(),
+              quantity: item.quantity,
+              rate: item.rate,
+              amount: pricingChanged
+                ? money(item.quantity * item.rate, pricing.currency)
+                : existing.lineItems[index].amount,
+            })),
+          });
+        }
+      });
     } catch (error) {
-      this.logger.error(
-        `Update failed - invoice ownership validation failed - userId: ${userId}, invoiceId: ${id}`,
-        error instanceof Error ? error.stack : String(error),
-      );
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('An invoice with this number already exists in your account.');
+      }
       throw error;
     }
-
-    // If updating customer, verify it belongs to user
-    if (updateInvoiceDto.customerId) {
-      try {
-        await this.validateCustomerOwnership(updateInvoiceDto.customerId, userId);
-      } catch (error) {
-        this.logger.error(
-          `Update failed - customer ownership validation failed - userId: ${userId}, customerId: ${updateInvoiceDto.customerId}`,
-          error instanceof Error ? error.stack : String(error),
-        );
-        throw error;
-      }
-    }
-
-    const existingInvoice = await this.prisma.invoice.findFirst({
-      where: this.buildUserIsolatedWhere(userId, { id }),
-      include: {
-        lineItems: true,
-      },
-    });
-
-    if (!existingInvoice) {
-      this.logger.error(`Update failed - invoice not found - userId: ${userId}, invoiceId: ${id}`);
-      throw new NotFoundException('Invoice not found or access denied');
-    }
-
-    // Validate dates if provided
-    if (updateInvoiceDto.serviceDate || updateInvoiceDto.dueDate) {
-      const serviceDate = updateInvoiceDto.serviceDate ?? existingInvoice.serviceDate;
-      const dueDate = updateInvoiceDto.dueDate ?? existingInvoice.dueDate;
-
-      this.validateInvoiceDates(serviceDate, dueDate);
-    }
-
-    // Update invoice with line items in a transaction
-    await this.prisma.$transaction(async (tx) => {
-      let updateData: Record<string, unknown> = Object.assign(
-        {},
-        updateInvoiceDto as Record<string, unknown>,
-      );
-
-      // If line items are being updated, recalculate totals
-      if (updateInvoiceDto.lineItems) {
-        this.logger.log(
-          `Updating line items - userId: ${userId}, invoiceId: ${id}, lineItemCount: ${updateInvoiceDto.lineItems.length}`,
-        );
-
-        const taxRate = updateInvoiceDto.taxRate ?? existingInvoice.taxRate;
-        const totals = this.calculateTotals(updateInvoiceDto.lineItems, taxRate);
-
-        updateData = {
-          ...updateData,
-          subtotal: totals.subtotal,
-          taxAmount: totals.taxAmount,
-          total: totals.total,
-        };
-
-        // Delete existing line items (atomic replacement)
-        const deleteResult = await tx.lineItem.deleteMany({
-          where: { invoiceId: id },
-        });
-
-        this.logger.log(
-          `Deleted existing line items - userId: ${userId}, invoiceId: ${id}, deletedCount: ${deleteResult.count}`,
-        );
-
-        // Create new line items
-        const lineItemsData = updateInvoiceDto.lineItems.map((item) => ({
-          invoiceId: id,
-          type: item.type,
-          description: item.description,
-          unit: item.unit.trim(),
-          quantity: item.quantity,
-          rate: item.rate,
-          amount: item.quantity * item.rate,
-        }));
-
-        await tx.lineItem.createMany({
-          data: lineItemsData,
-        });
-
-        this.logger.log(
-          `Created new line items - userId: ${userId}, invoiceId: ${id}, createdCount: ${lineItemsData.length}`,
-        );
-      } else if (updateInvoiceDto.taxRate !== undefined) {
-        // If only tax rate is updated, recalculate with existing line items
-        this.logger.log(
-          `Recalculating totals with new tax rate - userId: ${userId}, invoiceId: ${id}, taxRate: ${updateInvoiceDto.taxRate}`,
-        );
-
-        const existingLineItems = await tx.lineItem.findMany({
-          where: { invoiceId: id },
-        });
-
-        const lineItemDtos: CreateLineItemDto[] = existingLineItems.map((item) => ({
-          type: item.type,
-          description: item.description,
-          unit: item.unit,
-          quantity: item.quantity,
-          rate: item.rate,
-        }));
-
-        const totals = this.calculateTotals(lineItemDtos, updateInvoiceDto.taxRate);
-
-        updateData = {
-          ...updateData,
-          subtotal: totals.subtotal,
-          taxAmount: totals.taxAmount,
-          total: totals.total,
-        };
-      }
-
-      // Remove lineItems from updateData as it's handled separately
-      delete updateData.lineItems;
-
-      // Update the invoice with additional safety check
-      const updateResult = await tx.invoice.updateMany({
-        where: this.buildUserIsolatedWhere(userId, { id }),
-        data: updateData as Prisma.InvoiceUpdateInput,
-      });
-
-      if (updateResult.count === 0) {
-        this.logger.error(
-          `Update failed - invoice not found during update - userId: ${userId}, invoiceId: ${id}`,
-        );
-        throw new NotFoundException('Invoice not found or access denied');
-      }
-
-      this.logger.log(`Invoice updated successfully - userId: ${userId}, invoiceId: ${id}`);
-    });
-
-    // Return updated invoice with relations
-    return await this.findById(userId, id);
+    return this.findById(userId, id);
   }
 
   async updateStatus(
@@ -489,13 +459,16 @@ export class InvoiceService extends BaseUserService {
     id: string,
     updateStatusDto: UpdateInvoiceStatusDto,
   ): Promise<InvoiceWithRelations> {
-    // Validate invoice ownership
-    await this.validateInvoiceOwnership(id, userId);
+    // Keep recorded payment and the explicit Paid action consistent.
+    const invoice = await this.findById(userId, id);
 
     // Update invoice status with additional safety check
     const updateResult = await this.prisma.invoice.updateMany({
       where: this.buildUserIsolatedWhere(userId, { id }),
-      data: { status: updateStatusDto.status },
+      data: {
+        status: updateStatusDto.status,
+        ...(updateStatusDto.status === 'PAID' && { amountPaid: invoice.total }),
+      },
     });
 
     if (updateResult.count === 0) {
@@ -546,53 +519,74 @@ export class InvoiceService extends BaseUserService {
   }
 
   async generateInvoiceNumber(): Promise<string> {
-    const currentYear = new Date().getFullYear();
-    const prefix = `INV-${currentYear}-`;
-
-    // Find the most recent invoice for the current year to determine next number
-    const lastInvoice = await this.prisma.invoice.findFirst({
-      where: {
-        invoiceNumber: {
-          startsWith: prefix,
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-
-    let nextNumber = 1;
-    if (lastInvoice) {
-      // Extract the number part and increment
-      const numberPart = lastInvoice.invoiceNumber.replace(prefix, '');
-      const parsed = parseInt(numberPart, 10);
-      if (!isNaN(parsed)) {
-        nextNumber = parsed + 1;
-      }
-    }
-
-    // Format with leading zeros (at least 3 digits)
-    const formattedNumber = nextNumber.toString().padStart(3, '0');
-    return `${prefix}${formattedNumber}`;
+    // UUID generation avoids races between simultaneous automatic invoice creation.
+    return `INV-${randomUUID()}`;
   }
 
-  calculateTotals(lineItems: CreateLineItemDto[], taxRate: number): InvoiceTotals {
-    // Calculate subtotal
-    const subtotal = lineItems.reduce((sum, item) => {
-      return sum + item.quantity * item.rate;
-    }, 0);
+  private async ensureInvoiceNumberAvailable(
+    userId: string,
+    invoiceNumber: string,
+    exceptId?: string,
+  ): Promise<void> {
+    const existing = await this.prisma.invoice.findFirst({
+      where: { userId, invoiceNumber, ...(exceptId && { id: { not: exceptId } }) },
+      select: { id: true },
+    });
+    if (existing)
+      throw new ConflictException('An invoice with this number already exists in your account.');
+  }
 
-    // Calculate tax amount
-    const taxAmount = subtotal * taxRate;
+  private optionData(dto: Partial<CreateQuickInvoiceDto>, currency = dto.currency || 'USD') {
+    if (dto.logoDataUrl) {
+      const [prefix, encoded] = dto.logoDataUrl.split(',');
+      const image = Buffer.from(encoded || '', 'base64');
+      const png =
+        prefix === 'data:image/png;base64' &&
+        image.subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex'));
+      const jpeg = prefix === 'data:image/jpeg;base64' && image[0] === 0xff && image[1] === 0xd8;
+      if ((!png && !jpeg) || image.length > 256 * 1024)
+        throw new BadRequestException('Use a PNG or JPEG logo smaller than 256 KB.');
+    }
+    const fields = [
+      'currency',
+      'discountType',
+      'discountValue',
+      'shippingAmount',
+      'amountPaid',
+      'paymentTerms',
+      'terms',
+      'purchaseOrderNumber',
+      'shippingAddress',
+      'logoDataUrl',
+    ] as const;
+    return Object.fromEntries(
+      fields
+        .filter((field) => dto[field] !== undefined)
+        .map((field) => [
+          field,
+          (field === 'shippingAmount' ||
+            field === 'amountPaid' ||
+            (field === 'discountValue' && dto.discountType === 'fixed')) &&
+          typeof dto[field] === 'number'
+            ? money(dto[field] as number, currency)
+            : dto[field],
+        ]),
+    ) as Pick<CreateQuickInvoiceDto, (typeof fields)[number]>;
+  }
 
-    // Calculate total
-    const total = subtotal + taxAmount;
-
-    return {
-      subtotal: Math.round(subtotal * 100) / 100, // Round to 2 decimal places
-      taxAmount: Math.round(taxAmount * 100) / 100,
-      total: Math.round(total * 100) / 100,
-    };
+  calculateTotals(
+    lineItems: CreateLineItemDto[],
+    taxRate: number,
+    pricing: InvoicePricing = {},
+    original?: InvoiceSnapshot,
+  ): InvoiceTotals {
+    try {
+      return calculateInvoiceForEdit(lineItems, taxRate, pricing, original);
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'Invalid invoice totals.',
+      );
+    }
   }
 
   private validateInvoiceDates(serviceDate: Date, dueDate: Date): void {
