@@ -11,6 +11,7 @@ import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { CompanyModule } from './company/company.module';
 import { CustomerModule } from './customer/customer.module';
+import { CatalogModule } from './catalog/catalog.module';
 import { InvoiceModule } from './invoice/invoice.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HealthModule } from './health/health.module';
@@ -46,6 +47,7 @@ import { initializeCloudinary } from './config/cloudinary.config';
 
     // Customer management module
     CustomerModule,
+    CatalogModule,
 
     // Invoice management module
     InvoiceModule,

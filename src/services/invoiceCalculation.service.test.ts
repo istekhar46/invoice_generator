@@ -14,7 +14,7 @@ describe('InvoiceCalculationService', () => {
     quantity: number,
     rate: number,
     amount: number = 0,
-    type: 'material' = 'material',
+    type: 'product' = 'product',
     description: string = 'Test item'
   ): LineItem => ({
     id,

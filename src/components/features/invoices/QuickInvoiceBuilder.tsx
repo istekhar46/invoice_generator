@@ -48,6 +48,7 @@ import {
   transformLineItemToDto,
 } from '../../../utils/apiTransformers'
 import { formatCurrency, formatDateForInput } from '../../../utils/formatters'
+import { CatalogPicker } from '../catalog/CatalogPicker'
 
 export interface QuickInvoiceBuilderProps {
   invoice?: Invoice | null
@@ -64,7 +65,7 @@ export interface QuickInvoiceBuilderProps {
 
 const newItem = () => ({
   id: crypto.randomUUID(),
-  type: 'material' as const,
+  type: 'product' as const,
   description: '',
   unit: 'each',
   quantity: 1,
@@ -643,6 +644,30 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
               )}
             </div>
           </div>
+          {mode === 'authenticated' && (
+            <div className="mb-4 flex justify-end">
+              <CatalogPicker
+                currency={currency}
+                onSelect={selection => {
+                  const row = { ...newItem(), ...selection }
+                  const only = values.lineItems?.[0]
+                  if (
+                    fields.length === 1 &&
+                    only &&
+                    !only.description.trim() &&
+                    only.quantity === 1 &&
+                    only.rate === 0 &&
+                    !only.catalogItemId
+                  ) {
+                    setValue('lineItems.0', row, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  } else append(row)
+                }}
+              />
+            </div>
+          )}
           <div
             className="hidden grid-cols-[minmax(0,1fr)_64px_72px_100px_100px_28px] gap-3 rounded-lg bg-slate-900 px-3 py-3 text-xs font-medium text-white xl:grid"
             aria-hidden="true"
@@ -678,19 +703,50 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
                   key={item.id}
                   className="grid min-w-0 grid-cols-2 items-end gap-3 py-4 xl:grid-cols-[minmax(0,1fr)_64px_72px_100px_100px_28px]"
                 >
-                  <label className="qi-field col-span-2 xl:col-span-1">
-                    <span className="xl:sr-only">
-                      Item {index + 1} description *
-                    </span>
-                    <textarea
-                      rows={2}
-                      {...register(`lineItems.${index}.description`)}
-                      placeholder="Describe your product or service"
-                    />
-                  </label>
+                  <div className="col-span-2 min-w-0 xl:col-span-1">
+                    <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      <label>
+                        Item {index + 1} type
+                        <select
+                          {...register(`lineItems.${index}.type`)}
+                          disabled={!!value?.catalogItemId}
+                          className="ml-2 rounded border border-slate-200 bg-white px-2 py-1"
+                        >
+                          <option value="product">Product</option>
+                          <option value="service">Service</option>
+                        </select>
+                      </label>
+                      {value?.catalogItemId && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setValue(`lineItems.${index}.catalogItemId`, null, {
+                              shouldDirty: true,
+                            })
+                          }
+                          className="text-primary-600 underline"
+                        >
+                          Use as one-off
+                        </button>
+                      )}
+                    </div>
+                    <label className="qi-field">
+                      <span className="xl:sr-only">
+                        Item {index + 1} description *
+                      </span>
+                      <textarea
+                        rows={2}
+                        {...register(`lineItems.${index}.description`)}
+                        placeholder="Describe your product or service"
+                      />
+                    </label>
+                  </div>
                   <label className="qi-field">
                     <span className="xl:sr-only">Item {index + 1} unit *</span>
-                    <input {...register(`lineItems.${index}.unit`)} />
+                    <input
+                      {...register(`lineItems.${index}.unit`)}
+                      readOnly={!!value?.catalogItemId}
+                    />
                   </label>
                   <label className="qi-field">
                     <span className="xl:sr-only">

@@ -1,250 +1,93 @@
-# Invoice Backend API
+# Invoiceo API
 
-A comprehensive NestJS backend API for the Electrician Invoice Generation Web Application. This backend provides secure authentication, user management, and full CRUD operations for company profiles, customers, and invoices.
+NestJS 11 / TypeScript / Prisma 7.10.1 / PostgreSQL API for authentication, company profiles, customers, invoice defaults, invoices, and account-owned Products & Services.
 
-## Features
+## Local development
 
-- 🔐 JWT-based authentication with Google OAuth integration
-- 👤 User profile management
-- 🏢 Company profile management with logo upload
-- 👥 Customer management with search and pagination
-- 📄 Invoice management with automatic calculations
-- 🗄️ PostgreSQL database with Prisma ORM
-- 🔒 Comprehensive security measures (CORS, rate limiting, input validation)
-- 📚 Swagger/OpenAPI documentation
-- 🐳 Docker support for development and production
-- ✅ Comprehensive testing with property-based tests
-- 🚀 Latest NestJS v11+ with TypeScript 5.9+
+Use Node.js 22 (Prisma 7 requires 22.12 or newer on this release line). The production image uses its bundled npm 10; generate and verify dependency locks with that toolchain. The updated lock also passes the local npm 12 clean-install check.
 
-## Tech Stack
-
-- **Framework**: NestJS 11.x
-- **Runtime**: Node.js 20 LTS
-- **Database**: PostgreSQL 16
-- **ORM**: Prisma 7.x
-- **Authentication**: JWT + Passport + Google OAuth 2.0
-- **Validation**: class-validator + class-transformer
-- **File Upload**: Multer
-- **Security**: Helmet, CORS, Rate limiting
-- **Testing**: Jest + fast-check (property-based testing)
-- **Documentation**: Swagger/OpenAPI
-- **Code Quality**: ESLint + Prettier + TypeScript strict mode
-
-## Prerequisites
-
-- Node.js 20+ (LTS recommended)
-- Docker and Docker Compose
-- PostgreSQL 16+ (or use Docker)
-
-## Quick Start
-
-1. **Clone and setup**
-   ```bash
-   cd backend
-   npm install
-   ```
-
-2. **Environment setup**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your configuration
-   ```
-
-3. **Start database**
-   ```bash
-   npm run docker:up
-   ```
-
-4. **Setup database**
-   ```bash
-   npm run db:generate
-   npm run db:migrate
-   npm run db:seed
-   ```
-
-5. **Start development server**
-   ```bash
-   npm run start:dev
-   ```
-
-The API will be available at `http://localhost:3001`
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | - |
-| `JWT_SECRET` | JWT signing secret | - |
-| `JWT_EXPIRES_IN` | JWT expiration time | 15m |
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID | - |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | - |
-| `PORT` | Server port | 3001 |
-| `NODE_ENV` | Environment | development |
-| `FRONTEND_URL` | Frontend URL for CORS | http://localhost:5173 |
-| `API_DEV_SERVER_URL` | Development server URL for Swagger docs | http://localhost:{PORT} |
-| `API_PROD_SERVER_URL` | Production server URL for Swagger docs | https://api.example.com |
-
-## API Documentation
-
-Once the server is running, visit:
-- Swagger UI: `http://localhost:3001/api/docs`
-- OpenAPI JSON: `http://localhost:3001/api/docs-json`
-
-## Database Management
-
-```bash
-# Generate Prisma client
-npm run db:generate
-
-# Create and apply migration
-npm run db:migrate
-
-# Push the current Prisma schema to a specific database URL
-npm run db:push:url -- "postgres://user:password@host:port/dbname"
-
-# Deploy migrations (production)
-npm run db:migrate:deploy
-
-# Reset database (development only)
-npm run db:migrate:reset
-
-# Open Prisma Studio
-npm run db:studio
-
-# Seed database
-npm run db:seed
-
-# Format Prisma schema
-npm run db:format
+```sh
+cd backend
+nvm use
+npm ci
+cp .env.example .env
 ```
 
-## Development
+Configure your local database and authentication/OAuth settings in `.env`. For a local database without TLS, set `PG_SSL=false`. To use the repository's disposable Docker databases:
 
-```bash
-# Start development server with hot reload
-npm run start:dev
+```sh
+docker compose up -d postgres postgres_test
+```
 
-# Start with debugging
-npm run start:debug
+For a **new empty local database** only:
 
-# Build for production
+```sh
+npm run db:push
 npm run build
-
-# Start production server
-npm run start:prod
+npm run start:dev
 ```
 
-## Code Quality
+`npm run build` generates the Prisma client before compiling. `PORT` determines the listen port (default 3001); every API route uses `/api/v1`.
 
-```bash
-# Lint code
-npm run lint
+Nest CLI and Prisma CLI are development/build dependencies. Install development dependencies before generating/building or running schema checks; production starts the compiled application directly. Keep Prisma CLI/client/adapter versions aligned. Parent-scoped security overrides currently select Multer 2.5.0 for the Nest Express adapter and js-yaml 5.4.1 for Swagger; their rationale, actual resolved versions and regression evidence are in the implementation document. Review/remove each override when its upstream parent declares a patched dependency.
 
-# Check linting without fixing
+## Existing database upgrades and releases
+
+Read [schema rollout instructions](prisma/updates/README.md) and the [catalog release checklist](../docs/implementation/signed-in-dashboard-features.md#catalog-release-preparation--2-november-2026) before deployment.
+
+This repository has no baseline Prisma migration history. Existing databases use the reviewed, one-time SQL upgrades in `prisma/updates/`; `npm run db:migrate` does not apply these files. Do not run schema push against an existing pre-catalog database to rename its enum. Do not rerun upgrades after a fresh schema push.
+
+For a native Node service, install with `npm ci --include=dev`, build with `npm run build`, and start with `npm run start:prod`. Set the actual database/authentication/provider configuration in the deployment's secret store. The catalog schema and matching API/frontend must be released in one coordinated window.
+
+For the container:
+
+```sh
+docker build -t invoiceo-api:catalog .
+```
+
+The image uses Node 22, runs as a non-root user, and defaults to production mode. Build-time client generation uses an inert local URL; no production database credentials are needed to build. Supply the real `DATABASE_URL` and other required environment settings only when running the image. The container readiness probe uses the configured `PORT` and `/api/v1/health/ready`. No automatic database migration runs at build or startup.
+
+The live catalog migration is **on user-directed hold** until matching API/frontend deployment is ready. Preparing an image does not lift that hold.
+
+## Runtime configuration
+
+See [.env.example](.env.example) and the existing configuration modules for supported settings. Key release inputs:
+
+| Setting                                                                | Purpose                                                        |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `DATABASE_URL`, `PG_SSL`, `PG_CA_CERT`, `PG_SSL_REJECT_UNAUTHORIZED`   | Database connection and the existing TLS configuration         |
+| `JWT_SECRET`, `JWT_REFRESH_SECRET`                                     | Access/refresh token signing                                   |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL`      | Existing Google sign-in integration                            |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Existing logo provider settings required at API startup        |
+| `PORT`, `NODE_ENV`                                                     | Listen port and environment                                    |
+| `FRONTEND_URL`                                                         | Exact frontend origin allowed by CORS                          |
+| `API_PROD_SERVER_URL`                                                  | Public API origin displayed in Swagger                         |
+| `COOKIE_*`                                                             | Existing refresh-cookie configuration for the deployed origins |
+
+Preserve established production settings during this catalog release; it adds no runtime secret or provider requirement. The frontend's `VITE_API_BASE_URL` is a **build-time API origin**, without `/api/v1` (the client adds that prefix).
+
+## Verification
+
+```sh
+npm run test -- --runInBand
 npm run lint:check
-
-# Format code
-npm run format
-
-# Check formatting
-npm run format:check
-
-# Run all quality checks
-npm run precommit
+npm run build
 ```
 
-## Testing
+Also inspect `npm audit --omit=dev` and the full `npm audit`; development findings must stay visible. The 2 November remediation records zero production findings, with lower-severity build/test findings assessed separately. Full-repository lint has existing failures; the implementation document records the identical before/after baseline rather than claiming that check passes.
 
-```bash
-# Unit tests
-npm run test
+Database integrations require explicitly supplied **disposable localhost** URLs and the compiled API. They create and clean up their own fixtures:
 
-# Watch mode
-npm run test:watch
-
-# Coverage
-npm run test:cov
-
-# E2E tests
-npm run test:e2e
-
-# E2E tests with coverage
-npm run test:e2e:cov
-
-# Debug tests
-npm run test:debug
+```sh
+CATALOG_TEST_DATABASE_URL=postgresql://... npm run test:catalog-integration
+INVOICE_EDITOR_TEST_DATABASE_URL=postgresql://... npm run test:invoice-integration
 ```
 
-## Docker
+The catalog `-- --upgrade` mode requires a disposable database on the previous saved-defaults schema, applies the one-time SQL, and verifies historical fields/totals. Never use these integration scripts against production. See the schema rollout instructions for the upgrade rehearsal.
 
-```bash
-# Start services
-npm run docker:up
+Useful endpoints:
 
-# Stop services
-npm run docker:down
-
-# View logs
-npm run docker:logs
-
-# Clean up (remove volumes)
-npm run docker:clean
-
-# Build production image
-docker build -t invoice-backend .
-```
-
-## Project Structure
-
-```
-src/
-├── modules/           # Feature modules
-│   ├── auth/         # Authentication
-│   ├── users/        # User management
-│   ├── company/      # Company profiles
-│   ├── customers/    # Customer management
-│   └── invoices/     # Invoice management
-├── common/           # Shared utilities
-├── config/           # Configuration
-├── database/         # Database module
-└── main.ts          # Application entry point
-```
-
-## Security Features
-
-- JWT authentication with refresh tokens
-- Google OAuth 2.0 integration
-- Password hashing with bcrypt (12 rounds)
-- Input validation and sanitization
-- Rate limiting
-- CORS configuration
-- Security headers with Helmet
-- User data isolation
-- SQL injection protection via Prisma
-
-## Performance Features
-
-- Database connection pooling
-- Optimized Docker multi-stage builds
-- Efficient TypeScript compilation
-- Jest test parallelization
-- Prisma query optimization
-
-## Contributing
-
-1. Follow the existing code style (ESLint + Prettier)
-2. Write tests for new features
-3. Update documentation
-4. Ensure all quality checks pass (`npm run precommit`)
-
-## Version Requirements
-
-- Node.js: 20.x LTS
-- PostgreSQL: 16.x
-- NestJS: 11.x
-- Prisma: 7.x
-- TypeScript: 5.9+
-
-## License
-
-This project is licensed under the UNLICENSED license.
+- `/api/v1/health/ready`: database connectivity readiness.
+- `/api/v1/health/live`: process liveness.
+- `/api/v1/docs` and `/api/v1/docs-json`: Swagger UI/OpenAPI.
+- `/api/v1/catalog`: authenticated catalog API; a successful health probe alone does not verify the catalog schema or account isolation.

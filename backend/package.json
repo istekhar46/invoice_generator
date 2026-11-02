@@ -6,10 +6,10 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "npm run db:generate && npx nest build",
+    "build": "npm run db:generate && nest build",
     "start": "node dist/main.js",
-    "start:dev": "npx nest start --watch",
-    "start:debug": "npx nest start --debug --watch",
+    "start:dev": "nest start --watch",
+    "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main.js",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -23,20 +23,20 @@
     "db:push:url": "node scripts/push-schema.mjs",
     "db:migrate": "prisma migrate deploy",
     "db:studio": "prisma studio",
-    "test:invoice-integration": "node test/quick-invoice.integration.cjs"
+    "test:invoice-integration": "node test/quick-invoice.integration.cjs",
+    "test:catalog-integration": "node test/catalog.integration.cjs"
   },
   "dependencies": {
-    "@nestjs/cli": "^11.0.14",
-    "@nestjs/common": "^11.1.10",
-    "@nestjs/config": "^4.0.2",
-    "@nestjs/core": "^11.1.10",
+    "@nestjs/common": "^11.2.8",
+    "@nestjs/config": "^4.0.4",
+    "@nestjs/core": "^11.2.8",
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
-    "@nestjs/platform-express": "^11.1.10",
-    "@nestjs/swagger": "^11.2.3",
+    "@nestjs/platform-express": "^11.2.8",
+    "@nestjs/swagger": "^11.4.7",
     "@nestjs/throttler": "^6.5.0",
-    "@prisma/adapter-pg": "^7.2.0",
-    "@prisma/client": "^7.2.0",
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
@@ -53,23 +53,23 @@
     "cookie-parser": "^1.4.7",
     "dotenv": "^16.4.5",
     "fast-check": "^4.5.2",
-    "form-data": "^4.0.5",
+    "form-data": "^4.0.6",
     "helmet": "^8.1.0",
-    "multer": "^2.0.2",
+    "multer": "^2.5.0",
     "node-fetch": "^3.3.2",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.16.3",
-    "prisma": "^7.2.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
-    "@nestjs/schematics": "^11.0.9",
-    "@nestjs/testing": "^11.1.10",
+    "@nestjs/cli": "^11.0.24",
+    "@nestjs/schematics": "^11.1.0",
+    "@nestjs/testing": "^11.2.8",
     "@types/node": "^26.6.4",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
@@ -77,6 +77,7 @@
     "globals": "^16.0.0",
     "jest": "^30.0.0",
     "prettier": "^3.4.2",
+    "prisma": "^7.10.1",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",
@@ -116,5 +117,13 @@
     "clearMocks": true,
     "resetMocks": true,
     "restoreMocks": true
+  },
+  "overrides": {
+    "@nestjs/platform-express": {
+      "multer": "$multer"
+    },
+    "@nestjs/swagger": {
+      "js-yaml": "5.4.1"
+    }
   }
 }

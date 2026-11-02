@@ -65,7 +65,7 @@ describe('Standard invoice defaults', () => {
         {
           id: 'line',
           invoiceId: 'pdf',
-          type: 'material' as const,
+          type: 'product' as const,
           description: 'Service',
           quantity: 1,
           rate: 10,

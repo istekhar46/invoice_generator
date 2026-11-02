@@ -50,7 +50,7 @@ export const guestInvoiceDraftSchema = z.object({
   lineItems: z.array(
     z.object({
       id: z.string(),
-      type: z.literal('material'),
+      type: z.enum(['product', 'service']),
       description: z.string(),
       unit: z.string(),
       quantity: z.number(),

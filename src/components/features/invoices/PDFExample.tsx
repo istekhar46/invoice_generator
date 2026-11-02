@@ -22,7 +22,7 @@ const exampleInvoice: Invoice = {
     {
       id: 'item-1',
       invoiceId: 'example-invoice',
-      type: 'material',
+      type: 'product',
       description: 'Copper wire',
       unit: 'mtr',
       quantity: 1,
@@ -32,7 +32,7 @@ const exampleInvoice: Invoice = {
     {
       id: 'item-2',
       invoiceId: 'example-invoice',
-      type: 'material',
+      type: 'product',
       description: 'Circuit breaker panel',
       unit: 'bundle',
       quantity: 1,

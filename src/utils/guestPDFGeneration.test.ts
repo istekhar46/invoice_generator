@@ -12,7 +12,7 @@ const draft: GuestInvoiceData = {
     dueDate: new Date('2026-10-31'),
     taxRate: 0.1,
   },
-  lineItems: [{ id: 'line-1', type: 'material', description: 'Cable', quantity: 2, rate: 10, amount: 20, unit: 'm' }],
+  lineItems: [{ id: 'line-1', type: 'product', description: 'Cable', quantity: 2, rate: 10, amount: 20, unit: 'm' }],
   notes: '',
   createdAt: new Date('2026-10-01'),
   lastModified: new Date('2026-10-01'),

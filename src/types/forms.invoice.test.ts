@@ -7,7 +7,7 @@ const standardFields = {
   lineItems: [
     {
       id: 'item-1',
-      type: 'material' as const,
+      type: 'product' as const,
       description: 'Panel installation',
       unit: 'each',
       quantity: 1,

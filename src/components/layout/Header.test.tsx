@@ -89,13 +89,13 @@ describe('Header Property Tests', () => {
 
             // Feature: ui-modernization, Property 14: Navigation Responsive Behavior
             // Check that desktop navigation exists with proper classes
-            const desktopNavs = document.querySelectorAll('nav.md\\:flex')
+            const desktopNavs = document.querySelectorAll('nav.lg\\:flex')
             expect(desktopNavs.length).toBeGreaterThan(0)
 
             const desktopNav = desktopNavs[0]
             expect(desktopNav).toHaveClass(
               'hidden',
-              'md:flex',
+              'lg:flex',
               'bg-gray-100',
               'rounded-2xl',
               'p-2'
@@ -108,7 +108,7 @@ describe('Header Property Tests', () => {
             expect(menuButtons.length).toBeGreaterThan(0)
 
             const menuButton = menuButtons[0]
-            expect(menuButton).toHaveClass('md:hidden')
+            expect(menuButton).toHaveClass('lg:hidden')
             expect(menuButton).toHaveClass('min-h-11', 'min-w-11') // 44px touch target
 
             unmount()
@@ -134,7 +134,7 @@ describe('Header Property Tests', () => {
 
             // Feature: ui-modernization, Property 15: Navigation Active State
             // Find desktop navigation
-            const desktopNavs = document.querySelectorAll('nav.md\\:flex')
+            const desktopNavs = document.querySelectorAll('nav.lg\\:flex')
             expect(desktopNavs.length).toBeGreaterThan(0)
 
             const desktopNav = desktopNavs[0]

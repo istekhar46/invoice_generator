@@ -3,7 +3,10 @@
  * Handles localStorage operations for guest invoice drafts
  */
 
-import { LocalStorageService, LocalStorageError } from '../services/localStorage.service'
+import {
+  LocalStorageService,
+  LocalStorageError,
+} from '../services/localStorage.service'
 import type { GuestInvoiceData } from '../types/guest'
 import { guestInvoiceDraftSchema } from '../types/guestSchemas'
 
@@ -20,7 +23,7 @@ const MAX_STORAGE_SIZE = 1024 * 1024 // 1MB in bytes
 /**
  * Saves guest invoice data to localStorage
  * Updates lastModified timestamp automatically
- * 
+ *
  * @param data - Guest invoice data to save
  * @throws LocalStorageError if storage fails or quota exceeded
  */
@@ -57,28 +60,62 @@ export function saveToLocalStorage(data: GuestInvoiceData): void {
 /**
  * Loads guest invoice data from localStorage
  * Validates data structure and returns null if invalid
- * 
+ *
  * @returns Guest invoice data or null if not found/invalid
  */
 export function loadFromLocalStorage(): GuestInvoiceData | null {
+  let validatedUpgrade = false
   try {
-    const data = LocalStorageService.get<GuestInvoiceData>(GUEST_INVOICE_STORAGE_KEY)
-    
+    const data = LocalStorageService.get<GuestInvoiceData>(
+      GUEST_INVOICE_STORAGE_KEY
+    )
+
     if (!data) {
       return null
     }
 
-    // Validate data structure using Zod schema
-    const validationResult = guestInvoiceDraftSchema.safeParse(data)
-    
+    // Upgrade only the known old enum values; never guess from descriptions.
+    let upgraded = false
+    const oldTypes: Record<string, 'product' | 'service'> = {
+      material: 'product',
+      MATERIAL: 'product',
+      labor: 'service',
+      LABOR: 'service',
+    }
+    const normalized = {
+      ...data,
+      lineItems: Array.isArray(data.lineItems)
+        ? data.lineItems.map(item => {
+            const type = item && oldTypes[item.type]
+            if (!type) return item
+            upgraded = true
+            return { ...item, type }
+          })
+        : data.lineItems,
+    }
+    const validationResult = guestInvoiceDraftSchema.safeParse(normalized)
+
     if (!validationResult.success) {
-      console.warn('Invalid guest invoice data in localStorage, clearing:', validationResult.error)
+      console.warn(
+        'Invalid guest invoice data in localStorage, clearing:',
+        validationResult.error
+      )
       clearLocalStorage()
       return null
     }
 
+    if (upgraded) {
+      validatedUpgrade = true
+      LocalStorageService.set(GUEST_INVOICE_STORAGE_KEY, validationResult.data)
+    }
     return validationResult.data
   } catch (error) {
+    if (validatedUpgrade) {
+      throw new LocalStorageError(
+        'Your saved draft could not be upgraded. Free browser storage and reload to try again. Your previous draft has been retained.',
+        error as Error
+      )
+    }
     console.error('Failed to load guest invoice draft:', error)
     // Clear corrupted data
     try {
@@ -106,7 +143,7 @@ export function clearLocalStorage(): void {
 
 /**
  * Checks if a guest invoice draft exists in localStorage
- * 
+ *
  * @returns true if draft exists, false otherwise
  */
 export function hasStoredDraft(): boolean {
@@ -120,12 +157,14 @@ export function hasStoredDraft(): boolean {
 
 /**
  * Gets the size of the stored guest invoice data in bytes
- * 
+ *
  * @returns Size in bytes, or 0 if no data exists
  */
 export function getStoredDraftSize(): number {
   try {
-    const data = LocalStorageService.get<GuestInvoiceData>(GUEST_INVOICE_STORAGE_KEY)
+    const data = LocalStorageService.get<GuestInvoiceData>(
+      GUEST_INVOICE_STORAGE_KEY
+    )
     if (!data) {
       return 0
     }
@@ -138,7 +177,7 @@ export function getStoredDraftSize(): number {
 
 /**
  * Checks if localStorage has enough space for guest invoice data
- * 
+ *
  * @returns true if space is available, false otherwise
  */
 export function hasStorageSpace(): boolean {

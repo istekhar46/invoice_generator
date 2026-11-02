@@ -4,7 +4,8 @@ import { apiClient } from './apiClient'
 
 // Invoice API DTOs based on backend structure
 export interface CreateLineItemDto {
-  type: 'MATERIAL'
+  type: 'PRODUCT' | 'SERVICE'
+  catalogItemId?: string | null
   description: string
   unit: string
   quantity: number
@@ -58,7 +59,8 @@ export interface UpdateInvoiceStatusDto {
 
 export interface LineItemResponseDto {
   id: string
-  type: 'MATERIAL' | 'LABOR'
+  type: 'PRODUCT' | 'SERVICE'
+  catalogItemId?: string | null
   description: string
   unit: string
   quantity: number

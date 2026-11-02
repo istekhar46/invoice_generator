@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { validateCatalogReferences } from '../catalog/catalog-references';
 import {
   calculateInvoiceForEdit,
   invoicePricingChanged,
@@ -69,13 +70,14 @@ export class InvoiceService extends BaseUserService {
     );
 
     // Generate unique invoice number
-    const invoiceNumber =
-      createInvoiceDto.invoiceNumber?.trim() || (await this.generateInvoiceNumber());
+    const requestedNumber = createInvoiceDto.invoiceNumber?.trim();
+    const invoiceNumber = requestedNumber?.length ? requestedNumber : this.generateInvoiceNumber();
     await this.ensureInvoiceNumberAvailable(userId, invoiceNumber);
 
     // Create invoice with line items in a transaction
     const invoice = await this.prisma
       .$transaction(async (tx) => {
+        await validateCatalogReferences(tx, userId, createInvoiceDto.lineItems);
         // Create the invoice
         const newInvoice = await tx.invoice.create({
           data: {
@@ -98,6 +100,7 @@ export class InvoiceService extends BaseUserService {
         const lineItemsData = createInvoiceDto.lineItems.map((item) => ({
           invoiceId: newInvoice.id,
           type: item.type,
+          catalogItemId: item.catalogItemId ?? null,
           description: item.description,
           unit: item.unit.trim(),
           quantity: item.quantity,
@@ -159,8 +162,8 @@ export class InvoiceService extends BaseUserService {
     );
 
     // Generate unique invoice number
-    const invoiceNumber =
-      createQuickInvoiceDto.invoiceNumber?.trim() || (await this.generateInvoiceNumber());
+    const requestedNumber = createQuickInvoiceDto.invoiceNumber?.trim();
+    const invoiceNumber = requestedNumber?.length ? requestedNumber : this.generateInvoiceNumber();
     if (!createQuickInvoiceDto.customerId && !createQuickInvoiceDto.quickCustomerName?.trim()) {
       throw new BadRequestException('Customer name is required.');
     }
@@ -169,6 +172,7 @@ export class InvoiceService extends BaseUserService {
     let invoice: Invoice;
     try {
       invoice = await this.prisma.$transaction(async (tx) => {
+        await validateCatalogReferences(tx, userId, createQuickInvoiceDto.lineItems);
         // Create the invoice with inline details
         const newInvoice = await tx.invoice.create({
           data: {
@@ -210,6 +214,7 @@ export class InvoiceService extends BaseUserService {
         const lineItemsData = createQuickInvoiceDto.lineItems.map((item) => ({
           invoiceId: newInvoice.id,
           type: item.type,
+          catalogItemId: item.catalogItemId ?? null,
           description: item.description,
           unit: item.unit.trim(),
           quantity: item.quantity,
@@ -265,7 +270,7 @@ export class InvoiceService extends BaseUserService {
     } = query;
 
     // Build where clause with mandatory user isolation
-    const where = this.buildUserIsolatedWhere(userId);
+    const where: Prisma.InvoiceWhereInput = { userId };
 
     if (status) {
       where.status = status;
@@ -369,9 +374,10 @@ export class InvoiceService extends BaseUserService {
     const serviceDate = dto.serviceDate ?? existing.serviceDate;
     const dueDate = dto.dueDate ?? existing.dueDate;
     this.validateInvoiceDates(serviceDate, dueDate);
-    const invoiceNumber = dto.invoiceNumber?.trim() || existing.invoiceNumber;
+    const requestedNumber = dto.invoiceNumber?.trim();
+    const invoiceNumber = requestedNumber?.length ? requestedNumber : existing.invoiceNumber;
     await this.ensureInvoiceNumberAvailable(userId, invoiceNumber, id);
-    const options = this.optionData(dto, dto.currency || existing.currency);
+    const options = this.optionData(dto, dto.currency ?? existing.currency);
     const pricing = { ...existing, ...options };
     const lineItems = dto.lineItems ?? existing.lineItems;
     const taxRate = dto.taxRate ?? existing.taxRate;
@@ -408,6 +414,7 @@ export class InvoiceService extends BaseUserService {
     );
     try {
       await this.prisma.$transaction(async (tx) => {
+        await validateCatalogReferences(tx, userId, lineItems, existing.lineItems);
         await tx.invoice.update({
           where: { id },
           data: {
@@ -434,6 +441,7 @@ export class InvoiceService extends BaseUserService {
             data: lineItems.map((item, index) => ({
               invoiceId: id,
               type: item.type,
+              catalogItemId: item.catalogItemId ?? null,
               description: item.description,
               unit: item.unit.trim(),
               quantity: item.quantity,
@@ -518,7 +526,7 @@ export class InvoiceService extends BaseUserService {
     );
   }
 
-  async generateInvoiceNumber(): Promise<string> {
+  generateInvoiceNumber(): string {
     // UUID generation avoids races between simultaneous automatic invoice creation.
     return `INV-${randomUUID()}`;
   }
@@ -536,7 +544,7 @@ export class InvoiceService extends BaseUserService {
       throw new ConflictException('An invoice with this number already exists in your account.');
   }
 
-  private optionData(dto: Partial<CreateQuickInvoiceDto>, currency = dto.currency || 'USD') {
+  private optionData(dto: Partial<CreateQuickInvoiceDto>, currency = dto.currency ?? 'USD') {
     if (dto.logoDataUrl) {
       const [prefix, encoded] = dto.logoDataUrl.split(',');
       const image = Buffer.from(encoded || '', 'base64');
@@ -568,7 +576,7 @@ export class InvoiceService extends BaseUserService {
             field === 'amountPaid' ||
             (field === 'discountValue' && dto.discountType === 'fixed')) &&
           typeof dto[field] === 'number'
-            ? money(dto[field] as number, currency)
+            ? money(dto[field], currency)
             : dto[field],
         ]),
     ) as Pick<CreateQuickInvoiceDto, (typeof fields)[number]>;

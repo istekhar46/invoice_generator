@@ -54,7 +54,7 @@ describe('QuickInvoiceBuilder guest mode', () => {
     lineItems: [
       {
         id: 'item-1',
-        type: 'material',
+        type: 'product',
         description: 'Consulting',
         unit: 'hour',
         quantity: 2,
@@ -84,7 +84,7 @@ describe('QuickInvoiceBuilder guest mode', () => {
       lineItems: [
         {
           id: 'line-item-1',
-          type: 'MATERIAL',
+          type: 'PRODUCT',
           description: 'Consulting',
           unit: 'hour',
           quantity: 2,

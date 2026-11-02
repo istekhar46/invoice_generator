@@ -7,7 +7,19 @@ export const GuestInvoiceSection: React.FC<{ className?: string }> = ({
   className = '',
 }) => {
   const navigate = useNavigate()
-  const [initialDraft] = useState(loadFromLocalStorage)
+  const [restored] = useState(() => {
+    try {
+      return { draft: loadFromLocalStorage(), error: '' }
+    } catch (error) {
+      return {
+        draft: null,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Your saved draft could not be loaded.',
+      }
+    }
+  })
   return (
     <section
       id="invoice-editor"
@@ -15,11 +27,24 @@ export const GuestInvoiceSection: React.FC<{ className?: string }> = ({
       aria-label="Free invoice generator"
     >
       <div className="mx-auto max-w-7xl">
-        <QuickInvoiceBuilder
-          mode="guest"
-          initialGuestData={initialDraft}
-          onSignUp={() => navigate('/signup')}
-        />
+        {restored.error ? (
+          <p role="alert" className="rounded-lg bg-red-50 p-4 text-red-700">
+            {restored.error}{' '}
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="underline"
+            >
+              Retry
+            </button>
+          </p>
+        ) : (
+          <QuickInvoiceBuilder
+            mode="guest"
+            initialGuestData={restored.draft}
+            onSignUp={() => navigate('/signup')}
+          />
+        )}
       </div>
     </section>
   )

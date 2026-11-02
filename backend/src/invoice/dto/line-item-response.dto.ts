@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { LineItemType } from '@prisma/client';
 
@@ -12,11 +12,15 @@ export class LineItemResponseDto {
 
   @ApiProperty({
     description: 'Type of line item',
-    example: 'LABOR',
+    example: 'SERVICE',
     enum: LineItemType,
   })
   @Expose()
   type!: LineItemType;
+
+  @ApiPropertyOptional({ nullable: true })
+  @Expose()
+  catalogItemId!: string | null;
 
   @ApiProperty({
     description: 'Description of the line item',

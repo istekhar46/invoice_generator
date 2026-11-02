@@ -23,6 +23,7 @@ const accountPageTitles: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/invoices': 'Invoices',
   '/customers': 'Customers',
+  '/products': 'Products & Services',
   '/company': 'Company profile',
   '/quick-invoice': 'Quick invoice',
   '/auth/callback': 'Completing sign-in',

@@ -52,7 +52,7 @@ describe('guestInvoiceStorage', () => {
     lineItems: [
       {
         id: '1',
-        type: 'material',
+        type: 'product',
         description: 'Test service',
         unit: 'hrs',
         quantity: 1,
@@ -113,6 +113,29 @@ describe('guestInvoiceStorage', () => {
   })
 
   describe('loadFromLocalStorage', () => {
+    it('upgrades known material/labor drafts once without losing financial or identity values', () => {
+      const old = { ...mockGuestInvoiceData, draftId: 'old-draft', lineItems: [
+        { ...mockGuestInvoiceData.lineItems[0], type: 'material', amount: 0.335 },
+        { ...mockGuestInvoiceData.lineItems[0], id: '2', type: 'labor', amount: 0.335 },
+      ] }
+      vi.mocked(LocalStorageService.get).mockReturnValue(old)
+      vi.mocked(LocalStorageService.set).mockImplementation(() => {})
+      const upgraded = loadFromLocalStorage()
+      expect(upgraded?.draftId).toBe('old-draft')
+      expect(upgraded?.lineItems.map(item => item.type)).toEqual(['product', 'service'])
+      expect(upgraded?.lineItems.map(item => item.amount)).toEqual([0.335, 0.335])
+      expect(upgraded?.lastModified).toEqual(old.lastModified)
+      expect(LocalStorageService.set).toHaveBeenCalledWith(GUEST_INVOICE_STORAGE_KEY, upgraded)
+      expect(LocalStorageService.remove).not.toHaveBeenCalled()
+    })
+
+    it('does not clear a valid old draft if persisting its upgrade fails', () => {
+      vi.mocked(LocalStorageService.get).mockReturnValue({ ...mockGuestInvoiceData, lineItems: [{ ...mockGuestInvoiceData.lineItems[0], type: 'labor' }] })
+      vi.mocked(LocalStorageService.set).mockImplementation(() => { throw new Error('Quota exceeded') })
+      expect(() => loadFromLocalStorage()).toThrow('Your previous draft has been retained')
+      expect(LocalStorageService.remove).not.toHaveBeenCalled()
+    })
+
     it('should load and return valid guest invoice data', () => {
       vi.mocked(LocalStorageService.get).mockReturnValue(mockGuestInvoiceData)
 

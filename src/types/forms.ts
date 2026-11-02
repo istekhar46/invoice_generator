@@ -99,7 +99,8 @@ export type CustomerFormData = z.infer<typeof customerSchema>
  */
 export const lineItemSchema = z.object({
   id: z.string(),
-  type: z.literal('material'),
+  type: z.enum(['product', 'service']),
+  catalogItemId: z.string().min(1).max(100).nullable().optional(),
   description: z
     .string()
     .min(1, 'Description is required')

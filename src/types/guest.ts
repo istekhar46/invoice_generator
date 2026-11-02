@@ -1,4 +1,4 @@
-import type { InvoiceOptions } from './entities'
+import type { InvoiceOptions, LineItemType } from './entities'
 
 /**
  * Guest invoice type definitions
@@ -10,7 +10,7 @@ import type { InvoiceOptions } from './entities'
  */
 export interface GuestLineItem {
   id: string
-  type: 'material'
+  type: LineItemType
   description: string
   unit: string
   quantity: number

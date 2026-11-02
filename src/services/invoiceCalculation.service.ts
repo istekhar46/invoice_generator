@@ -83,7 +83,7 @@ export class InvoiceCalculationService {
       !item?.id ||
       !item.description?.trim() ||
       !item.unit?.trim() ||
-      item.type !== 'material'
+      !['product', 'service'].includes(item.type || '')
     )
       throw new CalculationError('Invalid line item')
     this.calculateLineItemAmount(item.quantity as number, item.rate as number)

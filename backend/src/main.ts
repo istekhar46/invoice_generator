@@ -62,9 +62,9 @@ async function bootstrap(): Promise<void> {
 
   // Setup Swagger/OpenAPI documentation
   const configBuilder = new DocumentBuilder()
-    .setTitle('Electrician Invoice API')
+    .setTitle('Invoiceo API')
     .setDescription(
-      'A comprehensive backend API for the Electrician Invoice Generation Web Application. This API provides secure endpoints for user authentication, company profile management, customer management, and invoice generation with line items.',
+      'Invoiceo API for account authentication, company profiles, customers, reusable products and services, and invoice creation and management.',
     )
     .setVersion('1.0')
     .addBearerAuth(

@@ -31,7 +31,7 @@ export interface CompanyProfile {
   email: string
   taxNumber?: string
   defaultTaxRate: number
-  /** Default labor rate used as a starting rate for labor line items */
+  /** Historical company field; catalog item prices do not use this value. */
   defaultLaborRate?: number
   logoUrl?: string
   createdAt: Date
@@ -58,7 +58,7 @@ export interface Customer {
 /**
  * Line item type for invoice entries
  */
-export type LineItemType = 'material'
+export type LineItemType = 'product' | 'service'
 
 /**
  * Line item entity representing a single charge on an invoice
@@ -67,6 +67,7 @@ export interface LineItem {
   id: string
   invoiceId: string
   type: LineItemType
+  catalogItemId?: string | null
   description: string
   unit: string
   quantity: number

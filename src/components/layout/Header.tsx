@@ -9,6 +9,7 @@ import {
   Users,
   FileText,
   Building2,
+  Package,
   ChevronRight,
 } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
@@ -58,6 +59,13 @@ const navigation: NavigationItem[] = [
     href: '/customers',
     description: 'Keep your client details together',
     icon: Users,
+    requiresAuth: true,
+  },
+  {
+    name: 'Products & Services',
+    href: '/products',
+    description: 'Reusable items and prices',
+    icon: Package,
     requiresAuth: true,
   },
   {
@@ -138,7 +146,7 @@ const Header: React.FC<HeaderProps> = ({
               size="small"
               ref={menuButtonRef}
               className={cn(
-                'md:hidden min-h-11 min-w-11 px-3 border shadow-none',
+                'lg:hidden min-h-11 min-w-11 px-3 border shadow-none',
                 mobileMenuOpen
                   ? 'bg-primary-50 border-primary-200 text-primary-700'
                   : 'bg-white border-gray-200 text-gray-600'
@@ -179,7 +187,7 @@ const Header: React.FC<HeaderProps> = ({
 
         {/* Desktop Navigation - Modern pill style */}
         {isAuthenticated && (
-          <nav className="hidden md:flex items-center space-x-2 bg-gray-100 rounded-2xl p-2">
+          <nav className="hidden lg:flex items-center space-x-2 bg-gray-100 rounded-2xl p-2">
             {filteredNavigation.map(item => (
               <NavLink
                 key={item.name}
@@ -214,7 +222,7 @@ const Header: React.FC<HeaderProps> = ({
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br from-primary-100 to-primary-200">
                   <User className="h-4 w-4 text-primary-600" />
                 </div>
-                <div className="hidden md:block">
+                <div className="hidden xl:block">
                   <p className="text-sm font-medium text-gray-900">
                     {user.displayName}
                   </p>
@@ -255,11 +263,11 @@ const Header: React.FC<HeaderProps> = ({
                 handleMenuClose()
                 menuButtonRef.current?.focus()
               }}
-              className="fixed inset-x-0 bottom-0 top-16 z-30 bg-gray-900/30 backdrop-blur-sm md:hidden sm:top-20"
+              className="fixed inset-x-0 bottom-0 top-16 z-30 bg-gray-900/30 backdrop-blur-sm lg:hidden sm:top-20"
             />,
             document.body
           )}
-          <div className="absolute inset-x-0 top-full md:hidden px-3 pb-3 pt-2 sm:px-6 motion-safe:animate-slide-down">
+          <div className="absolute inset-x-0 top-full lg:hidden px-3 pb-3 pt-2 sm:px-6 motion-safe:animate-slide-down">
           <div className="max-h-[calc(100dvh-6rem)] overflow-y-auto rounded-2xl border border-gray-200 bg-white shadow-hard">
             <div className="flex items-center gap-3 bg-linear-to-br from-gray-900 to-primary-950 p-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20">
