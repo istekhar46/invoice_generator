@@ -26,6 +26,7 @@ model User {
   invoices       Invoice[]
   refreshTokens  RefreshToken[]
   invoiceDefaults InvoiceDefaults?
+  catalogItems    CatalogItem[]
   
   @@map("users")
 }
@@ -191,13 +192,16 @@ model LineItem {
   quantity    Float
   rate        Float
   amount      Float
+  catalogItemId String?
   
   // Relations
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  catalogItem CatalogItem? @relation(fields: [catalogItemId], references: [id], onDelete: Restrict)
   
   // Indexes for query optimization
   @@index([invoiceId])
   @@index([type])
+  @@index([catalogItemId])
   @@map("line_items")
 }
 
@@ -209,6 +213,29 @@ enum InvoiceStatus {
 }
 
 enum LineItemType {
-  MATERIAL
-  LABOR
+  PRODUCT
+  SERVICE
+}
+
+// Reusable defaults; invoices retain their own line-item snapshots.
+model CatalogItem {
+  id          String       @id @default(cuid())
+  userId      String
+  type        LineItemType
+  name        String
+  description String       @default("")
+  sku         String?
+  unit        String
+  rate        Float
+  currency    String
+  isArchived  Boolean      @default(false)
+  usedAt      DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lineItems   LineItem[]
+
+  @@unique([userId, sku])
+  @@index([userId, isArchived, name])
+  @@map("catalog_items")
 }

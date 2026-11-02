@@ -4,7 +4,8 @@
  */
 
 import React, { useState } from 'react'
-import type { LineItem } from '../../../types/entities'
+import type { LineItem, LineItemType } from '../../../types/entities'
+import { CatalogPicker } from '../catalog/CatalogPicker'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { Card, CardHeader, CardTitle, CardContent } from '../../ui/Card'
@@ -21,6 +22,8 @@ interface LineItemsTableProps {
 }
 
 interface LineItemFormData {
+  type: LineItemType
+  catalogItemId?: string | null
   description: string
   unit: string
   quantity: string
@@ -28,6 +31,8 @@ interface LineItemFormData {
 }
 
 const emptyLineItem: LineItemFormData = {
+  type: 'product',
+  catalogItemId: null,
   description: '',
   unit: '',
   quantity: '',
@@ -84,7 +89,8 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
     const newLineItem: LineItem = {
       id: crypto.randomUUID(),
       invoiceId: '', // Will be set when invoice is saved
-      type: 'material',
+      type: formData.type,
+      catalogItemId: formData.catalogItemId,
       description: formData.description.trim(),
       unit: formData.unit.trim(),
       quantity,
@@ -103,13 +109,15 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
     const item = lineItems.find(item => item.id === id)
     if (item) {
       setFormData({
+        type: item.type,
+        catalogItemId: item.catalogItemId,
         description: item.description,
         unit: item.unit || '',
         quantity: item.quantity.toString(),
         rate: item.rate.toString(),
       })
       setEditingId(id)
-      setShowMobileModal(true)
+      setShowMobileModal(window.innerWidth < 768)
       setErrors({})
     }
   }
@@ -129,7 +137,8 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
       item.id === editingId
         ? {
             ...item,
-            type: 'material' as const,
+            type: formData.type,
+            catalogItemId: formData.catalogItemId,
             description: formData.description.trim(),
             unit: formData.unit.trim(),
             quantity,
@@ -186,8 +195,43 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
     }
   }
 
+  const renderTypeControl = () => (
+    <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+      <label>
+        Item type
+        <select
+          aria-label="Item type"
+          value={formData.type}
+          disabled={disabled || !!formData.catalogItemId}
+          onChange={event =>
+            setFormData(prev => ({
+              ...prev,
+              type: event.target.value as LineItemType,
+            }))
+          }
+          className="ml-2 rounded border border-slate-200 bg-white px-2 py-1"
+        >
+          <option value="product">Product</option>
+          <option value="service">Service</option>
+        </select>
+      </label>
+      {formData.catalogItemId && (
+        <button
+          type="button"
+          onClick={() =>
+            setFormData(prev => ({ ...prev, catalogItemId: null }))
+          }
+          className="text-primary-600 underline"
+        >
+          Use as one-off
+        </button>
+      )}
+    </div>
+  )
+
   const renderMobileForm = () => (
     <div className="space-y-4">
+      {renderTypeControl()}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Item Name *
@@ -197,6 +241,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
           value={formData.description}
           onChange={e => handleFormChange('description', e.target.value)}
           placeholder="Enter description"
+          aria-label="Item description"
           error={errors.description}
           disabled={disabled}
         />
@@ -211,6 +256,8 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
           value={formData.unit}
           onChange={e => handleFormChange('unit', e.target.value)}
           placeholder="mtr, bundle, box..."
+          aria-label="Item unit"
+          readOnly={!!formData.catalogItemId}
           error={errors.unit}
           disabled={disabled}
         />
@@ -225,6 +272,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
           value={formData.quantity}
           onChange={e => handleFormChange('quantity', e.target.value)}
           placeholder="0"
+          aria-label="Item quantity"
           min="0"
           step="0.01"
           error={errors.quantity}
@@ -241,6 +289,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
           value={formData.rate}
           onChange={e => handleFormChange('rate', e.target.value)}
           placeholder="0.00"
+          aria-label="Item rate"
           min="0"
           step="0.01"
           error={errors.rate}
@@ -297,11 +346,13 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
   const renderFormRow = (isEditing: boolean = false, key?: string) => (
     <tr key={key} className="bg-gray-50/50">
       <td className="px-4 py-3">
+        {renderTypeControl()}
         <Input
           type="text"
           value={formData.description}
           onChange={e => handleFormChange('description', e.target.value)}
           placeholder="Item name"
+          aria-label="Item description"
           error={errors.description}
           disabled={disabled}
           variant="filled"
@@ -313,6 +364,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
           value={formData.rate}
           onChange={e => handleFormChange('rate', e.target.value)}
           placeholder="0.00"
+          aria-label="Item rate"
           min="0"
           step="0.01"
           error={errors.rate}
@@ -326,6 +378,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
           value={formData.quantity}
           onChange={e => handleFormChange('quantity', e.target.value)}
           placeholder="0"
+          aria-label="Item quantity"
           min="0"
           step="0.01"
           error={errors.quantity}
@@ -338,6 +391,8 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
             value={formData.unit}
             onChange={e => handleFormChange('unit', e.target.value)}
             placeholder="unit"
+            aria-label="Item unit"
+            readOnly={!!formData.catalogItemId}
             error={errors.unit}
             disabled={disabled}
             variant="filled"
@@ -403,8 +458,18 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>Line Items</CardTitle>
+            <CatalogPicker
+              currency={currency}
+              disabled={disabled || showAddForm || editingId !== null}
+              onSelect={selection =>
+                onChange([
+                  ...lineItems,
+                  { id: crypto.randomUUID(), invoiceId: '', ...selection },
+                ])
+              }
+            />
             {!showAddForm && !editingId && (
               <Button
                 variant="outline"
@@ -433,7 +498,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
                 No line items yet
               </h3>
               <p className="text-gray-600 mb-6 max-w-sm mx-auto">
-                Add material charges to build your invoice.
+                Add products or services to build your invoice.
               </p>
               <Button
                 variant="primary"
@@ -479,7 +544,11 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
                     ) : (
                       <tr key={item.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          {item.description}
+                          <span className="block">{item.description}</span>
+                          <span className="text-xs text-slate-500">
+                            {item.type === 'service' ? 'Service' : 'Product'}
+                            {item.catalogItemId ? ' · From catalog' : ''}
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
                           {formatCurrency(item.rate, currency)}

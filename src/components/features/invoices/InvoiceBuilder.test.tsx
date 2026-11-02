@@ -46,7 +46,7 @@ const mockUpdateInvoiceMutate = vi.fn().mockResolvedValue({
   lineItems: [
     {
       id: 'item-1',
-      type: 'MATERIAL',
+      type: 'PRODUCT',
       description: 'Updated Material',
       quantity: 5,
       rate: 20,
@@ -144,7 +144,7 @@ vi.mock('./LineItemsTable', () => ({
             ...lineItems,
             {
               id: 'new-item',
-              type: 'material',
+              type: 'product',
               description: 'New Item',
               unit: 'pcs',
               quantity: 1,
@@ -254,7 +254,7 @@ const mockInvoice: Invoice = {
     {
       id: 'item-1',
       invoiceId: 'test-invoice-id',
-      type: 'material',
+      type: 'product',
       description: 'Test Material',
       unit: 'bundle',
       quantity: 5,

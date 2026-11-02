@@ -35,7 +35,7 @@ export const transformLineItemResponse = (
 ): LineItem => ({
   ...dto,
   invoiceId,
-  type: 'material',
+  type: dto.type === 'SERVICE' ? 'service' : 'product',
   unit: dto.unit ?? '',
 })
 
@@ -89,20 +89,22 @@ export const extractCustomerFromInvoiceResponse = (
 /**
  * Transform frontend LineItem to API CreateLineItemDto
  * Converts lowercase enum values to uppercase for API compatibility
- * Normalizes all line items to MATERIAL for backend payloads
+ * Retains product/service classification and the optional catalog reference.
  */
 export const transformLineItemToDto = (
   lineItem:
     | LineItem
     | {
-        type: string
+        type: LineItem['type']
+        catalogItemId?: string | null
         description: string
         unit?: string
         quantity: number
         rate: number
       }
 ): CreateLineItemDto => ({
-  type: 'MATERIAL',
+  type: lineItem.type === 'service' ? 'SERVICE' : 'PRODUCT',
+  catalogItemId: lineItem.catalogItemId,
   description: lineItem.description,
   unit: lineItem.unit?.trim() || '',
   quantity: lineItem.quantity,

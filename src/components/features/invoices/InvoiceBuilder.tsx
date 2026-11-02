@@ -82,7 +82,7 @@ const stepConfig = {
   items: {
     title: 'Line Items',
     icon: Calculator,
-    description: 'Add material charges with units',
+    description: 'Add products or services with units',
   },
   review: {
     title: 'Review & Save',
@@ -242,7 +242,7 @@ const InvoiceBuilderForm: React.FC<
       }
 
       // Check type is valid
-      if (item.type !== 'material') {
+      if (item.type !== 'product' && item.type !== 'service') {
         return false
       }
 

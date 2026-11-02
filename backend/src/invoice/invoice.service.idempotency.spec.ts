@@ -31,7 +31,7 @@ describe('InvoiceService quick-invoice idempotency', () => {
       taxRate: 0.1,
       lineItems: [
         {
-          type: 'MATERIAL',
+          type: 'PRODUCT',
           description: 'Consulting',
           unit: 'hour',
           quantity: 1,

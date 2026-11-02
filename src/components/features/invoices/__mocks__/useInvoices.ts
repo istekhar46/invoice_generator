@@ -16,7 +16,7 @@ export const mockUpdateInvoiceMutate = vi.fn().mockResolvedValue({
   lineItems: [
     {
       id: 'item-1',
-      type: 'MATERIAL',
+      type: 'PRODUCT',
       description: 'Updated Material',
       quantity: 5,
       rate: 20,

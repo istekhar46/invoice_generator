@@ -1,15 +1,31 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsNumber, Min, Max, MaxLength, IsEnum } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  Min,
+  Max,
+  MaxLength,
+  IsEnum,
+  IsOptional,
+} from 'class-validator';
 import { LineItemType } from '@prisma/client';
 
 export class CreateLineItemDto {
   @ApiProperty({
     description: 'Type of line item',
-    example: 'MATERIAL',
+    example: 'PRODUCT',
     enum: LineItemType,
   })
-  @IsEnum(LineItemType, { message: 'Line item type must be MATERIAL or LABOR' })
+  @IsEnum(LineItemType, { message: 'Line item type must be PRODUCT or SERVICE' })
   type!: LineItemType;
+
+  @ApiPropertyOptional({ nullable: true, description: 'Optional account-owned catalog reference' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  catalogItemId?: string | null;
 
   @ApiProperty({
     description: 'Description of the line item',

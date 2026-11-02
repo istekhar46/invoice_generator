@@ -1,36 +1,38 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 # Set working directory
 WORKDIR /app
 
 # Install build dependencies
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache openssl
 
 # Copy package files
 COPY package*.json ./
 COPY prisma ./prisma/
 
 # Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --include=dev
 
 # Copy source code
 COPY . .
 
-# Generate Prisma client
-RUN npx prisma generate
-
-# Build the application
-RUN npm run build
+# Prisma config requires a URL while generating the client. This build-only URL
+# is never contacted; the runtime must receive its own DATABASE_URL.
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npm run build \
+    && npm prune --omit=dev \
+    && npm cache clean --force
 
 # Production stage
-FROM node:20-alpine AS production
+FROM node:22-alpine AS production
 
 # Set working directory
 WORKDIR /app
 
 # Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+RUN apk add --no-cache dumb-init openssl
+
+ENV NODE_ENV=production
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
@@ -56,4 +58,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node dist/health-check.js || exit 1
 
 # Start the application
-CMD ["dumb-init", "node", "dist/main"]
+CMD ["dumb-init", "node", "dist/main.js"]

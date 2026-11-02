@@ -34,7 +34,7 @@ const payload = {
   terms: 'Bank transfer',
   purchaseOrderNumber: 'PO-42',
   lineItems: [
-    { type: 'MATERIAL', description: 'Design services', unit: 'project', quantity: 1, rate: 1000 },
+    { type: 'PRODUCT', description: 'Design services', unit: 'project', quantity: 1, rate: 1000 },
   ],
 };
 (async () => {
@@ -128,7 +128,7 @@ const payload = {
       total: 0.67,
       lineItems: {
         create: [1, 2].map((index) => ({
-          type: 'MATERIAL',
+          type: 'PRODUCT',
           description: `Original ${index}`,
           unit: 'each',
           quantity: 1,

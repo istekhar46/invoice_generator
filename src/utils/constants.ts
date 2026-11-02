@@ -20,13 +20,12 @@ export const INVOICE_STATUS = {
 
 // Line item types
 export const LINE_ITEM_TYPE = {
-  MATERIAL: 'material',
-  LABOR: 'labor',
+  PRODUCT: 'product',
+  SERVICE: 'service',
 } as const
 
 // Default values
 export const DEFAULTS = {
-  LABOR_RATE: 75.0,
   TAX_RATE: 0.08,
   CURRENCY: 'USD',
   INVOICE_NUMBER_PREFIX: 'INV',

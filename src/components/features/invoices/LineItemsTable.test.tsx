@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { LineItemsTable } from './LineItemsTable'
 import type { LineItem } from '../../../types/entities'
 
@@ -12,7 +12,7 @@ const mockLineItems: LineItem[] = [
   {
     id: 'item1',
     invoiceId: 'invoice1',
-    type: 'material',
+    type: 'product',
     description: 'Electrical work',
     unit: 'mtr',
     quantity: 2,
@@ -22,7 +22,7 @@ const mockLineItems: LineItem[] = [
   {
     id: 'item2',
     invoiceId: 'invoice1',
-    type: 'material',
+    type: 'product',
     description: 'Wire and outlets',
     unit: 'bundle',
     quantity: 1,
@@ -30,6 +30,35 @@ const mockLineItems: LineItem[] = [
     amount: 75,
   },
 ]
+
+it('preserves service/catalog identity and historical amounts on a description-only edit', () => {
+  const service: LineItem = {
+    id: 'service-1',
+    invoiceId: 'invoice-1',
+    type: 'service',
+    catalogItemId: 'catalog-service',
+    description: 'Consultation',
+    unit: 'hour',
+    quantity: 1,
+    rate: 0.335,
+    amount: 0.335,
+  }
+  const change = vi.fn()
+  render(<LineItemsTable lineItems={[service]} onChange={change} />)
+  fireEvent.click(screen.getByTitle('Edit Line Item'))
+  expect(screen.getByRole('combobox', { name: 'Item type' })).toHaveValue(
+    'service'
+  )
+  expect(screen.getByRole('combobox', { name: 'Item type' })).toBeDisabled()
+  expect(screen.getByLabelText('Item unit')).toHaveAttribute('readonly')
+  fireEvent.change(screen.getByLabelText('Item description'), {
+    target: { value: 'Consultation (revised)' },
+  })
+  fireEvent.click(screen.getByTitle('Save Changes'))
+  expect(change).toHaveBeenCalledWith([
+    { ...service, description: 'Consultation (revised)' },
+  ])
+})
 
 describe('LineItemsTable', () => {
   const mockOnChange = vi.fn()
@@ -89,7 +118,7 @@ describe('LineItemsTable', () => {
     fireEvent.click(editButtons[0])
 
     // Should show the form with the item's current values
-    const dialog = within(screen.getByRole('dialog'))
+    const dialog = screen
     expect(dialog.getByDisplayValue('Electrical work')).toBeInTheDocument()
     expect(dialog.getByDisplayValue('2')).toBeInTheDocument()
     expect(dialog.getByDisplayValue('50')).toBeInTheDocument()
@@ -104,9 +133,7 @@ describe('LineItemsTable', () => {
     )
     fireEvent.click(screen.getAllByTitle('Edit Line Item')[0])
     expect(onSelectInvoice).not.toHaveBeenCalled()
-    expect(
-      within(screen.getByRole('dialog')).getByDisplayValue('Electrical work')
-    ).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Electrical work')).toBeInTheDocument()
   })
 
   it('should call onChange when item is deleted', () => {

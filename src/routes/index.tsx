@@ -19,6 +19,7 @@ import {
 } from '../pages'
 import { InformationPage } from '../pages/InformationPage'
 import { GoogleAuthCallbackPage } from '../pages/GoogleAuthCallbackPage'
+import { ProductsPage } from '../pages/ProductsPage'
 
 export const router = createBrowserRouter([
   {
@@ -58,6 +59,14 @@ export const router = createBrowserRouter([
       },
 
       // Protected routes (only accessible when authenticated)
+      {
+        path: 'products',
+        element: (
+          <ProtectedRoute>
+            <ProductsPage />
+          </ProtectedRoute>
+        ),
+      },
       {
         path: 'dashboard',
         element: (
@@ -124,6 +133,10 @@ export const router = createBrowserRouter([
 
 // Route metadata for breadcrumbs and navigation
 export const routeMetadata = {
+  '/products': {
+    title: 'Products & Services',
+    breadcrumb: 'Products & Services',
+  },
   '/': {
     title: 'Home',
     breadcrumb: 'Home',
