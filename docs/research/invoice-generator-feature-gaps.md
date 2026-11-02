@@ -1,6 +1,6 @@
 # Invoice-Generator.com: top feature gaps for Invoiceo
 
-Historical baseline: the gap descriptions record Invoiceo before this implementation. Currency selection, discounts/shipping/payment balances, and the full quick editor are now implemented; see [implementation and validation](../implementation/quick-invoice-editor.md). Templates, estimates, sending, and payments remain future proposals.
+Historical baseline: the gap descriptions record Invoiceo before this implementation. Currency selection, discounts/shipping/payment balances, and the full quick editor are now implemented; see [implementation and validation](../implementation/quick-invoice-editor.md). A subsequent [saved invoice defaults release](../implementation/saved-invoice-defaults.md) adds one account default and profile branding reuse. Multiple templates/editable labels, estimates, sending, and online payments remain future proposals.
 
 Reviewed: **1 November 2026**. Scope: competitor public editor and official pages, compared with this repository's frontend, API, and database schema at the start of the work.
 

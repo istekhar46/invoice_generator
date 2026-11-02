@@ -28,7 +28,7 @@ Object.defineProperty(globalThis, 'localStorage', {
 
 describe('DateSerializer', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
   })
 
   describe('serialize', () => {
@@ -112,7 +112,7 @@ describe('DateSerializer', () => {
 
 describe('LocalStorageService', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
     mockLocalStorage.length = 0
   })
 
@@ -122,7 +122,7 @@ describe('LocalStorageService', () => {
       mockLocalStorage.getItem.mockReturnValue(JSON.stringify(testData))
 
       const result = LocalStorageService.get('test-key')
-      
+
       expect(mockLocalStorage.getItem).toHaveBeenCalledWith('test-key')
       expect(result).toEqual({
         name: 'test',
@@ -134,7 +134,7 @@ describe('LocalStorageService', () => {
       mockLocalStorage.getItem.mockReturnValue(null)
 
       const result = LocalStorageService.get('nonexistent-key')
-      
+
       expect(result).toBe(null)
     })
 
@@ -143,16 +143,21 @@ describe('LocalStorageService', () => {
         throw new Error('localStorage unavailable')
       })
 
-      expect(() => LocalStorageService.get('test-key')).toThrow(LocalStorageError)
+      expect(() => LocalStorageService.get('test-key')).toThrow(
+        LocalStorageError
+      )
     })
   })
 
   describe('set', () => {
     it('should serialize and store data in localStorage', () => {
-      const testData = { name: 'test', createdAt: new Date('2023-01-01T12:00:00.000Z') }
-      
+      const testData = {
+        name: 'test',
+        createdAt: new Date('2023-01-01T12:00:00.000Z'),
+      }
+
       LocalStorageService.set('test-key', testData)
-      
+
       expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
         'test-key',
         JSON.stringify({ name: 'test', createdAt: '2023-01-01T12:00:00.000Z' })
@@ -164,16 +169,16 @@ describe('LocalStorageService', () => {
         throw new Error('Storage quota exceeded')
       })
 
-      expect(() => LocalStorageService.set('test-key', { data: 'test' })).toThrow(
-        LocalStorageError
-      )
+      expect(() =>
+        LocalStorageService.set('test-key', { data: 'test' })
+      ).toThrow(LocalStorageError)
     })
   })
 
   describe('remove', () => {
     it('should remove item from localStorage', () => {
       LocalStorageService.remove('test-key')
-      
+
       expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('test-key')
     })
   })
@@ -181,7 +186,7 @@ describe('LocalStorageService', () => {
   describe('clear', () => {
     it('should clear all localStorage data', () => {
       LocalStorageService.clear()
-      
+
       expect(mockLocalStorage.clear).toHaveBeenCalled()
     })
   })
@@ -189,17 +194,17 @@ describe('LocalStorageService', () => {
   describe('exists', () => {
     it('should return true when key exists', () => {
       mockLocalStorage.getItem.mockReturnValue('some-value')
-      
+
       const result = LocalStorageService.exists('test-key')
-      
+
       expect(result).toBe(true)
     })
 
     it('should return false when key does not exist', () => {
       mockLocalStorage.getItem.mockReturnValue(null)
-      
+
       const result = LocalStorageService.exists('test-key')
-      
+
       expect(result).toBe(false)
     })
   })
@@ -207,10 +212,12 @@ describe('LocalStorageService', () => {
   describe('getKeys', () => {
     it('should return all localStorage keys', () => {
       mockLocalStorage.length = 2
-      mockLocalStorage.key.mockReturnValueOnce('key1').mockReturnValueOnce('key2')
-      
+      mockLocalStorage.key
+        .mockReturnValueOnce('key1')
+        .mockReturnValueOnce('key2')
+
       const result = LocalStorageService.getKeys()
-      
+
       expect(result).toEqual(['key1', 'key2'])
     })
   })
@@ -220,7 +227,7 @@ describe('LocalStorageRepository', () => {
   let repository: LocalStorageRepository<{ id: string; name: string }>
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
     repository = new LocalStorageRepository('test-entities')
   })
 
@@ -233,7 +240,7 @@ describe('LocalStorageRepository', () => {
       mockLocalStorage.getItem.mockReturnValue(JSON.stringify(entities))
 
       const result = repository.getAll()
-      
+
       expect(result).toEqual(entities)
     })
 
@@ -241,7 +248,7 @@ describe('LocalStorageRepository', () => {
       mockLocalStorage.getItem.mockReturnValue(null)
 
       const result = repository.getAll()
-      
+
       expect(result).toEqual([])
     })
   })
@@ -255,7 +262,7 @@ describe('LocalStorageRepository', () => {
       mockLocalStorage.getItem.mockReturnValue(JSON.stringify(entities))
 
       const result = repository.getById('1')
-      
+
       expect(result).toEqual({ id: '1', name: 'Entity 1' })
     })
 
@@ -263,7 +270,7 @@ describe('LocalStorageRepository', () => {
       mockLocalStorage.getItem.mockReturnValue(JSON.stringify([]))
 
       const result = repository.getById('nonexistent')
-      
+
       expect(result).toBe(null)
     })
   })
@@ -272,11 +279,11 @@ describe('LocalStorageRepository', () => {
     it('should add new entity to storage', () => {
       const existingEntities = [{ id: '1', name: 'Entity 1' }]
       const newEntity = { id: '2', name: 'Entity 2' }
-      
+
       mockLocalStorage.getItem.mockReturnValue(JSON.stringify(existingEntities))
 
       repository.create(newEntity)
-      
+
       expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
         'test-entities',
         JSON.stringify([...existingEntities, newEntity])
@@ -293,7 +300,7 @@ describe('LocalStorageRepository', () => {
       mockLocalStorage.getItem.mockReturnValue(JSON.stringify(entities))
 
       const result = repository.update('1', { name: 'Updated Entity 1' })
-      
+
       expect(result).toEqual({ id: '1', name: 'Updated Entity 1' })
       expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
         'test-entities',
@@ -308,7 +315,7 @@ describe('LocalStorageRepository', () => {
       mockLocalStorage.getItem.mockReturnValue(JSON.stringify([]))
 
       const result = repository.update('nonexistent', { name: 'Updated' })
-      
+
       expect(result).toBe(null)
     })
   })
@@ -322,7 +329,7 @@ describe('LocalStorageRepository', () => {
       mockLocalStorage.getItem.mockReturnValue(JSON.stringify(entities))
 
       const result = repository.delete('1')
-      
+
       expect(result).toBe(true)
       expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
         'test-entities',
@@ -334,7 +341,7 @@ describe('LocalStorageRepository', () => {
       mockLocalStorage.getItem.mockReturnValue(JSON.stringify([]))
 
       const result = repository.delete('nonexistent')
-      
+
       expect(result).toBe(false)
     })
   })
@@ -342,8 +349,11 @@ describe('LocalStorageRepository', () => {
   describe('deleteAll', () => {
     it('should clear all entities', () => {
       repository.deleteAll()
-      
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('test-entities', JSON.stringify([]))
+
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
+        'test-entities',
+        JSON.stringify([])
+      )
     })
   })
 
@@ -356,7 +366,7 @@ describe('LocalStorageRepository', () => {
       mockLocalStorage.getItem.mockReturnValue(JSON.stringify(entities))
 
       const result = repository.count()
-      
+
       expect(result).toBe(2)
     })
   })

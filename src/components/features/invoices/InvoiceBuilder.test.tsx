@@ -8,6 +8,25 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+vi.mock('../../../hooks/useInvoiceDefaults', () => ({
+  useSaveInvoiceDefaults: () => ({
+    mutateAsync: vi.fn().mockResolvedValue({}),
+  }),
+  useNewInvoiceDefaults: () => ({
+    isPending: false,
+    data: {
+      settings: {
+        currency: 'USD',
+        taxRate: 0.08,
+        notes: '',
+        terms: '',
+        paymentTerms: '',
+      },
+      company: null,
+      logoDataUrl: '',
+    },
+  }),
+}))
 import type { Invoice, Customer } from '../../../types/entities'
 
 // Setup mock functions
