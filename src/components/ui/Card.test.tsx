@@ -6,7 +6,13 @@ describe('Card', () => {
     render(<Card>Card content</Card>)
     const card = screen.getByText('Card content')
     expect(card).toBeInTheDocument()
-    expect(card).toHaveClass('rounded-2xl', 'shadow-soft', 'bg-white', 'p-6')
+    expect(card).toHaveClass(
+      'rounded-2xl',
+      'shadow-soft',
+      'bg-white',
+      'p-4',
+      'sm:p-6'
+    )
   })
 
   it('renders with different padding options', () => {
@@ -17,13 +23,22 @@ describe('Card', () => {
     expect(screen.getByText('Small padding')).toHaveClass('p-4')
 
     rerender(<Card padding="lg">Large padding</Card>)
-    expect(screen.getByText('Large padding')).toHaveClass('p-8')
+    expect(screen.getByText('Large padding')).toHaveClass(
+      'p-4',
+      'sm:p-6',
+      'lg:p-8'
+    )
   })
 
   it('applies hover effects when hover prop is true', () => {
     render(<Card hover>Hoverable card</Card>)
     const card = screen.getByText('Hoverable card')
-    expect(card).toHaveClass('hover:shadow-medium', 'hover:-translate-y-1', 'transition-all', 'duration-300')
+    expect(card).toHaveClass(
+      'hover:shadow-medium',
+      'hover:-translate-y-1',
+      'transition-all',
+      'duration-300'
+    )
   })
 
   it('applies glass morphism styling when glassMorphism prop is true', () => {

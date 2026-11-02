@@ -17,6 +17,11 @@ import type { QuickInvoiceFormData } from '../../../types/forms'
 import type { GuestInvoiceData } from '../../../types/guest'
 import type { Invoice } from '../../../types/entities'
 import {
+  pickInvoiceDefaults,
+  type InvoiceDefaults,
+  type NewInvoiceDefaults,
+} from '../../../types/invoiceDefaults'
+import {
   useCreateQuickInvoice,
   useUpdateInvoice,
 } from '../../../hooks/useInvoices'
@@ -44,7 +49,7 @@ import {
 } from '../../../utils/apiTransformers'
 import { formatCurrency, formatDateForInput } from '../../../utils/formatters'
 
-interface QuickInvoiceBuilderProps {
+export interface QuickInvoiceBuilderProps {
   invoice?: Invoice | null
   onSave?: (invoice: Invoice) => void
   initialGuestData?: GuestInvoiceData | null
@@ -52,6 +57,9 @@ interface QuickInvoiceBuilderProps {
   autoSaveImportedDraft?: boolean
   onSignUp?: () => void
   className?: string
+  initialDefaults?: NewInvoiceDefaults
+  onSaveDefaults?: (settings: InvoiceDefaults) => Promise<unknown>
+  onStartNew?: () => void
 }
 
 const newItem = () => ({
@@ -67,31 +75,61 @@ const currencyNames = new Intl.DisplayNames(['en'], { type: 'currency' })
 
 function initialValues(
   invoice?: Invoice | null,
-  draft?: GuestInvoiceData | null
+  draft?: GuestInvoiceData | null,
+  defaults?: NewInvoiceDefaults
 ): QuickInvoiceFormData {
   const today = new Date()
   const due = new Date(today)
   due.setDate(due.getDate() + 30)
+  const company = !invoice && !draft ? defaults?.company : null
   return {
-    ...invoiceOptions(invoice || draft?.invoiceDetails || {}),
+    ...invoiceOptions(
+      invoice || draft?.invoiceDetails || defaults?.settings || {}
+    ),
+    logoDataUrl:
+      invoice || draft
+        ? (invoice?.logoDataUrl ?? draft?.invoiceDetails.logoDataUrl ?? '')
+        : (defaults?.logoDataUrl ?? ''),
     invoiceNumber:
       invoice?.invoiceNumber || draft?.invoiceDetails.invoiceNumber || '',
     customerId: invoice?.customerId || '',
     quickCompanyName:
-      invoice?.quickCompanyName || draft?.company?.businessName || '',
+      invoice?.quickCompanyName ||
+      draft?.company?.businessName ||
+      company?.businessName ||
+      '',
     quickCompanyAddress:
-      invoice?.quickCompanyAddress || draft?.company?.address || '',
-    quickCompanyCity: invoice?.quickCompanyCity || draft?.company?.city || '',
+      invoice?.quickCompanyAddress ||
+      draft?.company?.address ||
+      company?.address ||
+      '',
+    quickCompanyCity:
+      invoice?.quickCompanyCity || draft?.company?.city || company?.city || '',
     quickCompanyState:
-      invoice?.quickCompanyState || draft?.company?.state || '',
+      invoice?.quickCompanyState ||
+      draft?.company?.state ||
+      company?.state ||
+      '',
     quickCompanyZipCode:
-      invoice?.quickCompanyZipCode || draft?.company?.zipCode || '',
+      invoice?.quickCompanyZipCode ||
+      draft?.company?.zipCode ||
+      company?.zipCode ||
+      '',
     quickCompanyPhone:
-      invoice?.quickCompanyPhone || draft?.company?.phone || '',
+      invoice?.quickCompanyPhone ||
+      draft?.company?.phone ||
+      company?.phone ||
+      '',
     quickCompanyEmail:
-      invoice?.quickCompanyEmail || draft?.company?.email || '',
+      invoice?.quickCompanyEmail ||
+      draft?.company?.email ||
+      company?.email ||
+      '',
     quickCompanyTaxNumber:
-      invoice?.quickCompanyTaxNumber || draft?.company?.taxNumber || '',
+      invoice?.quickCompanyTaxNumber ||
+      draft?.company?.taxNumber ||
+      company?.taxNumber ||
+      '',
     quickCustomerName:
       invoice?.quickCustomerName ||
       invoice?.customer?.name ||
@@ -130,8 +168,16 @@ function initialValues(
     serviceDate:
       invoice?.serviceDate || draft?.invoiceDetails.serviceDate || today,
     dueDate: invoice?.dueDate || draft?.invoiceDetails.dueDate || due,
-    taxRate: invoice?.taxRate ?? draft?.invoiceDetails.taxRate ?? 0,
-    notes: invoice?.notes || draft?.notes || '',
+    taxRate:
+      invoice?.taxRate ??
+      draft?.invoiceDetails.taxRate ??
+      defaults?.settings.taxRate ??
+      0,
+    notes:
+      invoice?.notes ??
+      draft?.notes ??
+      (!invoice && !draft ? defaults?.settings.notes : '') ??
+      '',
     lineItems: invoice?.lineItems || draft?.lineItems || [newItem()],
   }
 }
@@ -144,6 +190,9 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
   autoSaveImportedDraft = false,
   onSignUp,
   className = '',
+  initialDefaults,
+  onSaveDefaults,
+  onStartNew,
 }) => {
   const isGuest = mode === 'guest'
   const [savedInvoice, setSavedInvoice] = useState(invoice ?? undefined)
@@ -162,11 +211,12 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
       : 'Drafts stay in this browser'
   )
   const [downloading, setDownloading] = useState(false)
+  const [savingDefaults, setSavingDefaults] = useState(false)
   const autoSaveAttempted = useRef(false)
   const createInvoice = useCreateQuickInvoice()
   const updateInvoice = useUpdateInvoice()
   const [defaultValues] = useState(() =>
-    initialValues(invoice, initialGuestData)
+    initialValues(invoice, initialGuestData, initialDefaults)
   )
   const {
     register,
@@ -186,7 +236,11 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
     name: 'lineItems',
   })
   const values = useWatch({ control }) as QuickInvoiceFormData
-  const busy = downloading || createInvoice.isPending || updateInvoice.isPending
+  const busy =
+    downloading ||
+    savingDefaults ||
+    createInvoice.isPending ||
+    updateInvoice.isPending
   const currency = values.currency || 'USD'
   const step = 10 ** -currencyDigits(currency)
   let calculationError = ''
@@ -313,9 +367,13 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
     }
   }
   const startNew = () => {
+    if (onStartNew) {
+      onStartNew()
+      return
+    }
     try {
       if (isGuest) clearLocalStorage()
-      reset(initialValues())
+      reset(initialValues(undefined, undefined, initialDefaults))
       setSavedInvoice(undefined)
       setDraftId(crypto.randomUUID())
       setCreatedAt(new Date())
@@ -334,6 +392,25 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
       onSignUp?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Draft could not be saved.')
+    }
+  }
+  const saveDefaults = async () => {
+    if (!onSaveDefaults) return
+    setError('')
+    setMessage('')
+    setSavingDefaults(true)
+    try {
+      const settings = pickInvoiceDefaults(getValues())
+      await onSaveDefaults(settings)
+      setMessage('Invoice defaults saved for new invoices.')
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Invoice defaults could not be saved.'
+      )
+    } finally {
+      setSavingDefaults(false)
     }
   }
   const uploadLogo = async (file?: File) => {
@@ -843,6 +920,23 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
             <p className="mt-3 text-xs leading-relaxed text-slate-400">
               Currency changes the denomination. Your prices are not converted.
             </p>
+            {!isGuest && onSaveDefaults && (
+              <>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void saveDefaults()}
+                  className="qi-secondary mt-4"
+                >
+                  {savingDefaults ? 'Saving defaults…' : 'Save as default'}
+                </button>
+                <p className="mt-3 text-xs leading-relaxed text-slate-500">
+                  Saves currency, tax, payment terms, notes and terms for new
+                  invoices. Business details and logo come from your company
+                  profile.
+                </p>
+              </>
+            )}
           </div>
           <div
             className="px-1 text-xs leading-relaxed text-slate-500"

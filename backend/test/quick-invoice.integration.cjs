@@ -12,6 +12,7 @@ process.env.PG_SSL = 'false';
 const { PrismaService } = require('../dist/database/prisma.service.js');
 const { InvoiceService } = require('../dist/invoice/invoice.service.js');
 const { DashboardService } = require('../dist/dashboard/dashboard.service.js');
+const { InvoiceDefaultsService } = require('../dist/invoice/invoice-defaults.service.js');
 const prisma = new PrismaService();
 const service = new InvoiceService(prisma);
 const users = [`qi-test-${randomUUID()}`, `qi-test-${randomUUID()}`];
@@ -161,8 +162,27 @@ const payload = {
   assert.equal(repriced.taxAmount, 0.07);
   assert.equal(repriced.total, 0.75);
   assert.equal(repriced.lineItems[0].amount, 0.34);
+  const defaults = new InvoiceDefaultsService(prisma);
+  assert.equal(await defaults.get(users[0]), null);
+  const snapshot = JSON.stringify(await service.findById(users[0], first.id));
+  const preferences = {
+    currency: 'KWD',
+    taxRate: 0,
+    paymentTerms: 'Net 14',
+    notes: 'Thank you',
+    terms: 'Bank transfer',
+  };
+  await defaults.save(users[0], preferences);
+  assert.deepEqual(await defaults.get(users[0]), preferences);
+  assert.equal(await defaults.get(users[1]), null);
+  await defaults.save(users[1], { ...preferences, currency: 'JPY', taxRate: 0.1 });
+  await defaults.save(users[0], { ...preferences, paymentTerms: '', notes: '', terms: '' });
+  assert.equal((await defaults.get(users[0])).notes, '');
+  assert.equal((await defaults.get(users[1])).currency, 'JPY');
+  assert.equal(await prisma.invoiceDefaults.count({ where: { userId: users[0] } }), 1);
+  assert.equal(JSON.stringify(await service.findById(users[0], first.id)), snapshot);
   console.log(
-    'PASS: fields/totals, edit/clear, account numbering/ownership, duplicate/overpayment errors, concurrent creation/imports, payment status, separate currency summaries, and saved-total preservation/repricing.',
+    'PASS: fields/totals, edit/clear, account numbering/ownership, duplicate/overpayment errors, concurrent creation/imports, payment status, separate currency summaries, saved-total preservation/repricing, and isolated invoice defaults without modifying saved invoices.',
   );
 })()
   .finally(async () => {

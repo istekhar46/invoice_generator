@@ -2,6 +2,7 @@ import {
   calculateInvoiceForEdit,
   invoicePricingChanged,
   money,
+  SUPPORTED_CURRENCIES,
 } from '../../../services/invoiceCalculation.service'
 /**
  * Invoice Builder Component
@@ -45,6 +46,13 @@ import {
 } from 'lucide-react'
 import { formatCurrency } from '../../../utils/formatters'
 import { invoiceOptions } from '../../../utils/invoiceDocument'
+import { InvoiceDefaultsGate } from './InvoiceDefaultsGate'
+import { useSaveInvoiceDefaults } from '../../../hooks/useInvoiceDefaults'
+import { usePDFGeneration } from '../../../hooks/usePDFGeneration'
+import {
+  pickInvoiceDefaults,
+  type InvoiceDefaults,
+} from '../../../types/invoiceDefaults'
 import {
   transformLineItemToDto,
   transformInvoiceResponse,
@@ -83,12 +91,37 @@ const stepConfig = {
   },
 }
 
-export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
+export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = props => {
+  const defaults = useSaveInvoiceDefaults()
+  return (
+    <InvoiceDefaultsGate
+      key={props.invoice?.id ?? 'new'}
+      enabled={!props.invoice}
+    >
+      {initial => (
+        <InvoiceBuilderForm
+          {...props}
+          initialSettings={initial?.settings}
+          onSaveDefaults={settings => defaults.mutateAsync(settings)}
+        />
+      )}
+    </InvoiceDefaultsGate>
+  )
+}
+
+const InvoiceBuilderForm: React.FC<
+  InvoiceBuilderProps & {
+    initialSettings?: InvoiceDefaults
+    onSaveDefaults: (settings: InvoiceDefaults) => Promise<unknown>
+  }
+> = ({
   invoice,
   initialCustomer,
   onSave,
   onAddCustomer,
   className,
+  initialSettings,
+  onSaveDefaults,
 }) => {
   const [currentStep, setCurrentStep] = useState<BuilderStep>('customer')
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
@@ -98,12 +131,19 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   const [lineItems, setLineItems] = useState<LineItem[]>([])
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [savingDefaults, setSavingDefaults] = useState(false)
+  const [defaultsMessage, setDefaultsMessage] = useState('')
 
+  const { downloadInvoicePDFDirect, isGenerating } = usePDFGeneration()
   const createInvoice = useCreateInvoice()
   const updateInvoice = useUpdateInvoice()
   const { data: companyProfile } = useCompanyProfile()
 
-  const loading = createInvoice.isPending || updateInvoice.isPending
+  const loading =
+    createInvoice.isPending ||
+    updateInvoice.isPending ||
+    savingDefaults ||
+    isGenerating
   const error = createInvoice.error || updateInvoice.error
 
   const [defaultValues] = useState<InvoiceFormData>(() => {
@@ -111,12 +151,14 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     const dueDate = new Date(today)
     dueDate.setDate(dueDate.getDate() + 30)
     return {
+      ...invoiceOptions(initialSettings || {}),
       customerId: '',
       serviceDate: today,
       dueDate,
       lineItems: [],
-      notes: '',
-      taxRate: companyProfile?.defaultTaxRate ?? 0.08,
+      notes: initialSettings?.notes ?? '',
+      taxRate:
+        initialSettings?.taxRate ?? companyProfile?.defaultTaxRate ?? 0.08,
     }
   })
 
@@ -126,6 +168,8 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     handleSubmit,
     watch,
     setValue,
+    getValues,
+    register,
     formState: { errors },
     reset,
   } = useForm<InvoiceFormData>({
@@ -142,14 +186,6 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       setValue('customerId', initialCustomer.id, { shouldValidate: true })
     }
   }, [initialCustomer, setValue])
-
-  useEffect(() => {
-    if (!invoice && companyProfile?.defaultTaxRate !== undefined) {
-      setValue('taxRate', companyProfile.defaultTaxRate, {
-        shouldValidate: true,
-      })
-    }
-  }, [companyProfile?.defaultTaxRate, invoice, setValue])
 
   // Validation helpers - single source of truth for each step
   const validateCustomerStep = (): boolean => {
@@ -287,6 +323,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       }
 
       const formData = {
+        ...invoiceOptions(invoice),
         customerId: customerId || '',
         serviceDate: new Date(invoice.serviceDate),
         dueDate: new Date(invoice.dueDate),
@@ -321,13 +358,15 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   }, [lineItems, setValue])
 
   // Calculate totals for real-time display
+  const currency = watchedValues.currency ?? invoice?.currency ?? 'USD'
+  const pricing = invoiceOptions(watchedValues)
   let totals: ReturnType<typeof calculateInvoiceForEdit> | undefined
   let calculationError = ''
   try {
     totals = calculateInvoiceForEdit(
       lineItems,
       watchedValues.taxRate || 0,
-      invoice || {},
+      pricing,
       invoice ?? undefined
     )
   } catch (err) {
@@ -335,13 +374,13 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       err instanceof Error ? err.message : 'Check invoice amounts.'
   }
   const displayTotal = (value?: number) =>
-    value === undefined ? '—' : formatCurrency(value, invoice?.currency)
+    value === undefined ? '—' : formatCurrency(value, currency)
   const preserveAmounts =
     invoice &&
     !invoicePricingChanged(
       lineItems,
       watchedValues.taxRate || 0,
-      invoice,
+      pricing,
       invoice
     )
   const displayedLineItems = totals
@@ -349,7 +388,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
         ...item,
         amount: preserveAmounts
           ? invoice.lineItems[index].amount
-          : money(item.quantity * item.rate, invoice?.currency),
+          : money(item.quantity * item.rate, currency),
       }))
     : lineItems
 
@@ -357,6 +396,24 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     setSelectedCustomer(customer)
     setValue('customerId', customer.id, { shouldValidate: true })
     setShowCustomerModal(false)
+  }
+
+  const saveDefaults = async () => {
+    setSavingDefaults(true)
+    setDefaultsMessage('')
+    setSubmitError(null)
+    try {
+      await onSaveDefaults(pickInvoiceDefaults(getValues()))
+      setDefaultsMessage('Invoice defaults saved for new invoices.')
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : 'Invoice defaults could not be saved.'
+      )
+    } finally {
+      setSavingDefaults(false)
+    }
   }
 
   const handleNextStep = () => {
@@ -388,6 +445,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
 
       // Build the payload with proper transformations
       const payload = {
+        ...invoiceOptions(data),
         customerId: data.customerId,
         serviceDate: data.serviceDate,
         dueDate: data.dueDate,
@@ -645,6 +703,47 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
         </FormSection>
 
         <FormSection
+          title="Invoice defaults"
+          description="Saved settings are used for new invoices. Business details and logo come from your company profile."
+          variant="bordered"
+        >
+          <FormGrid columns={2} gap="lg">
+            <label className="qi-field">
+              <span>Currency</span>
+              <select aria-label="Currency" {...register('currency')}>
+                {SUPPORTED_CURRENCIES.map(code => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Input
+              label="Payment terms"
+              {...register('paymentTerms')}
+              error={errors.paymentTerms?.message}
+            />
+          </FormGrid>
+          <label className="qi-field mt-4">
+            <span>Terms</span>
+            <textarea rows={3} {...register('terms')} />
+          </label>
+          {errors.terms?.message && (
+            <p role="alert" className="text-sm text-red-600">
+              {errors.terms.message}
+            </p>
+          )}
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => void saveDefaults()}
+            className="qi-secondary mt-4 max-w-xs"
+          >
+            {savingDefaults ? 'Saving defaults…' : 'Save as default'}
+          </button>
+        </FormSection>
+
+        <FormSection
           title="Tax Information"
           description="Set the tax rate for this invoice"
           variant="bordered"
@@ -658,7 +757,11 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                   label="Tax Rate (%) *"
                   type="text"
                   inputMode="decimal"
-                  value={field.value ? (field.value * 100).toString() : ''}
+                  value={
+                    Number.isFinite(field.value)
+                      ? (field.value * 100).toString()
+                      : ''
+                  }
                   onChange={e => {
                     const value = parseFloat(e.target.value) / 100 || 0
                     field.onChange(value)
@@ -712,7 +815,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   const renderItemsStep = () => (
     <div className="space-y-6">
       <LineItemsTable
-        currency={invoice?.currency}
+        currency={currency}
         lineItems={displayedLineItems}
         onChange={setLineItems}
         disabled={loading}
@@ -753,6 +856,45 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       </Card>
     </div>
   )
+
+  const invoiceForPreview = (): Invoice => {
+    if (!totals)
+      throw new Error(
+        calculationError || 'Check invoice amounts before downloading.'
+      )
+    return {
+      ...pricing,
+      id: invoice?.id || 'preview',
+      userId: invoice?.userId || '',
+      invoiceNumber: invoice?.invoiceNumber || 'INV-PREVIEW',
+      customerId: watchedValues.customerId ?? null,
+      serviceDate: watchedValues.serviceDate || new Date(),
+      dueDate: watchedValues.dueDate || new Date(),
+      lineItems: displayedLineItems,
+      subtotal: totals.subtotal,
+      taxRate: watchedValues.taxRate || 0,
+      taxAmount: totals.taxAmount,
+      total: totals.total,
+      notes: watchedValues.notes || '',
+      status: invoice?.status || 'draft',
+      createdAt: invoice?.createdAt || new Date(),
+      updatedAt: invoice?.updatedAt || new Date(),
+    }
+  }
+  const downloadPreview = async () => {
+    setSubmitError(null)
+    try {
+      await downloadInvoicePDFDirect(
+        invoiceForPreview(),
+        selectedCustomer,
+        companyProfile
+      )
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : 'PDF could not be downloaded.'
+      )
+    }
+  }
 
   const renderReviewStep = () => {
     if (!totals) return null
@@ -800,24 +942,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       )
     }
 
-    const previewInvoice: Invoice = {
-      ...invoiceOptions(invoice || {}),
-      id: invoice?.id || 'preview',
-      userId: invoice?.userId || '',
-      invoiceNumber: invoice?.invoiceNumber || 'INV-PREVIEW',
-      customerId: watchedValues.customerId ?? null,
-      serviceDate: watchedValues.serviceDate || new Date(),
-      dueDate: watchedValues.dueDate || new Date(),
-      lineItems: displayedLineItems,
-      subtotal: totals.subtotal,
-      taxRate: watchedValues.taxRate || 0,
-      taxAmount: totals.taxAmount,
-      total: totals.total,
-      notes: watchedValues.notes || '',
-      status: invoice?.status || 'draft',
-      createdAt: invoice?.createdAt || new Date(),
-      updatedAt: invoice?.updatedAt || new Date(),
-    }
+    const previewInvoice = invoiceForPreview()
 
     return (
       <div className="space-y-4">
@@ -857,6 +982,14 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
 
   return (
     <div className={className}>
+      {defaultsMessage && (
+        <p
+          role="status"
+          className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-700"
+        >
+          {defaultsMessage}
+        </p>
+      )}
       {/* Step Indicator */}
       <div className="mb-8">{renderStepIndicator()}</div>
 
@@ -917,7 +1050,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => window.print()}
+                onClick={() => void downloadPreview()}
                 disabled={loading}
                 className="flex items-center space-x-2"
               >

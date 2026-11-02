@@ -25,8 +25,22 @@ model User {
   customers      Customer[]
   invoices       Invoice[]
   refreshTokens  RefreshToken[]
+  invoiceDefaults InvoiceDefaults?
   
   @@map("users")
+}
+
+// One account's reusable settings; invoice records keep their own snapshots.
+model InvoiceDefaults {
+  userId       String @id
+  currency     String
+  taxRate      Float
+  paymentTerms String
+  notes        String
+  terms        String
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_defaults")
 }
 
 // Refresh token model for secure token management

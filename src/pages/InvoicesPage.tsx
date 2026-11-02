@@ -1,6 +1,6 @@
-import { QuickInvoiceBuilder } from '../components/features/invoices/QuickInvoiceBuilder'
+import { AccountQuickInvoiceBuilder } from '../components/features/invoices/AccountQuickInvoiceBuilder'
 import { CompanySetupGuard } from '../components/guards/CompanySetupGuard'
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { InvoiceList } from '../components/features/invoices/InvoiceList'
 import { InvoiceBuilder } from '../components/features/invoices/InvoiceBuilder'
@@ -26,15 +26,20 @@ export const InvoicesPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const invoiceIdParam = searchParams.get('id')
 
-  const [showInvoiceBuilder, setShowInvoiceBuilder] = useState(
-    searchParams.get('create') === 'true'
-  )
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
-  const [showInvoicePreview, setShowInvoicePreview] = useState(false)
-  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null)
+  const [localSelection, setSelectedInvoice] = useState<Invoice | null>(null)
+  const [invoiceToEdit, setEditingInvoice] = useState<Invoice | null>(null)
+  const shouldCreate = searchParams.get('create') === 'true'
+  const editingInvoice = shouldCreate ? null : invoiceToEdit
+  const showInvoiceBuilder = shouldCreate || !!editingInvoice
 
   const { data: companyProfile } = useCompanyProfile()
   const { data: directInvoiceDto } = useInvoice(invoiceIdParam || '')
+  const selectedInvoice = invoiceIdParam
+    ? directInvoiceDto
+      ? transformInvoiceResponse(directInvoiceDto)
+      : null
+    : localSelection
+  const showInvoicePreview = !!selectedInvoice
   const {
     downloadInvoicePDFDirect,
     isGenerating,
@@ -44,52 +49,26 @@ export const InvoicesPage: React.FC = () => {
     selectedInvoice?.customerId || editingInvoice?.customerId || ''
   )
 
-  // Auto-open invoice preview when navigated with ?id=
-  useEffect(() => {
-    if (
-      directInvoiceDto &&
-      (!selectedInvoice || selectedInvoice.id !== directInvoiceDto.id)
-    ) {
-      setSelectedInvoice(transformInvoiceResponse(directInvoiceDto))
-      setShowInvoicePreview(true)
-    }
-  }, [directInvoiceDto])
-
-  useEffect(() => {
-    const shouldCreate = searchParams.get('create') === 'true'
-    if (shouldCreate && !showInvoiceBuilder) {
-      setEditingInvoice(null)
-      setShowInvoiceBuilder(true)
-    } else if (!shouldCreate && showInvoiceBuilder && !editingInvoice) {
-      setShowInvoiceBuilder(false)
-    }
-  }, [editingInvoice, searchParams, showInvoiceBuilder])
-
   const handleCreateInvoice = () => {
     setEditingInvoice(null)
-    setShowInvoiceBuilder(true)
     setSearchParams({ create: 'true' }, { replace: true })
   }
 
   const handleEditInvoice = (invoice: Invoice) => {
     setEditingInvoice(invoice)
-    setShowInvoiceBuilder(true)
   }
 
   const handleInvoiceSelect = (invoice: Invoice) => {
     setSelectedInvoice(invoice)
-    setShowInvoicePreview(true)
   }
 
   const handleInvoiceSave = (invoice: Invoice) => {
     closeInvoiceBuilder()
     // Optionally show the newly created/updated invoice
     setSelectedInvoice(invoice)
-    setShowInvoicePreview(true)
   }
 
   const closeInvoiceBuilder = () => {
-    setShowInvoiceBuilder(false)
     setEditingInvoice(null)
     if (searchParams.has('create')) {
       const nextParams = new URLSearchParams(searchParams)
@@ -99,7 +78,6 @@ export const InvoicesPage: React.FC = () => {
   }
 
   const handlePreviewClose = () => {
-    setShowInvoicePreview(false)
     setSelectedInvoice(null)
     if (searchParams.has('id')) {
       const nextParams = new URLSearchParams(searchParams)
@@ -144,7 +122,7 @@ export const InvoicesPage: React.FC = () => {
                 Back to Invoices
               </Button>
               {editingInvoice?.isQuickInvoice ? (
-                <QuickInvoiceBuilder
+                <AccountQuickInvoiceBuilder
                   key={editingInvoice.id}
                   invoice={editingInvoice}
                   onSave={handleInvoiceSave}

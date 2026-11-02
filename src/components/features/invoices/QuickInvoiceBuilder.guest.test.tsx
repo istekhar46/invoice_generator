@@ -178,6 +178,93 @@ describe('QuickInvoiceBuilder guest mode', () => {
     expect(clearLocalStorage).toHaveBeenCalledOnce()
   })
 
+  const initialDefaults = {
+    settings: {
+      currency: 'INR',
+      taxRate: 0,
+      paymentTerms: 'Net 14',
+      notes: 'Standard note',
+      terms: 'Bank transfer',
+    },
+    company: {
+      id: 'company',
+      userId: 'account',
+      businessName: 'Profile Company',
+      address: 'Profile address',
+      city: 'Mumbai',
+      state: 'MH',
+      zipCode: '400001',
+      email: 'company@example.test',
+      phone: '1234567890',
+      defaultTaxRate: 0.1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    logoDataUrl: 'data:image/png;base64,aGVsbG8=',
+  }
+  it('prefills a fresh invoice and saves only preferences without requiring customer/items', async () => {
+    const onSaveDefaults = vi.fn().mockResolvedValue(initialDefaults.settings)
+    render(
+      <QuickInvoiceBuilder
+        initialDefaults={initialDefaults}
+        onSaveDefaults={onSaveDefaults}
+      />
+    )
+    expect(screen.getByLabelText('From')).toHaveValue('Profile Company')
+    expect(screen.getByLabelText('Bill to *')).toHaveValue('')
+    expect(screen.getByLabelText('Currency')).toHaveValue('INR')
+    expect(screen.getByLabelText('Tax (%)')).toHaveValue(0)
+    expect(screen.getByLabelText('Notes')).toHaveValue('Standard note')
+    expect(screen.getByLabelText('Invoice number')).toHaveValue('')
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Save as default' })
+    )
+    await waitFor(() =>
+      expect(onSaveDefaults).toHaveBeenCalledWith(initialDefaults.settings)
+    )
+    expect(mutateAsync).not.toHaveBeenCalled()
+  })
+  it('retains a restored draft and existing invoice even when account defaults differ', () => {
+    const view = render(
+      <QuickInvoiceBuilder
+        initialGuestData={guestDraft}
+        initialDefaults={initialDefaults}
+      />
+    )
+    expect(screen.getByLabelText('From')).toHaveValue('Guest Company')
+    expect(screen.getByLabelText('Currency')).toHaveValue('USD')
+    expect(screen.getByLabelText('Notes')).toHaveValue('')
+    expect(
+      screen.queryByRole('img', { name: 'Company logo' })
+    ).not.toBeInTheDocument()
+    view.unmount()
+    render(
+      <QuickInvoiceBuilder
+        invoice={guestDocument(guestDraft, 'EXISTING-1')}
+        initialDefaults={initialDefaults}
+      />
+    )
+    expect(screen.getByLabelText('Invoice number')).toHaveValue('EXISTING-1')
+    expect(screen.getByLabelText('Tax (%)')).toHaveValue(12.5)
+    expect(screen.getByLabelText('Currency')).toHaveValue('USD')
+  })
+  it('shows a defaults save failure without clearing invoice values', async () => {
+    render(
+      <QuickInvoiceBuilder
+        initialDefaults={initialDefaults}
+        onSaveDefaults={vi
+          .fn()
+          .mockRejectedValue(new Error('Defaults save failed'))}
+      />
+    )
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Save as default' })
+    )
+    await screen.findByText('Defaults save failed')
+    expect(screen.getByLabelText('Notes')).toHaveValue('Standard note')
+    expect(clearLocalStorage).not.toHaveBeenCalled()
+  })
+
   it('clears the saved draft and resets the complete guest form', async () => {
     const user = userEvent.setup()
 

@@ -82,6 +82,8 @@ Design direction: a light invoice sheet, clear blue Invoiceo accents, restrained
 
 ### Verification (QI-07)
 
+These are the original 1 November checks. The [saved invoice defaults follow-up](saved-invoice-defaults.md) subsequently resolves the baseline frontend test/lint failures and records current checks.
+
 - Frontend and backend production builds passed. Vite retains its existing large-chunk warning.
 - Focused frontend run: **139 passed, 0 failed** across editor, pricing, session restore/refresh, draft storage/PDF, form, dashboard, routes, and homepage navigation tests. Includes the existing 39 calculation tests and actual PDF byte generation. Report: `/tmp/invoiceo-final-focused-tests.json`.
 - Full frontend run: **264 passed, 28 failed**. Every failing test name also fails on a clean HEAD archive at `/tmp/invoiceo-quick-editor-baseline`; no new failing names. Remaining failures concern old App/Header/Card/LineItemsTable assertions and localStorage mock isolation. Reports: `/tmp/invoiceo-final-all-frontend-tests.json`, `/tmp/invoiceo-baseline-tests.json`. These failures remain disclosed rather than expanding into unrelated component rewrites.
@@ -93,12 +95,19 @@ Design direction: a light invoice sheet, clear blue Invoiceo accents, restrained
 
 ### Rollout and limits
 
-- Prepared the one-time transactional SQL and [schema rollout instructions](../../backend/prisma/updates/README.md). No real application database, production environment, or deployment was changed. Existing databases require the documented coordinated schema/API/frontend rollout; use schema push only for a new empty database.
+- Prepared the one-time transactional SQL and [schema rollout instructions](../../backend/prisma/updates/README.md). The original feature delivery did not modify an application database or deploy the application. A subsequent database upgrade was explicitly authorized and completed as recorded below. Other existing databases require the documented coordinated schema/API/frontend rollout; use schema push only for a new empty database.
 - Email sending and online payments remain excluded as agreed. Templates/editable labels and estimates from the research are future proposals. PDFs use explicit currency codes because the built-in font cannot render every currency symbol.
 - Preserving legacy snapshots can retain their historical line/subtotal rounding discrepancy. Pricing edits switch the whole invoice to the corrected rounding; detail-only edits do not silently change issued amounts.
+
+### Authorized database upgrade follow-up — 1 November 2026
+
+- The user supplied and explicitly authorized upgrading an Aiven PostgreSQL database. Read-only inspection and Prisma comparison confirmed the exact expected pre-editor schema. Connection details and backup contents are excluded from the repository.
+- Took a full custom-format backup, verified archive readability and SHA-256 integrity, and kept it in the private, gitignored local directory `database-backups.local/aiven-pre-quick-editor-20261101/`. No connection credential is retained.
+- Applied `20261101_quick_invoice_editor.sql` in one transaction with bounded lock/statement timeouts. Invoice writes were locked during the upgrade. Pre-commit assertions verified that every original invoice field and line-item record was preserved, along with the expected defaults and paid-invoice backfill.
+- Post-commit SQL verification passed. Prisma's read-only schema comparison returned an empty migration with exit 0: the database matches the feature schema. Application deployment was not performed. Do not rerun the one-time SQL on this upgraded database.
 
 ## E. Recovery state
 
 All QI-01–QI-08 tasks are complete, including the final confirmed saved-total rule, diff review, and documentation/temporary-artifact cleanup. No unresolved product decision or implementation blocker.
 
-No implementation action remains. If resuming for deployment, follow the schema rollout document against the intended environment; deployment was not part of this work. Local QA uses API :3101, preview :5174, and disposable PostgreSQL :55432. QA captures were moved to `/tmp/invoiceo-quick-editor-qa-20261101-final`; reports are under `/tmp`. Recreate the disposable database with the schema and integration instructions if those temporary resources expire. Remaining limitations are the baseline test/lint failures and the unapplied real-database rollout documented above.
+No quick-editor implementation or requested database-migration action remains. The user-supplied database has both the 1 November quick-editor upgrade and the separately authorized 2 November saved-defaults upgrade. Frontend/API deployment was not performed here. For another environment, inspect its schema and follow the rollout document. Local quick-editor QA uses API :3101, preview :5174, and disposable PostgreSQL :55432. QA captures are in `/tmp/invoiceo-quick-editor-qa-20261101-final`; reports are under `/tmp`. Subsequent defaults implementation, live migration and test/lint cleanup are tracked in [saved invoice defaults](saved-invoice-defaults.md).

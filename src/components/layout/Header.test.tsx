@@ -40,158 +40,153 @@ afterEach(() => {
 describe('Header Property Tests', () => {
   describe('Property 13: Header Glass Morphism', () => {
     it('should implement glass morphism effects with backdrop blur and transparency', () => {
-      fc.assert(fc.property(
-        fc.record({
-          user: fc.option(fc.record({
-            displayName: fc.string({ minLength: 1, maxLength: 20 }),
-            email: fc.emailAddress(),
-          }), { nil: null }),
-          isLoading: fc.boolean(),
-        }),
-        (props) => {
-          const { unmount } = renderHeader(props)
-          
-          const header = screen.getByRole('banner')
-          
-          // Feature: ui-modernization, Property 13: Header Glass Morphism
-          // Verify glass morphism classes are applied
-          expect(header).toHaveClass('bg-white/80')
-          expect(header).toHaveClass('backdrop-blur-lg')
-          expect(header).toHaveClass('border-b')
-          expect(header).toHaveClass('border-white/20')
-          expect(header).toHaveClass('shadow-soft')
-          
-          unmount()
-        }
-      ), { numRuns: 5 })
+      fc.assert(
+        fc.property(
+          fc.record({
+            user: fc.option(
+              fc.record({
+                displayName: fc.string({ minLength: 1, maxLength: 20 }),
+                email: fc.emailAddress(),
+              }),
+              { nil: null }
+            ),
+            isLoading: fc.boolean(),
+          }),
+          props => {
+            const { unmount } = renderHeader(props)
+
+            const header = screen.getByRole('banner')
+
+            // Feature: ui-modernization, Property 13: Header Glass Morphism
+            // Verify glass morphism classes are applied
+            expect(header).toHaveClass('bg-white/80')
+            expect(header).toHaveClass('backdrop-blur-lg')
+            expect(header).toHaveClass('border-b')
+            expect(header).toHaveClass('border-white/20')
+            expect(header).toHaveClass('shadow-soft')
+
+            unmount()
+          }
+        ),
+        { numRuns: 5 }
+      )
     })
   })
 
   describe('Property 14: Navigation Responsive Behavior', () => {
     it('should display navigation elements with proper responsive classes', () => {
-      fc.assert(fc.property(
-        fc.record({
-          user: fc.record({
-            displayName: fc.string({ minLength: 1, maxLength: 20 }),
-            email: fc.emailAddress(),
+      fc.assert(
+        fc.property(
+          fc.record({
+            user: fc.record({
+              displayName: fc.string({ minLength: 1, maxLength: 20 }),
+              email: fc.emailAddress(),
+            }),
+            isMobileMenuOpen: fc.boolean(),
           }),
-          isMobileMenuOpen: fc.boolean(),
-        }),
-        (props) => {
-          const { unmount } = renderHeader(props)
-          
-          // Feature: ui-modernization, Property 14: Navigation Responsive Behavior
-          // Check that desktop navigation exists with proper classes
-          const desktopNavs = document.querySelectorAll('nav.md\\:flex')
-          expect(desktopNavs.length).toBeGreaterThan(0)
-          
-          const desktopNav = desktopNavs[0]
-          expect(desktopNav).toHaveClass('hidden', 'md:flex', 'bg-gray-100', 'rounded-2xl', 'p-2')
-          
-          // Check that mobile menu button exists with proper classes
-          const menuButtons = document.querySelectorAll('button[aria-label*="menu"]')
-          expect(menuButtons.length).toBeGreaterThan(0)
-          
-          const menuButton = menuButtons[0]
-          expect(menuButton).toHaveClass('md:hidden')
-          expect(menuButton).toHaveClass('min-h-[44px]', 'min-w-[44px]') // Touch target requirement
-          
-          unmount()
-        }
-      ), { numRuns: 5 })
+          props => {
+            const { unmount } = renderHeader(props)
+
+            // Feature: ui-modernization, Property 14: Navigation Responsive Behavior
+            // Check that desktop navigation exists with proper classes
+            const desktopNavs = document.querySelectorAll('nav.md\\:flex')
+            expect(desktopNavs.length).toBeGreaterThan(0)
+
+            const desktopNav = desktopNavs[0]
+            expect(desktopNav).toHaveClass(
+              'hidden',
+              'md:flex',
+              'bg-gray-100',
+              'rounded-2xl',
+              'p-2'
+            )
+
+            // Check that mobile menu button exists with proper classes
+            const menuButtons = document.querySelectorAll(
+              'button[aria-label*="menu"]'
+            )
+            expect(menuButtons.length).toBeGreaterThan(0)
+
+            const menuButton = menuButtons[0]
+            expect(menuButton).toHaveClass('md:hidden')
+            expect(menuButton).toHaveClass('min-h-11', 'min-w-11') // 44px touch target
+
+            unmount()
+          }
+        ),
+        { numRuns: 5 }
+      )
     })
   })
 
   describe('Property 15: Navigation Active State', () => {
     it('should provide proper styling for active state support', () => {
-      fc.assert(fc.property(
-        fc.record({
-          user: fc.record({
-            displayName: fc.string({ minLength: 1, maxLength: 20 }),
-            email: fc.emailAddress(),
+      fc.assert(
+        fc.property(
+          fc.record({
+            user: fc.record({
+              displayName: fc.string({ minLength: 1, maxLength: 20 }),
+              email: fc.emailAddress(),
+            }),
           }),
-        }),
-        (props) => {
-          const { unmount } = renderHeader(props)
-          
-          // Feature: ui-modernization, Property 15: Navigation Active State
-          // Find desktop navigation
-          const desktopNavs = document.querySelectorAll('nav.md\\:flex')
-          expect(desktopNavs.length).toBeGreaterThan(0)
-          
-          const desktopNav = desktopNavs[0]
-          expect(desktopNav).toHaveClass('space-x-2') // Proper spacing for pill navigation
-          
-          // Each navigation item should support active state styling
-          const navItems = desktopNav.querySelectorAll('a')
-          navItems.forEach(item => {
-            // Should have transition classes for smooth active state changes
-            expect(item).toHaveClass('transition-all', 'duration-200')
-            // Should have proper structure for active state highlighting
-            expect(item).toHaveClass('rounded-xl', 'px-4', 'py-2')
-          })
-          
-          unmount()
-        }
-      ), { numRuns: 5 })
+          props => {
+            const { unmount } = renderHeader(props)
+
+            // Feature: ui-modernization, Property 15: Navigation Active State
+            // Find desktop navigation
+            const desktopNavs = document.querySelectorAll('nav.md\\:flex')
+            expect(desktopNavs.length).toBeGreaterThan(0)
+
+            const desktopNav = desktopNavs[0]
+            expect(desktopNav).toHaveClass('space-x-2') // Proper spacing for pill navigation
+
+            // Each navigation item should support active state styling
+            const navItems = desktopNav.querySelectorAll('a')
+            navItems.forEach(item => {
+              // Should have transition classes for smooth active state changes
+              expect(item).toHaveClass('transition-all', 'duration-200')
+              // Should have proper structure for active state highlighting
+              expect(item).toHaveClass('rounded-xl', 'px-4', 'py-2')
+            })
+
+            unmount()
+          }
+        ),
+        { numRuns: 5 }
+      )
     })
   })
 
   describe('Property 16: Logo Interactive Effects', () => {
-    it('should include gradient effects and hover animations', () => {
-      fc.assert(fc.property(
-        fc.record({
-          user: fc.option(fc.record({
-            displayName: fc.string({ minLength: 1, maxLength: 20 }),
-            email: fc.emailAddress(),
-          }), { nil: null }),
-          isLoading: fc.boolean(),
-        }),
-        (props) => {
-          const { unmount } = renderHeader(props)
-          
-          // Feature: ui-modernization, Property 16: Logo Interactive Effects
-          // Find the logo link by looking for the group class and gradient container
-          const logoLinks = document.querySelectorAll('a.group')
-          expect(logoLinks.length).toBeGreaterThan(0)
-          
-          const logoLink = logoLinks[0]
-          expect(logoLink).toHaveClass('group') // Required for hover effects
-          
-          // Logo container should have gradient background
-          const logoContainer = logoLink.querySelector('div.bg-gradient-to-br')
-          expect(logoContainer).toHaveClass(
-            'bg-gradient-to-br',
-            'from-primary-600',
-            'to-primary-500',
-            'p-2.5',
-            'rounded-xl',
-            'shadow-lg'
-          )
-          
-          // Logo container should have hover animations
-          expect(logoContainer).toHaveClass(
-            'group-hover:shadow-glow',
-            'transition-all',
-            'duration-300',
-            'group-hover:scale-105'
-          )
-          
-          // Logo text should have gradient text effect
-          const logoText = logoLink.querySelector('span.bg-gradient-to-r')
-          if (logoText) {
-            expect(logoText).toHaveClass(
-              'bg-gradient-to-r',
-              'from-primary-600',
-              'to-primary-500',
-              'bg-clip-text',
-              'text-transparent'
+    it('should provide a branded home link for the current authentication state', () => {
+      fc.assert(
+        fc.property(
+          fc.record({
+            user: fc.option(
+              fc.record({
+                displayName: fc.string({ minLength: 1, maxLength: 20 }),
+                email: fc.emailAddress(),
+              }),
+              { nil: null }
+            ),
+            isLoading: fc.boolean(),
+          }),
+          props => {
+            const { unmount } = renderHeader(props)
+
+            const logo = screen.getByRole('img', { name: 'Invoiceo home' })
+            const link = logo.closest('a')
+            expect(link).toHaveAttribute(
+              'href',
+              props.user ? '/dashboard' : '/'
             )
+            expect(logo).toHaveAttribute('src')
+
+            unmount()
           }
-          
-          unmount()
-        }
-      ), { numRuns: 5 })
+        ),
+        { numRuns: 5 }
+      )
     })
   })
 
@@ -199,34 +194,34 @@ describe('Header Property Tests', () => {
   describe('Unit Tests', () => {
     it('should toggle mobile menu when hamburger button is clicked', () => {
       const onMenuToggle = vi.fn()
-      renderHeader({ 
+      renderHeader({
         user: { displayName: 'Test User', email: 'test@example.com' },
         onMenuToggle,
-        isMobileMenuOpen: false 
+        isMobileMenuOpen: false,
       })
-      
+
       const menuButton = screen.getByLabelText('Open menu')
       fireEvent.click(menuButton)
-      
+
       expect(onMenuToggle).toHaveBeenCalledTimes(1)
     })
 
     it('should call onLogout when logout button is clicked', () => {
       const onLogout = vi.fn()
-      renderHeader({ 
+      renderHeader({
         user: { displayName: 'Test User', email: 'test@example.com' },
-        onLogout 
+        onLogout,
       })
-      
+
       const logoutButton = screen.getByLabelText('Logout')
       fireEvent.click(logoutButton)
-      
+
       expect(onLogout).toHaveBeenCalledTimes(1)
     })
 
     it('should show loading state when isLoading is true', () => {
       renderHeader({ isLoading: true })
-      
+
       expect(screen.getByText('Loading...')).toBeInTheDocument()
       // Check for loading spinner by class instead of role
       const loadingSpinner = document.querySelector('.animate-spin')
@@ -235,11 +230,11 @@ describe('Header Property Tests', () => {
 
     it('should not show navigation when user is not authenticated', () => {
       renderHeader({ user: null })
-      
+
       // Should not show desktop navigation
       const navElements = screen.queryAllByRole('navigation')
       expect(navElements).toHaveLength(0)
-      
+
       // Should not show mobile menu button
       expect(screen.queryByLabelText(/menu/i)).not.toBeInTheDocument()
     })
@@ -247,7 +242,7 @@ describe('Header Property Tests', () => {
     it('should show user info when authenticated', () => {
       const user = { displayName: 'John Doe', email: 'john@example.com' }
       renderHeader({ user })
-      
+
       expect(screen.getByText('John Doe')).toBeInTheDocument()
       expect(screen.getByText('john@example.com')).toBeInTheDocument()
     })
