@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Header } from './Header'
+import { Sidebar } from './Sidebar'
 import { SiteMetadata } from '../seo/SiteMetadata'
 import { Footer } from './Footer'
 import { Breadcrumbs } from './Breadcrumbs'
@@ -13,26 +14,25 @@ export interface MainLayoutProps {
 }
 
 /**
- * MainLayout component that provides the application shell with header and content area.
- * Automatically detects authentication state and adjusts layout accordingly.
- * Now uses integrated header navigation instead of separate sidebar.
- * 
- * Requirements: 5.2, 5.3, 5.4 - Modern responsive navigation with pill-style desktop nav and mobile hamburger menu
- * Requirements: 3.2, 3.3, 3.5, 9.2 - Responsive layout adaptation and mobile optimization
+ * Signed-in accounts receive desktop navigation and a modal mobile drawer.
+ * Public pages retain the header/content shell.
  */
 const MainLayout: React.FC<MainLayoutProps> = ({ className }) => {
-  const { pathname } = useLocation()
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const location = useLocation()
   const { user, isAuthenticated } = useAuthStatus()
   const logout = useLogout()
 
-  const handleMenuToggle = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen)
-  }
+  // Dismiss on every navigation, including query-only history changes.
+  const menuKey = `${user?.id ?? ''}:${location.key}`
+  const [menu, setMenu] = useState({ key: menuKey, open: false })
+  if (menu.key !== menuKey) setMenu({ key: menuKey, open: false })
+  const isMobileMenuOpen = isAuthenticated && menu.key === menuKey && menu.open
+  const handleMenuToggle = () =>
+    setMenu({ key: menuKey, open: !isMobileMenuOpen })
 
-  const handleMenuClose = () => {
-    setIsMobileMenuOpen(false)
-  }
+  const handleMenuClose = useCallback(() => {
+    setMenu(current => (current.open ? { ...current, open: false } : current))
+  }, [])
 
   const handleLogout = async () => {
     try {
@@ -46,27 +46,34 @@ const MainLayout: React.FC<MainLayoutProps> = ({ className }) => {
 
   return (
     <div className={cn('min-h-screen flex flex-col bg-gray-50', className)}>
-      <SiteMetadata pathname={pathname} />
-      {/* Header with integrated navigation */}
+      <SiteMetadata pathname={location.pathname} />
       <Header
-        user={user}
+        user={isAuthenticated ? user : null}
         onMenuToggle={handleMenuToggle}
-        onMenuClose={handleMenuClose}
         onLogout={handleLogout}
         isMobileMenuOpen={isMobileMenuOpen}
         isLoading={logout.isPending}
       />
 
-      {/* Main content area with responsive container */}
-      <main className="flex-1">
+      <div className="flex flex-1">
         {isAuthenticated && (
-          <ResponsiveContainer padding="none" className="px-4 pt-4 sm:px-6 lg:px-8">
-            <Breadcrumbs />
-          </ResponsiveContainer>
+          <Sidebar isOpen={isMobileMenuOpen} onClose={handleMenuClose} />
         )}
-        <Outlet />
-      </main>
-      <Footer />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <main className="flex-1" id="main-content">
+            {isAuthenticated && (
+              <ResponsiveContainer
+                padding="none"
+                className="px-4 pt-4 sm:px-6 lg:px-8"
+              >
+                <Breadcrumbs />
+              </ResponsiveContainer>
+            )}
+            <Outlet />
+          </main>
+          <Footer />
+        </div>
+      </div>
     </div>
   )
 }

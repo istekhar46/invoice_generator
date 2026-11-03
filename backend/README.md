@@ -33,7 +33,7 @@ Nest CLI and Prisma CLI are development/build dependencies. Install development 
 
 ## Existing database upgrades and releases
 
-Read [schema rollout instructions](prisma/updates/README.md) and the [catalog release checklist](../docs/implementation/signed-in-dashboard-features.md#catalog-release-preparation--2-november-2026) before deployment.
+Read [schema rollout instructions](prisma/updates/README.md) and the [current catalog cutover checklist](../docs/implementation/signed-in-dashboard-features.md#coordinated-catalog-rollout-preparation--3-november-2026) before deployment.
 
 This repository has no baseline Prisma migration history. Existing databases use the reviewed, one-time SQL upgrades in `prisma/updates/`; `npm run db:migrate` does not apply these files. Do not run schema push against an existing pre-catalog database to rename its enum. Do not rerun upgrades after a fresh schema push.
 
@@ -49,6 +49,14 @@ The image uses Node 22, runs as a non-root user, and defaults to production mode
 
 The live catalog migration is **on user-directed hold** until matching API/frontend deployment is ready. Preparing an image does not lift that hold.
 
+The current Render native build command must install compiler dependencies explicitly and prune them after compilation: `npm ci --include=dev && npm run build && npm prune --omit=dev`. A production-only `npm install` omits Nest CLI and fails with `nest: not found`. Keep the existing compiled start command; changing this provider setting can trigger deployment, so apply it only during the coordinated rollout.
+
+### API maintenance mode
+
+`MAINTENANCE_MODE` defaults to off when absent or `false`. Set it to `true` and restart/deploy the API to return HTTP 503, `Cache-Control: no-store` and `Retry-After: 60` for business requests before controllers run. CORS still applies. Only GET/HEAD requests to `/api/v1/health/ready`, `/api/v1/health/live`, `/api/v1/docs-json` and `/api/v1/docs-yaml` bypass the gate; requests with other methods do not. Invalid flag values prevent startup.
+
+Use the flag to keep writes blocked while deploying the matching API and migrating the database; wait for the old deployment to drain and verify the gate before changing the live schema. A successful connectivity probe does not prove that the catalog schema is present. Verify the schema and OpenAPI separately, then restart/deploy with the flag `false` to reopen business routes. This switch does not pause external writers or background jobs; the current API has no scheduled database writer. It introduces no secret bypass or public admin control. See the implementation document for the ordered cutover and rollback steps. Enabling maintenance or deploying remains a separately authorized live action.
+
 ## Runtime configuration
 
 See [.env.example](.env.example) and the existing configuration modules for supported settings. Key release inputs:
@@ -58,8 +66,9 @@ See [.env.example](.env.example) and the existing configuration modules for supp
 | `DATABASE_URL`, `PG_SSL`, `PG_CA_CERT`, `PG_SSL_REJECT_UNAUTHORIZED`   | Database connection and the existing TLS configuration         |
 | `JWT_SECRET`, `JWT_REFRESH_SECRET`                                     | Access/refresh token signing                                   |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL`      | Existing Google sign-in integration                            |
-| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Existing logo provider settings required at API startup        |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Existing logo provider settings required for logo operations   |
 | `PORT`, `NODE_ENV`                                                     | Listen port and environment                                    |
+| `MAINTENANCE_MODE`                                                     | Default-off business-request gate; literal `true` or `false`   |
 | `FRONTEND_URL`                                                         | Exact frontend origin allowed by CORS                          |
 | `API_PROD_SERVER_URL`                                                  | Public API origin displayed in Swagger                         |
 | `COOKIE_*`                                                             | Existing refresh-cookie configuration for the deployed origins |

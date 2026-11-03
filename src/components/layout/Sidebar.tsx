@@ -1,157 +1,163 @@
-import React from 'react'
-import { NavLink } from 'react-router-dom'
+import { useEffect } from 'react'
 import {
-  LayoutDashboard,
-  Users,
-  FileText,
+  Dialog,
+  DialogBackdrop,
+  DialogPanel,
+  DialogTitle,
+} from '@headlessui/react'
+import { Link, NavLink } from 'react-router-dom'
+import {
   Building2,
+  FileText,
+  HelpCircle,
+  LayoutDashboard,
+  Package,
+  Plus,
+  Users,
+  X,
+  Zap,
 } from 'lucide-react'
 import { cn } from '../../utils/classNames'
 
 export interface SidebarProps {
-  isOpen?: boolean
-  onClose?: () => void
-  className?: string
-  isAuthenticated?: boolean
+  isOpen: boolean
+  onClose: () => void
 }
 
-interface NavigationItem {
-  name: string
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-  requiresAuth?: boolean
-}
-
-const navigation: NavigationItem[] = [
+const navigationGroups = [
   {
-    name: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-    requiresAuth: true,
+    name: 'Workspace',
+    items: [{ name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }],
   },
   {
-    name: 'Customers',
-    href: '/customers',
-    icon: Users,
-    requiresAuth: true,
+    name: 'Sales',
+    items: [
+      { name: 'Invoices', href: '/invoices', icon: FileText },
+      { name: 'Quick Invoice', href: '/quick-invoice', icon: Zap },
+    ],
   },
   {
-    name: 'Invoices',
-    href: '/invoices',
-    icon: FileText,
-    requiresAuth: true,
+    name: 'Business',
+    items: [
+      { name: 'Products & Services', href: '/products', icon: Package },
+      { name: 'Customers', href: '/customers', icon: Users },
+      { name: 'Company Profile', href: '/company', icon: Building2 },
+    ],
   },
-  {
-    name: 'Company Profile',
-    href: '/company',
-    icon: Building2,
-    requiresAuth: true,
-  },
-  // Settings navigation is temporarily disabled.
-  // Restore the Settings icon import and navigation item when the page is re-enabled.
 ]
 
-const Sidebar: React.FC<SidebarProps> = ({
-  isOpen = true,
-  onClose,
-  className,
-  isAuthenticated = false,
-}) => {
-  // Filter navigation items based on authentication status
-  const filteredNavigation = navigation.filter((item) => {
-    if (item.requiresAuth && !isAuthenticated) {
-      return false
-    }
-    return true
-  })
-
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
-      {/* Mobile overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
-          onClick={onClose}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Sidebar */}
-      <div
-        className={cn(
-          'fixed inset-y-0 left-0 z-50 w-64 transform bg-white shadow-lg transition-transform duration-300 ease-in-out lg:static lg:translate-x-0',
-          isOpen ? 'translate-x-0' : '-translate-x-full',
-          className
-        )}
+      <div className="p-4">
+        <Link
+          to="/invoices?create=true"
+          onClick={onNavigate}
+          className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 focus-ring"
+        >
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          Create Invoice
+        </Link>
+      </div>
+      <nav
+        aria-label="Workspace"
+        className="flex-1 space-y-6 overflow-y-auto px-3 pb-6"
       >
-        <div className="flex h-full flex-col">
-          {/* Sidebar header */}
-          <div className="flex h-16 items-center justify-center border-b border-gray-200 px-4">
-            <h2 className="text-lg font-semibold text-gray-900">Navigation</h2>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 space-y-1 px-2 py-4">
-            {isAuthenticated ? (
-              filteredNavigation.map((item) => (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  className={({ isActive }) =>
-                    cn(
-                      'group flex items-center rounded-md px-2 py-2 text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-blue-100 text-blue-900'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    )
-                  }
-                  onClick={() => {
-                    // Close mobile menu when navigation item is clicked
-                    if (window.innerWidth < 1024) {
-                      onClose?.()
-                    }
-                  }}
-                >
-                  {({ isActive }) => (
-                    <>
-                      <item.icon
-                        className={cn(
-                          'mr-3 h-5 w-5 flex-shrink-0',
-                          isActive
-                            ? 'text-blue-500'
-                            : 'text-gray-400 group-hover:text-gray-500'
-                        )}
-                        aria-hidden="true"
-                      />
-                      {item.name}
-                    </>
-                  )}
-                </NavLink>
-              ))
-            ) : (
-              <div className="px-2 py-4 text-center">
-                <p className="text-sm text-gray-500">
-                  Please log in to access navigation
-                </p>
-              </div>
-            )}
-          </nav>
-
-          {/* Sidebar footer */}
-          <div className="border-t border-gray-200 p-4">
-            <p className="text-xs text-gray-500">
-              Electrician Invoice Generator v1.0
+        {navigationGroups.map(group => (
+          <div key={group.name}>
+            <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+              {group.name}
             </p>
-            {isAuthenticated && (
-              <p className="text-xs text-green-600 mt-1">
-                ✓ Authenticated
-              </p>
-            )}
+            <ul className="space-y-1">
+              {group.items.map(item => (
+                <li key={item.href}>
+                  <NavLink
+                    to={item.href}
+                    onClick={onNavigate}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex min-h-11 items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors focus-ring-inset',
+                        isActive
+                          ? 'bg-primary-50 text-primary-700'
+                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      )
+                    }
+                  >
+                    <item.icon
+                      className="h-5 w-5 shrink-0"
+                      aria-hidden="true"
+                    />
+                    {item.name}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
+        ))}
+      </nav>
+      <div className="border-t border-gray-200 p-3">
+        <Link
+          to="/help"
+          onClick={onNavigate}
+          className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-3 text-sm text-gray-600 hover:bg-gray-100 focus-ring-inset"
+        >
+          <HelpCircle className="h-5 w-5" aria-hidden="true" />
+          Help & Support
+        </Link>
       </div>
     </>
   )
 }
 
-export { Sidebar }
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
+  // Release modal focus/scroll lock when desktop navigation takes over.
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 1024px)')
+    const closeOnDesktop = () => {
+      if (desktop.matches) onClose()
+    }
+    if (isOpen) closeOnDesktop()
+    desktop.addEventListener('change', closeOnDesktop)
+    return () => desktop.removeEventListener('change', closeOnDesktop)
+  }, [isOpen, onClose])
+
+  return (
+    <>
+      <aside
+        aria-label="Console sidebar"
+        className="sticky top-20 hidden h-[calc(100dvh-5rem)] w-64 shrink-0 flex-col self-start border-r border-gray-200 bg-white lg:flex no-print"
+      >
+        <SidebarContent />
+      </aside>
+      <Dialog
+        open={isOpen}
+        onClose={onClose}
+        className="fixed inset-0 z-50 lg:hidden no-print"
+      >
+        <DialogBackdrop className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm" />
+        <div className="fixed inset-0 flex">
+          <DialogPanel
+            id="console-navigation"
+            className="flex h-dvh w-72 max-w-[calc(100vw-3rem)] flex-col bg-white shadow-xl"
+          >
+            <div className="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 px-5 sm:h-20">
+              <DialogTitle className="text-lg font-semibold text-gray-900">
+                Your workspace
+              </DialogTitle>
+              <button
+                type="button"
+                data-autofocus
+                onClick={onClose}
+                aria-label="Close menu"
+                className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-gray-600 hover:bg-gray-100 focus-ring-inset"
+              >
+                <X className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+            <SidebarContent onNavigate={onClose} />
+          </DialogPanel>
+        </div>
+      </Dialog>
+    </>
+  )
+}

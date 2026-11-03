@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
 import { join } from 'path';
 import { AppModule } from './app.module';
+import { createMaintenanceMiddleware } from './common/middleware/maintenance.middleware';
 
 async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
@@ -44,6 +45,11 @@ async function bootstrap(): Promise<void> {
     allowedHeaders: ['Content-Type', 'Authorization'],
     exposedHeaders: ['Set-Cookie'],
   });
+
+  app.use(createMaintenanceMiddleware(process.env.MAINTENANCE_MODE));
+  if (process.env.MAINTENANCE_MODE === 'true') {
+    logger.warn('API maintenance mode is enabled; business requests return HTTP 503.');
+  }
 
   // Configure secure cookies
   if (process.env.NODE_ENV === 'production') {
