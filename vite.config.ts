@@ -7,11 +7,8 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { SiteMetadata } from './src/components/seo/SiteMetadata'
 
-// import { cloudflare } from "@cloudflare/vite-plugin";
-
 // https://vite.dev/config/
 export default defineConfig({
-  // plugins: [react(), tailwindcss(), cloudflare()],
   plugins: [react(), tailwindcss(), {
     name: 'invoiceo-metadata',
     transformIndexHtml(html) {

@@ -38,7 +38,7 @@ Nest CLI and Prisma CLI are development/build dependencies. Install development 
 
 Read [schema rollout instructions](prisma/updates/README.md) and the [current release recovery state](../docs/implementation/signed-in-dashboard-features.md#e-recovery-state) before deployment.
 
-**Hosted development state (4 November 2026):** upgrades through `20261104_razorpay_gateway.sql` are applied and API commit `df27525` is live. The Razorpay Test webhook is configured and genuine delivery verified. Do not rerun these upgrades. PR #14 is open; frontend deployment is pending Cloudflare authentication. Render remains configured to dev with Auto-Deploy Off until the released backend is merged. See the implementation document for exact evidence.
+**Hosted development state (4 November 2026):** upgrades through `20261104_razorpay_gateway.sql` are applied and API commit `df27525` is live. The Razorpay Test webhook is configured and genuine delivery verified. Do not rerun these upgrades. PR #14 is merged into dev. The owner confirmed Render hosting for both frontend and backend; frontend release verification remains pending. Render auto-deploy was last observed Off; the merge prerequisite is now satisfied. See the implementation document for exact evidence.
 
 This repository has no baseline Prisma migration history. Existing databases use the reviewed, one-time SQL upgrades in `prisma/updates/`; `npm run db:migrate` does not apply these files. Do not run schema push against an existing pre-catalog database to rename its enum. Do not rerun upgrades after a fresh schema push.
 

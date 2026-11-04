@@ -25,3 +25,23 @@ npm run start:dev
 ## Checks
 
 From the project root, run `npm run build`, `npm test`, or `npm run lint`. Backend documentation is in [backend/README.md](backend/README.md).
+
+## Frontend deployment on Render
+
+Use the existing Render frontend service with the repository root as its root directory:
+
+- Branch: `dev`
+- Build command: `npm ci && npm run build`
+- Publish directory: `dist`
+- Build environment: `VITE_API_BASE_URL=https://invoice-generator-cpn8.onrender.com`
+
+The app appends `/api/v1` to that API origin. Frontend environment variables are embedded during the build. Keep backend credentials in the backend's environment.
+
+For a Render Static Site, configure a [rewrite](https://render.com/docs/redirects-rewrites) from `/*` to `/index.html` so dashboard URLs support direct navigation. The backend's `FRONTEND_URL` must match the frontend origin. This repository cleanup does not change hosting settings or deploy either service.
+
+To inspect a production build locally:
+
+```bash
+npm run build
+npm run preview
+```
