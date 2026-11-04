@@ -18,6 +18,9 @@ export interface StockProduct {
 export interface StockBalance {
   product: StockProduct
   quantity: string
+  opening: string
+  adjustments: string
+  netInvoiced: string
 }
 export interface StockMovement {
   catalogItemId: string
@@ -30,6 +33,11 @@ export interface StockAction {
   requestId: string
   kind: StockActionKind
   invoiceId: string | null
+  invoice: {
+    id: string
+    invoiceNumber: string
+    customerName: string | null
+  } | null
   reversalOfId: string | null
   reversedById: string | null
   reason: string
@@ -51,6 +59,9 @@ export interface BalanceQuery {
   status?: 'active' | 'archived' | 'all'
   page?: number
   limit?: number
+}
+export interface StockBalancePage extends InventoryPage<StockBalance> {
+  summary: { tracked: number; inStock: number; outOfStock: number }
 }
 export interface HistoryQuery {
   catalogItemId?: string
@@ -82,5 +93,10 @@ export interface StockResult {
 /** Group digits without converting exact stock decimals to floating point. */
 export function formatStockQuantity(value: string) {
   const [whole, fraction] = value.split('.')
-  return `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}${fraction ? `.${fraction}` : ''}`
+  const significant = fraction?.replace(/0+$/, '')
+  return `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}${significant ? `.${significant}` : ''}`
+}
+
+export function isOutOfStock(quantity: string) {
+  return /^0(?:\.0+)?$/.test(quantity)
 }

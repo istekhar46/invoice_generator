@@ -113,6 +113,13 @@ const opening = (item, quantity) =>
     reason: 'Current stock',
     effectiveDate: '2026-11-03',
   });
+async function overview(item, netInvoiced, quantity) {
+  const result = await http('GET', `/inventory/products/${item.id}/balance`);
+  assert.equal(result.netInvoiced, netInvoiced);
+  assert.equal(result.quantity, quantity);
+  assert.equal(result.opening, '10.125');
+  assert.equal(result.adjustments, '0.000');
+}
 
 (async () => {
   if (process.argv.includes('--upgrade')) {
@@ -184,6 +191,7 @@ const opening = (item, quantity) =>
   });
   assert.equal(await balance(cable), '10.125');
   assert.equal(invoice.issuedAt, null);
+  await overview(cable, '0.000', '10.125');
   await http('PATCH', `/invoices/${invoice.id}/status`, { status: 'SENT' }, 401, null);
   await http('PATCH', `/invoices/${invoice.id}/status`, { status: 'SENT' }, 403, otherToken);
   await status(invoice, 'PAID', 409);
@@ -191,6 +199,9 @@ const opening = (item, quantity) =>
   assert.ok(issued.every((value) => value.issuedAt && value.status === 'SENT'));
   assert.equal(await historyCount(invoice), 1);
   assert.equal(await balance(cable), '8.000');
+  await overview(cable, '2.125', '8.000');
+  const sourceHistory = await http('GET', `/inventory/history?catalogItemId=${cable.id}`);
+  assert.deepEqual(sourceHistory.data[0].invoice, { id: invoice.id, invoiceNumber: invoice.invoiceNumber, customerName: 'Fixture client' });
   await status(invoice, 'DRAFT', 409);
   await http('DELETE', `/invoices/${invoice.id}`, undefined, 409);
   await edit(invoice, {
@@ -200,6 +211,7 @@ const opening = (item, quantity) =>
   assert.equal(await historyCount(invoice), 1);
   const increased = { lineItems: [row(cable, 0.125), row(cable, 2.875)] };
   await edit(invoice, increased);
+  await overview(cable, '3.000', '7.125');
   assert.equal(await balance(cable), '7.125');
   assert.equal(await historyCount(invoice), 2);
   await edit(invoice, increased);
@@ -247,6 +259,7 @@ const opening = (item, quantity) =>
   assert.ok(voids.every((value) => value.status === 'VOIDED'));
   assert.equal(await balance(cable), '10.125');
   assert.equal(await historyCount(invoice), 3);
+  await overview(cable, '0.000', '10.125');
   assert.equal(voids[0].issuedAt, issued[0].issuedAt);
   await edit(invoice, { notes: 'Cannot edit' }, 409);
   await status(invoice, 'SENT', 409);

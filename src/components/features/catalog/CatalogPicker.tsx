@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { PackagePlus } from 'lucide-react'
 import { useCatalog } from '../../../hooks/useCatalog'
+import { useStockAvailability } from '../../../hooks/useInventory'
+import { formatStockQuantity, isOutOfStock } from '../../../types/inventory'
 import {
   catalogDescription,
   type CatalogItem,
@@ -67,6 +69,14 @@ function CatalogBrowser({
   const [foreign, setForeign] = useState<CatalogItem | null>(null)
   const [price, setPrice] = useState('')
   const query = useCatalog({ search, status: 'active', page, limit: 10 })
+  const stock = useStockAvailability(
+    query.data?.data
+      .filter(item => item.type === 'product' && item.stockTrackingStartedAt)
+      .map(item => item.id) ?? []
+  )
+  const quantities = new Map(
+    stock.data?.map(balance => [balance.product.id, balance.quantity])
+  )
   const select = (item: CatalogItem, rate = item.rate) =>
     onSelect({
       catalogItemId: item.id,
@@ -199,6 +209,15 @@ function CatalogBrowser({
                       {item.type === 'service' ? 'Service' : 'Product'}
                       {item.sku ? ` · ${item.sku}` : ''} · {item.unit}
                     </span>
+                    {item.type === 'product' && item.stockTrackingStartedAt && (
+                      <span className="mt-1 block text-xs text-slate-600">
+                        {stock.error
+                          ? 'Stock unavailable'
+                          : quantities.has(item.id)
+                            ? `${isOutOfStock(quantities.get(item.id)!) ? 'Out of stock · ' : ''}Available: ${formatStockQuantity(quantities.get(item.id)!)} ${item.unit}`
+                            : 'Loading stock…'}
+                      </span>
+                    )}
                   </span>
                   <span className="shrink-0 text-sm">
                     {formatCurrency(item.rate, item.currency)}
@@ -207,6 +226,24 @@ function CatalogBrowser({
               </li>
             ))}
           </ul>
+          {stock.error && (
+            <p role="alert" className="text-xs text-red-700">
+              Stock availability could not be loaded.{' '}
+              <button
+                type="button"
+                className="underline"
+                onClick={() => void stock.refetch()}
+              >
+                Retry stock lookup
+              </button>
+            </p>
+          )}
+          {!!stock.data?.length && (
+            <p className="text-xs text-slate-500">
+              Drafts do not reserve stock. Stock is deducted when an invoice is
+              issued.
+            </p>
+          )}
           <div className="flex items-center justify-between border-t pt-3 text-xs text-slate-500">
             <span>
               {query.data.total} {query.data.total === 1 ? 'item' : 'items'}

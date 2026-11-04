@@ -16,6 +16,7 @@ import {
 } from './inventory.dto';
 import { stockQuantity } from './stock-quantity';
 import { assertStockBalances, stockRequestHash } from './stock-ledger';
+import { stockOverview, stockSummary, zeroStock } from './stock-overview';
 
 const productSelect = {
   id: true,
@@ -26,6 +27,14 @@ const productSelect = {
   stockTrackingStartedAt: true,
 } satisfies Prisma.CatalogItemSelect;
 const actionInclude = {
+  invoice: {
+    select: {
+      id: true,
+      invoiceNumber: true,
+      quickCustomerName: true,
+      customer: { select: { name: true } },
+    },
+  },
   movements: {
     orderBy: { catalogItemId: 'asc' },
     include: { catalogItem: { select: productSelect } },
@@ -41,6 +50,13 @@ function serialize(action: Action) {
     requestId: action.requestId,
     kind: action.kind,
     invoiceId: action.invoiceId,
+    invoice: action.invoice
+      ? {
+          id: action.invoice.id,
+          invoiceNumber: action.invoice.invoiceNumber,
+          customerName: action.invoice.customer?.name ?? action.invoice.quickCustomerName,
+        }
+      : null,
     reversalOfId: action.reversalOfId,
     reversedById: action.reversal?.id ?? null,
     reason: action.reason,
@@ -252,10 +268,7 @@ export class InventoryService {
         const product = await tx.catalogItem.findFirst({ where: { id: catalogItemId, userId } });
         if (!product) throw new NotFoundException('Catalog item not found or access denied.');
         this.requireTracking(product);
-        const totals = await tx.stockMovement.aggregate({
-          where: { userId, catalogItemId },
-          _sum: { quantityDelta: true },
-        });
+        const totals = await stockOverview(tx, userId, [catalogItemId]);
         return {
           product: {
             id: product.id,
@@ -265,7 +278,7 @@ export class InventoryService {
             isArchived: product.isArchived,
             stockTrackingStartedAt: product.stockTrackingStartedAt,
           },
-          quantity: (totals._sum.quantityDelta ?? new Prisma.Decimal(0)).toFixed(3),
+          ...(totals.get(catalogItemId) ?? zeroStock),
         };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
@@ -288,7 +301,7 @@ export class InventoryService {
     };
     return this.prisma.$transaction(
       async (tx) => {
-        const total = await tx.catalogItem.count({ where });
+        const summary = await stockSummary(tx, userId, search, status);
         const products = await tx.catalogItem.findMany({
           where,
           select: productSelect,
@@ -296,21 +309,47 @@ export class InventoryService {
           skip: (page - 1) * limit,
           take: limit,
         });
-        const sums = await tx.stockMovement.groupBy({
-          by: ['catalogItemId'],
-          where: { userId, catalogItemId: { in: products.map((product) => product.id) } },
-          _sum: { quantityDelta: true },
-        });
-        const balances = new Map(sums.map((sum) => [sum.catalogItemId, sum._sum.quantityDelta]));
-        return pagination(
-          products.map((product) => ({
-            product,
-            quantity: (balances.get(product.id) ?? new Prisma.Decimal(0)).toFixed(3),
-          })),
-          total,
-          page,
-          limit,
+        const balances = await stockOverview(
+          tx,
+          userId,
+          products.map((product) => product.id),
         );
+        return {
+          ...pagination(
+            products.map((product) => ({
+              product,
+              ...(balances.get(product.id) ?? zeroStock),
+            })),
+            summary.tracked,
+            page,
+            limit,
+          ),
+          summary,
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+  }
+
+  async availability(userId: string, ids: string[]) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        const products = await tx.catalogItem.findMany({
+          where: {
+            userId,
+            id: { in: ids },
+            type: 'PRODUCT',
+            stockTrackingStartedAt: { not: null },
+          },
+          select: productSelect,
+          orderBy: { id: 'asc' },
+        });
+        const totals = await stockOverview(
+          tx,
+          userId,
+          products.map((product) => product.id),
+        );
+        return products.map((product) => ({ product, ...(totals.get(product.id) ?? zeroStock) }));
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );

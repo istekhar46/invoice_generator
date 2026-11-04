@@ -213,6 +213,16 @@ async function product(name, extra = {}, userId = owner) {
   assert.equal(trackedCatalog.total, 1);
   assert.equal(trackedCatalog.data[0].id, item.id);
   assert.ok(trackedCatalog.data[0].stockTrackingStartedAt);
+  const availability = await http('GET', `/inventory/availability?ids=${item.id},${foreign.id},${service.id},missing`);
+  assert.equal(availability.length, 1);
+  assert.equal(availability[0].product.id, item.id);
+  assert.equal(availability[0].quantity, '1.000');
+  assert.equal(availability[0].opening, '0.000');
+  assert.equal(availability[0].adjustments, '1.000');
+  assert.equal(availability[0].netInvoiced, '0.000');
+  await http('GET', '/inventory/availability?ids=', undefined, 400);
+  await http('GET', `/inventory/availability?ids=${item.id},${item.id}`, undefined, 400);
+  await http('GET', `/inventory/availability?ids=${item.id}`, undefined, 401, null);
   const untrackedCatalog = await http('GET', '/catalog?type=PRODUCT&tracking=untracked&limit=1');
   assert.equal(untrackedCatalog.total, 0); // Other owner's untracked/archived items and services are excluded.
   for (const name of ['Picker A', 'Picker B', 'Picker C']) await product(name);
@@ -312,6 +322,29 @@ async function product(name, extra = {}, userId = owner) {
     }),
     1,
   );
+  // Complete ledgers and filtered counts are independent of history/product pagination.
+  const overview = await product('Overview stocked');
+  const empty = await product('Overview empty', { unit: 'each' });
+  await post(overview.id, 'opening', input('0.100'));
+  await post(empty.id, 'opening', input('0', { unit: 'each' }));
+  for (let i = 0; i < 21; i++) await post(overview.id, 'adjustments', input('0.010', { direction: 'IN' }));
+  const page2 = await http('GET', '/inventory/products?search=Overview&limit=1&page=2');
+  assert.equal(page2.total, 2);
+  assert.deepEqual(page2.summary, { tracked: 2, inStock: 1, outOfStock: 1 });
+  assert.equal(page2.data[0].product.id, overview.id);
+  assert.equal(page2.data[0].opening, '0.100');
+  assert.equal(page2.data[0].adjustments, '0.210');
+  assert.equal(page2.data[0].netInvoiced, '0.000');
+  assert.equal(page2.data[0].quantity, '0.310');
+  const beyond = await http('GET', '/inventory/products?search=Overview&limit=1&page=3');
+  assert.deepEqual(beyond.summary, page2.summary);
+  assert.equal(beyond.data.length, 0);
+  const noMatches = await http('GET', '/inventory/products?search=Overview', undefined, 200, otherToken);
+  assert.deepEqual(noMatches.summary, { tracked: 0, inStock: 0, outOfStock: 0 });
+  await http('PUT', `/catalog/${overview.id}`, { isArchived: true });
+  assert.deepEqual((await http('GET', '/inventory/products?search=Overview')).summary, { tracked: 1, inStock: 0, outOfStock: 1 });
+  assert.deepEqual((await http('GET', '/inventory/products?search=Overview&status=archived')).summary, { tracked: 1, inStock: 1, outOfStock: 0 });
+  assert.deepEqual((await http('GET', '/inventory/products?search=Overview&status=all')).summary, page2.summary);
   console.log(
     JSON.stringify({
       passed: true,

@@ -6,6 +6,7 @@
 import React, { useState } from 'react'
 import type { LineItem, LineItemType } from '../../../types/entities'
 import { CatalogPicker } from '../catalog/CatalogPicker'
+import { InvoiceStockAvailability } from '../inventory/InvoiceStockAvailability'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { Card, CardHeader, CardTitle, CardContent } from '../../ui/Card'
@@ -621,6 +622,9 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
             </div>
           )}
         </CardContent>
+        <div className="px-6 pb-6">
+          <InvoiceStockAvailability items={lineItems} />
+        </div>
       </Card>
 
       {/* Mobile Modal for Add/Edit */}
