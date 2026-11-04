@@ -14,10 +14,10 @@ Not completed or deployed:
 
 - Public page body prerendering. Initial HTML still contains an empty application root.
 - Route-specific metadata in initial responses for About/Help/auth/error routes. The shared SPA response contains homepage metadata until React runs.
-- Real HTTP 404s for unknown routes. The repository has a Cloudflare SPA fallback, while production responses indicate Render infrastructure; the deployment owner must identify the host before its routing configuration is changed.
+- Real HTTP 404s for unknown routes. The owner confirmed Render hosting for the frontend and backend. Production routing must serve known SPA routes while returning the correct status for genuinely unknown URLs; that routing work remains pending.
 - Deployment of the existing footer, About and Help pages and these changes.
 - Legal operator, support/privacy contact, jurisdiction and pricing-dependent policy content; these facts must come from the owner.
 
-Proposed next step: approve build-time prerendering using the existing React components and specify the production host. Then produce public-page HTML and configure public assets, known app routes and unknown URLs correctly for that host. Validate all direct entry points, raw metadata, status codes, authentication redirects, sitemap URLs and PDF downloads before publishing.
+Proposed next step: approve build-time prerendering using the existing React components for Render hosting. Then produce public-page HTML and configure public assets, known app routes and unknown URLs correctly. Validate all direct entry points, raw metadata, status codes, authentication redirects, sitemap URLs and PDF downloads before publishing.
 
 Validation completed: production TypeScript/Vite build, route metadata and navigation tests, guest invoice workflow tests, real guest PDF output, sitemap XML parsing, and review of initial bundle imports. Field Core Web Vitals and production indexing require measurements after deployment; no ranking or AI-citation guarantees are made.
