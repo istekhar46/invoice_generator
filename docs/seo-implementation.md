@@ -15,9 +15,10 @@ Not completed or deployed:
 - Public page body prerendering. Initial HTML still contains an empty application root.
 - Route-specific metadata in initial responses for About/Help/auth/error routes. The shared SPA response contains homepage metadata until React runs.
 - Real HTTP 404s for unknown routes. The owner confirmed Render hosting for the frontend and backend. Production routing must serve known SPA routes while returning the correct status for genuinely unknown URLs; that routing work remains pending.
-- Deployment of the existing footer, About and Help pages and these changes.
 - Legal operator, support/privacy contact, jurisdiction and pricing-dependent policy content; these facts must come from the owner.
 
 Proposed next step: approve build-time prerendering using the existing React components for Render hosting. Then produce public-page HTML and configure public assets, known app routes and unknown URLs correctly. Validate all direct entry points, raw metadata, status codes, authentication redirects, sitemap URLs and PDF downloads before publishing.
+
+Deployment update (4 November 2026): Render frontend release `67639d4` is live at `https://www.invoiceo.site`; the current footer/About/Help links and route metadata are included. Prerendering and correct unknown-route HTTP status remain pending as listed above.
 
 Validation completed: production TypeScript/Vite build, route metadata and navigation tests, guest invoice workflow tests, real guest PDF output, sitemap XML parsing, and review of initial bundle imports. Field Core Web Vitals and production indexing require measurements after deployment; no ranking or AI-citation guarantees are made.
