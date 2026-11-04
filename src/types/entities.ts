@@ -99,6 +99,8 @@ export interface Invoice extends InvoiceOptions {
   notes?: string
   status: InvoiceStatus
   issuedAt?: Date | null
+  sourceQuoteId?: string | null
+  sourceQuote?: { id: string; quoteNumber: string } | null
   hasPaymentHistory?: boolean
   paymentUrl?: string | null
   createdAt: Date

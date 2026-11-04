@@ -34,6 +34,7 @@ const navigationGroups = [
   {
     name: 'Sales',
     items: [
+      { name: 'Quotations', href: '/quotes', icon: FileText },
       { name: 'Invoices', href: '/invoices', icon: FileText },
       { name: 'Quick Invoice', href: '/quick-invoice', icon: Zap },
     ],

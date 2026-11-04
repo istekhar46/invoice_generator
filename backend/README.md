@@ -26,6 +26,7 @@ npm run db:push
 psql -X -v ON_ERROR_STOP=1 --single-transaction -f prisma/constraints/inventory.sql
 psql -X -v ON_ERROR_STOP=1 --single-transaction -f prisma/constraints/payments.sql
 psql -X -v ON_ERROR_STOP=1 --single-transaction -f prisma/constraints/razorpay.sql
+psql -X -v ON_ERROR_STOP=1 --single-transaction -f prisma/constraints/quotations.sql
 npm run build
 npm run start:dev
 ```
@@ -151,3 +152,9 @@ Useful endpoints:
 - `/api/v1/health/live`: process liveness.
 - `/api/v1/docs` and `/api/v1/docs-json`: Swagger UI/OpenAPI.
 - `/api/v1/catalog`: authenticated catalog API; a successful health probe alone does not verify the catalog schema or account isolation.
+
+### Quotations and account numbering
+
+For an existing database upgraded through Razorpay, apply `prisma/updates/20261105_quotations.sql` once with `psql -X -v ON_ERROR_STOP=1 -f ...`, then deploy the matching API/frontend. It adds quotation snapshots/rows, account counters, retained number reservations and invoice source links, installs quotation invariants, and seeds counters/reservations from existing invoices without rewriting them. Used numbers remain reserved to their original document after draft deletion or renumbering. Schema push does not install the native guards. The migration has been rehearsed locally; it is not applied to the hosted database by feature development.
+
+Run `QUOTES_TEST_DATABASE_URL=<disposable localhost stock_schema_* URL> npm run test:quotes` after a backend build. Conversion creates an unpaid draft, preserves the saved quote, and never issues stock or takes payment. Linked invoices are retained; an unissued converted draft can be cancelled without stock history. Quote validity ends after the selected UTC date.

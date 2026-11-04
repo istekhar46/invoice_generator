@@ -119,6 +119,10 @@ export class CacheInvalidationService {
      */
     invalidateAllLists: () => {
       // Invoice posting changes stock; first use also fixes catalog identity.
+      const profile = this.queryClient.getQueryData<{ id: string }>(queryKeys.profile())
+      if (profile) {
+        this.queryClient.invalidateQueries({ queryKey: ['quotes', profile.id] })
+      }
       this.queryClient.invalidateQueries({ queryKey: queryKeys.inventory })
       this.queryClient.invalidateQueries({ queryKey: queryKeys.payments })
       this.queryClient.invalidateQueries({ queryKey: queryKeys.gateway })

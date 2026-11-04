@@ -17,7 +17,8 @@ export interface PDFGeneratorService {
   generateInvoicePDF(
     invoice: Invoice,
     company: InvoiceCompany | null | undefined,
-    customer: InvoiceCustomer | null | undefined
+    customer: InvoiceCustomer | null | undefined,
+    quotation?: { status: string }
   ): Promise<Blob>
   downloadPDF(blob: Blob, filename: string): void
   previewPDF(blob: Blob): void
@@ -40,7 +41,8 @@ export class PDFGeneratorServiceImpl implements PDFGeneratorService {
   async generateInvoicePDF(
     invoice: Invoice,
     company: InvoiceCompany | null | undefined,
-    customer: InvoiceCustomer | null | undefined
+    customer: InvoiceCustomer | null | undefined,
+    quotation?: { status: string }
   ): Promise<Blob> {
     try {
       // Import the PDF template component dynamically to avoid SSR issues
@@ -55,6 +57,7 @@ export class PDFGeneratorServiceImpl implements PDFGeneratorService {
           invoice,
           company,
           customer,
+          quotation,
         }) as any
       ).toBlob()
 

@@ -19,6 +19,7 @@ import {
 } from '../pages'
 import { InformationPage } from '../pages/InformationPage'
 import { GoogleAuthCallbackPage } from '../pages/GoogleAuthCallbackPage'
+import { QuotationsPage } from '../pages/QuotationsPage'
 import { ProductsPage } from '../pages/ProductsPage'
 import { InventoryPage } from '../pages/InventoryPage'
 import { PaymentsPage } from '../pages/PaymentsPage'
@@ -63,10 +64,29 @@ export const router = createBrowserRouter([
       },
 
       // Protected routes (only accessible when authenticated)
-      { path: 'payments/links', element: <ProtectedRoute><PaymentLinksPage /></ProtectedRoute> },
+      {
+        path: 'quotes',
+        element: (
+          <ProtectedRoute>
+            <QuotationsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'payments/links',
+        element: (
+          <ProtectedRoute>
+            <PaymentLinksPage />
+          </ProtectedRoute>
+        ),
+      },
       {
         path: 'payments/settings',
-        element: <ProtectedRoute><PaymentSettingsPage /></ProtectedRoute>,
+        element: (
+          <ProtectedRoute>
+            <PaymentSettingsPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'payments',
@@ -158,8 +178,12 @@ export const router = createBrowserRouter([
 
 // Route metadata for breadcrumbs and navigation
 export const routeMetadata = {
+  '/quotes': { title: 'Quotations', breadcrumb: 'Quotations' },
   '/payments/links': { title: 'Payment links', breadcrumb: 'Payment links' },
-  '/payments/settings': { title: 'Payment settings', breadcrumb: 'Payment settings' },
+  '/payments/settings': {
+    title: 'Payment settings',
+    breadcrumb: 'Payment settings',
+  },
   '/payments': { title: 'Payments', breadcrumb: 'Payments' },
   '/inventory': { title: 'Inventory', breadcrumb: 'Inventory' },
   '/products': {

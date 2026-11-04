@@ -18,10 +18,12 @@ export function CatalogPicker({
   currency,
   onSelect,
   disabled,
+  context = 'invoice',
 }: {
   currency: string
   onSelect: (selection: CatalogSelection) => void
   disabled?: boolean
+  context?: 'invoice' | 'quotation'
 }) {
   const [open, setOpen] = useState(false)
   return (
@@ -45,6 +47,7 @@ export function CatalogPicker({
         {open && (
           <CatalogBrowser
             currency={currency}
+            context={context}
             onSelect={selection => {
               onSelect(selection)
               setOpen(false)
@@ -59,7 +62,9 @@ export function CatalogPicker({
 function CatalogBrowser({
   currency,
   onSelect,
+  context,
 }: {
+  context: 'invoice' | 'quotation'
   currency: string
   onSelect: (selection: CatalogSelection) => void
 }) {
@@ -108,7 +113,7 @@ function CatalogBrowser({
       <div className="space-y-4">
         <p className="text-sm text-slate-600">
           <strong>{foreign.name}</strong> is priced in {foreign.currency}. Enter
-          a unit price in {currency} to use it on this invoice. No currency
+          a unit price in {currency} to use it on this {context}. No currency
           conversion is applied.
         </p>
         <label className="block text-sm font-medium">
@@ -240,8 +245,9 @@ function CatalogBrowser({
           )}
           {!!stock.data?.length && (
             <p className="text-xs text-slate-500">
-              Drafts do not reserve stock. Stock is deducted when an invoice is
-              issued.
+              {context === 'quotation'
+                ? 'Quotations do not reserve or deduct stock. Stock is checked when the resulting invoice is issued.'
+                : 'Drafts do not reserve stock. Stock is deducted when an invoice is issued.'}
             </p>
           )}
           <div className="flex items-center justify-between border-t pt-3 text-xs text-slate-500">

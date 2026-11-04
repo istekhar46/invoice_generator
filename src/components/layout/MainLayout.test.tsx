@@ -69,10 +69,12 @@ describe('Console navigation', () => {
       within(sidebar).getByRole('link', { name: 'Create Invoice' })
     ).toHaveAttribute('href', '/invoices?create=true')
     expect(
-      within(sidebar).queryByText(
-        /Purchases|Expenses|Subscriptions|Quotations/
-      )
+      within(sidebar).queryByText(/Purchases|Expenses|Subscriptions/)
     ).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Quotations' })).toHaveAttribute(
+      'href',
+      '/quotes'
+    )
   })
 
   it('opens an accessible drawer, traps focus and restores the trigger on Escape', async () => {

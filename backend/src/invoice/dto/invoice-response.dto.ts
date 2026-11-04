@@ -4,7 +4,22 @@ import { InvoiceStatus } from '@prisma/client';
 import { LineItemResponseDto } from './line-item-response.dto';
 import { CustomerResponseDto } from '../../customer/dto/customer-response.dto';
 
+export class QuotationSourceResponseDto {
+  @Expose()
+  id!: string;
+  @Expose()
+  quoteNumber!: string;
+}
+
 export class InvoiceResponseDto {
+  @ApiProperty({ nullable: true, description: 'Retained source quotation ID, when converted.' })
+  @Expose()
+  sourceQuoteId!: string | null;
+
+  @ApiProperty({ nullable: true, type: QuotationSourceResponseDto })
+  @Expose()
+  @Type(() => QuotationSourceResponseDto)
+  sourceQuote!: QuotationSourceResponseDto | null;
   @ApiProperty({
     nullable: true,
     description: 'Current matching Live Razorpay payment URL, otherwise null.',

@@ -20,6 +20,7 @@ interface LineItemsTableProps {
   onChange: (lineItems: LineItem[]) => void
   disabled?: boolean
   currency?: string
+  documentKind?: 'invoice' | 'quotation'
 }
 
 interface LineItemFormData {
@@ -45,6 +46,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
   onChange,
   disabled = false,
   currency = 'USD',
+  documentKind = 'invoice',
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -462,6 +464,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>Line Items</CardTitle>
             <CatalogPicker
+              context={documentKind}
               currency={currency}
               disabled={disabled || showAddForm || editingId !== null}
               onSelect={selection =>
@@ -499,7 +502,8 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
                 No line items yet
               </h3>
               <p className="text-gray-600 mb-6 max-w-sm mx-auto">
-                Add products or services to build your invoice.
+                Add products or services to build your{' '}
+                {documentKind === 'quotation' ? 'quotation' : 'invoice'}.
               </p>
               <Button
                 variant="primary"
@@ -552,7 +556,9 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
                           </span>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          {formatCurrency(item.rate, currency)}
+                          {documentKind === 'quotation'
+                            ? `${currency} ${item.rate}`
+                            : formatCurrency(item.rate, currency)}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
                           {item.quantity} {item.unit}
@@ -623,7 +629,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
           )}
         </CardContent>
         <div className="px-6 pb-6">
-          <InvoiceStockAvailability items={lineItems} />
+          <InvoiceStockAvailability items={lineItems} context={documentKind} />
         </div>
       </Card>
 

@@ -1,4 +1,9 @@
-import { randomUUID } from 'node:crypto';
+import {
+  allocateDocumentNumber,
+  lockDocumentCounter,
+  recordDocumentNumber,
+} from './document-number';
+import { validateInvoiceLogo } from './invoice-logo';
 import { lockInvoiceRow } from './invoice-lock';
 import { createOpeningPayment, paymentBalance } from '../payments/payment-ledger';
 import { paidCache, paidStatus, savedMinor } from '../payments/payment-money';
@@ -84,12 +89,11 @@ export class InvoiceService extends BaseUserService {
 
     // Generate unique invoice number
     const requestedNumber = createInvoiceDto.invoiceNumber?.trim();
-    const invoiceNumber = requestedNumber?.length ? requestedNumber : this.generateInvoiceNumber();
-    await this.ensureInvoiceNumberAvailable(userId, invoiceNumber);
 
     // Create invoice with line items in a transaction
     const invoice = await this.prisma
       .$transaction(async (tx) => {
+        const invoiceNumber = await allocateDocumentNumber(tx, userId, 'INVOICE', requestedNumber);
         const products = await validateCatalogReferences(tx, userId, createInvoiceDto.lineItems);
         aggregateStockQuantities(createInvoiceDto.lineItems, trackedProductIds(products));
         // Create the invoice
@@ -109,6 +113,8 @@ export class InvoiceService extends BaseUserService {
             status: InvoiceStatus.DRAFT,
           },
         });
+
+        await recordDocumentNumber(tx, userId, 'INVOICE', invoiceNumber, newInvoice.id);
 
         // Create line items
         const lineItemsData = createInvoiceDto.lineItems.map((item) => ({
@@ -183,7 +189,6 @@ export class InvoiceService extends BaseUserService {
 
     // Generate unique invoice number
     const requestedNumber = createQuickInvoiceDto.invoiceNumber?.trim();
-    const invoiceNumber = requestedNumber?.length ? requestedNumber : this.generateInvoiceNumber();
     if (!createQuickInvoiceDto.customerId && !createQuickInvoiceDto.quickCustomerName?.trim()) {
       throw new BadRequestException('Customer name is required.');
     }
@@ -192,6 +197,7 @@ export class InvoiceService extends BaseUserService {
     let invoice: Invoice;
     try {
       invoice = await this.prisma.$transaction(async (tx) => {
+        const invoiceNumber = await allocateDocumentNumber(tx, userId, 'INVOICE', requestedNumber);
         const products = await validateCatalogReferences(
           tx,
           userId,
@@ -235,6 +241,8 @@ export class InvoiceService extends BaseUserService {
           },
         });
 
+        await recordDocumentNumber(tx, userId, 'INVOICE', invoiceNumber, newInvoice.id);
+
         // Create line items
         const lineItemsData = createQuickInvoiceDto.lineItems.map((item) => ({
           invoiceId: newInvoice.id,
@@ -258,9 +266,10 @@ export class InvoiceService extends BaseUserService {
     } catch (error) {
       if (
         clientRequestId &&
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
+        (error instanceof ConflictException ||
+          (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'))
       ) {
+        // A concurrent replay can encounter its retained number before the request-ID constraint.
         const existingInvoice = await this.prisma.invoice.findFirst({
           where: { userId, clientRequestId },
           select: { id: true },
@@ -344,6 +353,7 @@ export class InvoiceService extends BaseUserService {
           },
         },
         lineItems: true,
+        sourceQuote: { select: { id: true, quoteNumber: true } },
         _count: {
           select: { paymentEntries: true, gatewayPayments: { where: { link: { mode: 'LIVE' } } } },
         },
@@ -402,6 +412,7 @@ export class InvoiceService extends BaseUserService {
           },
         },
         lineItems: true,
+        sourceQuote: { select: { id: true, quoteNumber: true } },
         _count: {
           select: { paymentEntries: true, gatewayPayments: { where: { link: { mode: 'LIVE' } } } },
         },
@@ -434,6 +445,7 @@ export class InvoiceService extends BaseUserService {
     try {
       await this.prisma.$transaction(
         async (tx) => {
+          if (dto.invoiceNumber !== undefined) await lockDocumentCounter(tx, userId, 'INVOICE');
           const existing = await this.lockInvoice(tx, userId, id);
           if (existing.status === InvoiceStatus.VOIDED)
             throw new ConflictException(
@@ -453,6 +465,8 @@ export class InvoiceService extends BaseUserService {
           const requestedNumber = dto.invoiceNumber?.trim();
           const invoiceNumber = requestedNumber?.length ? requestedNumber : existing.invoiceNumber;
           await this.ensureInvoiceNumberAvailable(userId, invoiceNumber, id, tx);
+          if (dto.invoiceNumber !== undefined)
+            await recordDocumentNumber(tx, userId, 'INVOICE', invoiceNumber, id);
           const options = this.optionData(dto, dto.currency ?? existing.currency);
           if (
             dto.currency &&
@@ -598,10 +612,15 @@ export class InvoiceService extends BaseUserService {
         const paid = await paymentBalance(tx, id, userId);
         if (next === InvoiceStatus.VOIDED) {
           await requireResolvedLiveLink(tx, userId, id);
-          if (invoice.status !== InvoiceStatus.SENT || paid > 0n)
+          const convertedDraft = invoice.status === InvoiceStatus.DRAFT && !!invoice.sourceQuoteId;
+          if ((!convertedDraft && invoice.status !== InvoiceStatus.SENT) || paid > 0n)
             throw new ConflictException(
               'Only an unpaid issued invoice can be voided. Reverse any recorded payment first.',
             );
+          if (convertedDraft) {
+            await tx.invoice.update({ where: { id }, data: { status: next } });
+            return;
+          }
           const returns = await invoiceStockReturns(tx, userId, id);
           await lockCatalogItems(tx, userId, [
             ...invoice.lineItems.flatMap((item) =>
@@ -641,13 +660,14 @@ export class InvoiceService extends BaseUserService {
       async (tx) => {
         const invoice = await this.lockInvoice(tx, userId, id);
         if (
+          invoice.sourceQuoteId ||
           invoice.status !== InvoiceStatus.DRAFT ||
           invoice.amountPaid > 0 ||
           (await tx.paymentEntry.count({ where: { userId, invoiceId: id } })) ||
           (await tx.stockAction.count({ where: { userId, invoiceId: id } }))
         ) {
           throw new ConflictException(
-            'Only unpaid drafts without stock or payment history can be deleted. Void an unpaid issued invoice to retain its history.',
+            'Only unpaid drafts without quotation, stock or payment history can be deleted. Cancel a converted draft or void an unpaid issued invoice to retain its history.',
           );
         }
         await tx.invoice.delete({ where: { id } });
@@ -659,11 +679,6 @@ export class InvoiceService extends BaseUserService {
   private async lockInvoice(tx: Prisma.TransactionClient, userId: string, id: string) {
     await lockInvoiceRow(tx, userId, id);
     return tx.invoice.findUniqueOrThrow({ where: { id }, include: { lineItems: true } });
-  }
-
-  generateInvoiceNumber(): string {
-    // UUID generation avoids races between simultaneous automatic invoice creation.
-    return `INV-${randomUUID()}`;
   }
 
   private async ensureInvoiceNumberAvailable(
@@ -681,16 +696,7 @@ export class InvoiceService extends BaseUserService {
   }
 
   private optionData(dto: Partial<CreateQuickInvoiceDto>, currency = dto.currency ?? 'USD') {
-    if (dto.logoDataUrl) {
-      const [prefix, encoded] = dto.logoDataUrl.split(',');
-      const image = Buffer.from(encoded || '', 'base64');
-      const png =
-        prefix === 'data:image/png;base64' &&
-        image.subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex'));
-      const jpeg = prefix === 'data:image/jpeg;base64' && image[0] === 0xff && image[1] === 0xd8;
-      if ((!png && !jpeg) || image.length > 256 * 1024)
-        throw new BadRequestException('Use a PNG or JPEG logo smaller than 256 KB.');
-    }
+    validateInvoiceLogo(dto.logoDataUrl);
     const fields = [
       'currency',
       'discountType',

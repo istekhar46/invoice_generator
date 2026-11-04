@@ -7,25 +7,48 @@ describe('Route metadata', () => {
   it('replaces homepage metadata when navigating to help or an error page', () => {
     const { rerender } = render(<SiteMetadata pathname="/" />)
     expect(document.title).toContain('Free Invoice Generator')
-    expect(document.head.querySelector('link[rel="canonical"]')).toHaveAttribute('href', 'https://www.invoiceo.site/')
+    expect(
+      document.head.querySelector('link[rel="canonical"]')
+    ).toHaveAttribute('href', 'https://www.invoiceo.site/')
     rerender(<SiteMetadata pathname="/help" />)
     expect(document.title).toContain('Invoice Help')
-    expect(document.head.querySelectorAll('meta[name="description"]')).toHaveLength(1)
-    expect(document.head.querySelector('link[rel="canonical"]')).toHaveAttribute('href', 'https://www.invoiceo.site/help')
+    expect(
+      document.head.querySelectorAll('meta[name="description"]')
+    ).toHaveLength(1)
+    expect(
+      document.head.querySelector('link[rel="canonical"]')
+    ).toHaveAttribute('href', 'https://www.invoiceo.site/help')
     rerender(<SiteMetadata pathname="/does-not-exist" />)
     expect(document.title).toBe('Page not found | Invoiceo')
-    expect(document.head.querySelector('meta[name="robots"]')).toHaveAttribute('content', 'noindex, follow')
+    expect(document.head.querySelector('meta[name="robots"]')).toHaveAttribute(
+      'content',
+      'noindex, follow'
+    )
     expect(document.head.querySelector('link[rel="canonical"]')).toBeNull()
     expect(document.head.querySelector('meta[name="description"]')).toBeNull()
   })
 
   it('canonicalizes a trailing slash on a public route', () => {
     render(<SiteMetadata pathname="/about/" />)
-    expect(document.head.querySelector('link[rel="canonical"]')).toHaveAttribute('href', 'https://www.invoiceo.site/about')
-    expect(document.head.querySelector('meta[name="robots"]')).toHaveAttribute('content', 'index, follow')
+    expect(
+      document.head.querySelector('link[rel="canonical"]')
+    ).toHaveAttribute('href', 'https://www.invoiceo.site/about')
+    expect(document.head.querySelector('meta[name="robots"]')).toHaveAttribute(
+      'content',
+      'index, follow'
+    )
   })
 
-  it.each(['/login', '/signup', '/dashboard', '/auth/callback', '/inventory', '/payments', '/payments/settings'])('does not index %s', (pathname) => {
+  it.each([
+    '/login',
+    '/signup',
+    '/dashboard',
+    '/auth/callback',
+    '/inventory',
+    '/quotes',
+    '/payments',
+    '/payments/settings',
+  ])('does not index %s', pathname => {
     const html = renderToStaticMarkup(<SiteMetadata pathname={pathname} />)
     expect(html).toContain('noindex, follow')
     expect(html).not.toContain('rel="canonical"')

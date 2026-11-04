@@ -170,6 +170,10 @@ export class CustomerService extends BaseUserService {
           throw new BadRequestException(
             'Cannot delete a customer with saved invoices. Retain the customer to preserve invoice history.',
           );
+        if (await tx.quote.count({ where: { userId, customerId: id } }))
+          throw new BadRequestException(
+            'Cannot delete a customer with saved quotations. Retain the customer to preserve quotation history.',
+          );
         await tx.customer.delete({ where: { id } });
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },

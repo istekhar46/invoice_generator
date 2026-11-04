@@ -31,6 +31,7 @@
     "test:payments": "node test/payments.integration.cjs",
     "test:payment-migration": "node test/payment-migration.integration.cjs",
     "test:razorpay-connections": "node test/razorpay-connections.integration.cjs",
+    "test:quotes": "node test/quotes.integration.cjs",
     "test:gateway": "node test/gateway.integration.cjs"
   },
   "dependencies": {

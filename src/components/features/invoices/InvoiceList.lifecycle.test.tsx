@@ -125,6 +125,37 @@ describe('Invoice stock lifecycle controls', () => {
     )
   })
 
+  it('retains converted drafts and offers stock-free cancellation instead of deletion', async () => {
+    state.rows = [
+      {
+        ...invoice('DRAFT'),
+        sourceQuoteId: 'quote-a',
+        sourceQuote: { id: 'quote-a', quoteNumber: 'QT-000001' },
+      },
+    ]
+    render(<InvoiceList />)
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Actions for INV-001' })
+    )
+    expect(
+      screen.queryByRole('button', { name: 'Delete Invoice' })
+    ).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel draft' }))
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveTextContent(
+      'Cancelling an unissued draft makes no stock change'
+    )
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Cancel draft' })
+    )
+    await waitFor(() =>
+      expect(state.change).toHaveBeenCalledWith({
+        id: 'invoice-1',
+        status: 'VOIDED',
+      })
+    )
+  })
+
   it('requires confirmation before voiding an unpaid issued invoice', async () => {
     state.rows = [invoice('SENT')]
     const user = userEvent.setup()
