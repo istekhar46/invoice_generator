@@ -24,6 +24,17 @@ export function useStockBalance(id: string) {
     staleTime: 30_000,
   })
 }
+export function useStockAvailability(productIds: string[]) {
+  const { data: user } = useUserProfile()
+  const ids = [...new Set(productIds)].sort()
+  return useQuery({
+    queryKey: [...queryKeys.inventory, user?.id, 'availability', ids],
+    enabled: !!user?.id && ids.length > 0,
+    queryFn: ({ signal }) => inventoryApi.availability(ids, signal),
+    retry: false,
+    staleTime: 30_000,
+  })
+}
 export function useStockHistory(query: HistoryQuery, enabled = true) {
   const { data: user } = useUserProfile()
   return useQuery({

@@ -2,6 +2,7 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import {
   AdjustStockDto,
+  InventoryAvailabilityQueryDto,
   InventoryBalanceQueryDto,
   InventoryHistoryQueryDto,
   OpeningStockDto,
@@ -18,6 +19,24 @@ const convert = (input: object) =>
   plainToInstance(OpeningStockDto, input, { enableImplicitConversion: true });
 
 describe('Inventory request contract', () => {
+  it('validates bounded nonempty availability batches under implicit conversion', async () => {
+    const convertIds = (ids: unknown) =>
+      plainToInstance(InventoryAvailabilityQueryDto, { ids }, { enableImplicitConversion: true });
+    expect(await validate(convertIds('product-a,product-b'))).toEqual([]);
+    expect(convertIds('product-a,product-b').ids).toEqual(['product-a', 'product-b']);
+    for (const ids of [
+      undefined,
+      '',
+      'a,a',
+      'a,',
+      false,
+      2,
+      ['a', 2],
+      'x'.repeat(101),
+      Array.from({ length: 101 }, (_, i) => String(i)).join(','),
+    ])
+      expect((await validate(convertIds(ids))).length).toBeGreaterThan(0);
+  });
   it('retains decimal strings and trims the reason without coercing input types', async () => {
     const dto = convert(opening);
     expect(await validate(dto)).toEqual([]);

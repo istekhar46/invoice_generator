@@ -48,6 +48,7 @@ const action: StockAction = {
   requestId: 'original-request',
   kind: 'ADJUSTMENT',
   invoiceId: null,
+  invoice: null,
   reversalOfId: null,
   reversedById: null,
   reason: 'Count correction',
@@ -56,7 +57,17 @@ const action: StockAction = {
   movements: [{ catalogItemId: product.id, quantityDelta: '-1.250', product }],
 }
 const page = <T,>(data: T[], extra = {}) => ({
-  data,
+  data: data.map(row =>
+    typeof row === 'object' && row && 'quantity' in row
+      ? {
+          opening: '10.000',
+          adjustments: '0.000',
+          netInvoiced: '4.000',
+          ...row,
+        }
+      : row
+  ),
+  summary: { tracked: 21, inStock: 20, outOfStock: 1 },
   total: data.length,
   page: 1,
   limit: 20,
@@ -103,7 +114,7 @@ function fill(label = 'Quantity', quantity = '1.250') {
   })
 }
 beforeEach(() => {
-  vi.clearAllMocks()
+  vi.resetAllMocks()
   mocks.owner = 'owner-a'
   mocks.balances.mockResolvedValue(
     page([{ product, quantity: '999999999999999.999' }])
@@ -146,6 +157,12 @@ describe('Inventory workspace', () => {
   it('keeps exact quantities, filters before paging, and resets page on search', async () => {
     const { router } = setup(<InventoryPage />, '/inventory?page=2')
     await screen.findByText('999,999,999,999,999.999')
+    expect(screen.getByLabelText('Inventory summary')).toHaveTextContent(
+      'Tracked products21In stock20Out of stock1'
+    )
+    expect(
+      screen.getByRole('columnheader', { name: 'Net invoiced' })
+    ).toBeInTheDocument()
     expect(mocks.balances).toHaveBeenLastCalledWith(
       expect.objectContaining({ page: 2, status: 'active' }),
       expect.any(AbortSignal)
@@ -173,6 +190,8 @@ describe('Inventory workspace', () => {
     expect(
       screen.getByRole('link', { name: 'History for Cotton fabric' })
     ).toHaveAttribute('href', '/inventory?view=history&product=product-a')
+    expect(formatStockQuantity('1.250')).toBe('1.25')
+    expect(formatStockQuantity('0.000')).toBe('0')
     expect(formatStockQuantity('-999999999999999.999')).toBe(
       '-999,999,999,999,999.999'
     )
@@ -188,6 +207,11 @@ describe('Inventory workspace', () => {
           sequence: '2',
           kind: 'INVOICE_ISSUE',
           invoiceId: 'invoice-1',
+          invoice: {
+            id: 'invoice-1',
+            invoiceNumber: 'INV-003',
+            customerName: 'Fixture customer',
+          },
           reversedById: 'void-action',
           movements: [],
         },
@@ -229,10 +253,11 @@ describe('Inventory workspace', () => {
       expect.objectContaining({ catalogItemId: 'product-a' }),
       expect.any(AbortSignal)
     )
-    expect(screen.getByRole('link', { name: 'View invoice' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'INV-003' })).toHaveAttribute(
       'href',
       '/invoices?id=invoice-1'
     )
+    expect(screen.getByText('Customer: Fixture customer')).toBeInTheDocument()
     expect(
       screen.getAllByRole('button', { name: /Reverse adjustment/ })
     ).toHaveLength(1)
@@ -279,7 +304,7 @@ describe('Inventory workspace', () => {
       )
       .mockResolvedValueOnce(page([], { hasPrev: true }))
     setup(<InventoryPage />)
-    await screen.findByText('1.000')
+    await screen.findByRole('link', { name: 'Cotton fabric' })
     await userEvent.click(screen.getByRole('button', { name: 'Next' }))
     await waitFor(() =>
       expect(mocks.balances).toHaveBeenLastCalledWith(
@@ -290,7 +315,7 @@ describe('Inventory workspace', () => {
     await userEvent.click(
       await screen.findByRole('button', { name: 'Back to first page' })
     )
-    await screen.findByText('1.000')
+    await screen.findByRole('link', { name: 'Cotton fabric' })
   })
 
   it('uses the owner-scoped cache when the account changes', async () => {
@@ -411,7 +436,7 @@ describe('Stock forms', () => {
       screen.getByRole('button', { name: 'Save adjustment' })
     )
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Available: 0.750'
+      'Available: 0.75'
     )
     expect(screen.getByLabelText(/^Quantity/)).toHaveValue('1.250')
     await userEvent.click(
@@ -481,7 +506,7 @@ describe('Stock forms', () => {
   it('records a manual reversal against its source with its own reason/date and no replacement quantity', async () => {
     const { saved } = dialog({ type: 'reversal', action })
     expect(screen.queryByLabelText(/^Quantity/)).not.toBeInTheDocument()
-    expect(screen.getByText(/9007199254740993/)).toHaveTextContent('-1.250 m')
+    expect(screen.getByText(/9007199254740993/)).toHaveTextContent('-1.25 m')
     fireEvent.change(screen.getByLabelText('Reason'), {
       target: { value: 'Incorrect count' },
     })

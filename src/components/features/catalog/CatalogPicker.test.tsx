@@ -7,8 +7,12 @@ import type { CatalogItem } from '../../../types/catalog'
 
 const mocks = vi.hoisted(() => ({
   query: vi.fn(),
+  stock: vi.fn(),
   save: vi.fn(),
   refetch: vi.fn(),
+}))
+vi.mock('../../../hooks/useInventory', () => ({
+  useStockAvailability: mocks.stock,
 }))
 vi.mock('../../../hooks/useCatalog', () => ({
   useCatalog: (query: unknown) => mocks.query(query),
@@ -48,6 +52,7 @@ const service: CatalogItem = {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mocks.stock.mockReturnValue({ data: [], error: null })
   mocks.query.mockReturnValue({
     data: {
       data: [product, service],
@@ -80,6 +85,32 @@ describe('Catalog invoice selection', () => {
       rate: 12,
       amount: 12,
     })
+  })
+
+  it('shows exact tracked availability and zero-stock context without treating services as stock', async () => {
+    mocks.query.mockReturnValue({
+      data: {
+        data: [{ ...product, stockTrackingStartedAt: '2026-11-04' }, service],
+        total: 2,
+      },
+      error: null,
+    })
+    mocks.stock.mockReturnValue({
+      data: [{ product: { id: product.id }, quantity: '0.000' }],
+      error: null,
+    })
+    render(<CatalogPicker currency="USD" onSelect={vi.fn()} />)
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Add from catalog' })
+    )
+    expect(mocks.stock).toHaveBeenLastCalledWith([product.id])
+    expect(screen.getByRole('button', { name: /Cable/ })).toHaveTextContent(
+      'Out of stock · Available: 0 each'
+    )
+    expect(
+      screen.getByRole('button', { name: /Consulting/ })
+    ).not.toHaveTextContent('Available')
+    expect(screen.getByText(/Drafts do not reserve stock/)).toBeInTheDocument()
   })
 
   it('requires an explicit price for a service in another currency', async () => {

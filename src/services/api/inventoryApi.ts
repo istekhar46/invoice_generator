@@ -5,6 +5,7 @@ import type {
   InventoryPage,
   StockAction,
   StockBalance,
+  StockBalancePage,
   StockCommand,
   StockResult,
 } from '../../types/inventory'
@@ -19,7 +20,7 @@ function queryString(query: object) {
 
 export const inventoryApi = {
   balances: (query: BalanceQuery, signal?: AbortSignal) =>
-    apiClient.get<InventoryPage<StockBalance>>(
+    apiClient.get<StockBalancePage>(
       `/inventory/products?${queryString(query)}`,
       { signal }
     ),
@@ -28,6 +29,18 @@ export const inventoryApi = {
       `/inventory/products/${encodeURIComponent(id)}/balance`,
       { signal }
     ),
+  availability: async (ids: string[], signal?: AbortSignal) => {
+    const batches: Promise<StockBalance[]>[] = []
+    for (let offset = 0; offset < ids.length; offset += 100) {
+      batches.push(
+        apiClient.get<StockBalance[]>(
+          `/inventory/availability?${queryString({ ids: ids.slice(offset, offset + 100).join(',') })}`,
+          { signal }
+        )
+      )
+    }
+    return (await Promise.all(batches)).flat()
+  },
   history: (query: HistoryQuery, signal?: AbortSignal) =>
     apiClient.get<InventoryPage<StockAction>>(
       `/inventory/history?${queryString(query)}`,

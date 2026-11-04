@@ -1,6 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
+  IsArray,
   IsDateString,
   IsEnum,
   IsIn,
@@ -115,4 +119,19 @@ export class InventoryHistoryQueryDto extends InventoryPageDto {
   @Transform(raw)
   @IsEnum(StockActionKind)
   kind?: StockActionKind;
+}
+
+export class InventoryAvailabilityQueryDto {
+  @ApiProperty({ description: 'Comma-separated catalog IDs, at most 100.' })
+  @Transform(({ obj }: { obj: Record<string, unknown> }) =>
+    typeof obj.ids === 'string' ? obj.ids.split(',') : obj.ids,
+  )
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  @ArrayUnique()
+  @IsString({ each: true })
+  @IsNotEmpty({ each: true })
+  @MaxLength(100, { each: true })
+  ids!: string[];
 }

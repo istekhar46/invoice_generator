@@ -14,7 +14,11 @@ import {
   useStockBalances,
   useStockHistory,
 } from '../hooks/useInventory'
-import { formatStockQuantity, stockActionLabels } from '../types/inventory'
+import {
+  formatStockQuantity,
+  isOutOfStock,
+  stockActionLabels,
+} from '../types/inventory'
 import type {
   InventoryPage as PageData,
   StockAction,
@@ -129,10 +133,15 @@ function HistoryEntry({
             to={`/invoices?id=${encodeURIComponent(action.invoiceId)}`}
             className="text-sm font-medium text-primary-700 underline"
           >
-            View invoice
+            {action.invoice?.invoiceNumber ?? 'View invoice'}
           </Link>
         )}
       </div>
+      {action.invoice?.customerName && (
+        <p className="mt-2 text-sm text-slate-600">
+          Customer: {action.invoice.customerName}
+        </p>
+      )}
       <p className="mt-3 whitespace-pre-wrap break-words text-sm text-slate-600">
         {action.reason}
       </p>
@@ -336,6 +345,55 @@ function InventoryWorkspace() {
               <QueryStatus query={balances} />
               {balances.data && !balances.error && (
                 <>
+                  <div
+                    className="grid grid-cols-1 gap-3 border-b border-slate-100 bg-slate-50/50 p-4 sm:grid-cols-3"
+                    aria-label="Inventory summary"
+                  >
+                    {(
+                      [
+                        [
+                          'Tracked products',
+                          balances.data.summary.tracked,
+                          'text-slate-900',
+                        ],
+                        [
+                          'In stock',
+                          balances.data.summary.inStock,
+                          'text-emerald-700',
+                        ],
+                        [
+                          'Out of stock',
+                          balances.data.summary.outOfStock,
+                          'text-amber-700',
+                        ],
+                      ] as const
+                    ).map(([label, count, color]) => (
+                      <div
+                        key={label}
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3"
+                      >
+                        <p className="text-xs font-medium text-slate-500">
+                          {label}
+                        </p>
+                        <p
+                          className={`mt-1 text-2xl font-semibold tabular-nums ${color}`}
+                        >
+                          {count}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-b border-slate-100 px-4 py-3 text-xs leading-relaxed text-slate-500">
+                    <p>
+                      Counts cover all products matching your filters.
+                      Quantities stay in each product’s unit.
+                    </p>
+                    <p className="mt-1">
+                      Opening + net adjustments − net invoiced = available. Net
+                      invoiced includes issued invoices, edits and void returns
+                      since tracking began. Drafts do not reserve stock.
+                    </p>
+                  </div>
                   {!balances.data.data.length && (
                     <div className="px-5 py-14 text-center">
                       <Boxes
@@ -364,57 +422,135 @@ function InventoryWorkspace() {
                       )}
                     </div>
                   )}
-                  <ul className="divide-y divide-slate-100">
-                    {balances.data.data.map(({ product, quantity }) => (
-                      <li
-                        key={product.id}
-                        className="grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:p-5"
-                      >
-                        <div className="min-w-0">
-                          <h2 className="break-words font-semibold text-slate-800">
-                            {product.name}
-                            {product.isArchived && (
-                              <span className="ml-2 text-xs font-normal text-slate-400">
-                                Archived
-                              </span>
-                            )}
-                          </h2>
-                          {product.sku && (
-                            <p className="mt-1 break-words text-xs text-slate-500">
-                              {product.sku}
-                            </p>
+                  {!!balances.data.data.length && (
+                    <div
+                      className="overflow-x-auto"
+                      role="region"
+                      aria-label="Product stock reconciliation"
+                      tabIndex={0}
+                    >
+                      <table className="block w-full text-sm md:table md:min-w-[850px]">
+                        <thead className="hidden border-b border-slate-100 bg-slate-50 text-xs text-slate-500 md:table-header-group">
+                          <tr>
+                            {[
+                              'Product',
+                              'Opening',
+                              'Net adjustments',
+                              'Net invoiced',
+                              'Available',
+                              'Actions',
+                            ].map(label => (
+                              <th
+                                key={label}
+                                scope="col"
+                                className="px-4 py-3 text-left font-medium"
+                              >
+                                {label}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="block divide-y divide-slate-100 md:table-row-group">
+                          {balances.data.data.map(
+                            ({
+                              product,
+                              quantity,
+                              opening,
+                              adjustments,
+                              netInvoiced,
+                            }) => (
+                              <tr
+                                key={product.id}
+                                className="grid grid-cols-2 md:table-row"
+                              >
+                                <th
+                                  scope="row"
+                                  className="col-span-2 min-w-0 px-4 py-4 text-left md:max-w-64"
+                                >
+                                  <Link
+                                    to={`/inventory?view=history&product=${encodeURIComponent(product.id)}`}
+                                    className="break-words font-semibold text-slate-800 hover:underline"
+                                  >
+                                    {product.name}
+                                  </Link>
+                                  {product.sku && (
+                                    <span className="mt-1 block break-words text-xs font-normal text-slate-500">
+                                      {product.sku}
+                                    </span>
+                                  )}
+                                  {product.isArchived && (
+                                    <span className="mt-1 block text-xs font-normal text-slate-400">
+                                      Archived
+                                    </span>
+                                  )}
+                                </th>
+                                {(
+                                  [
+                                    ['Opening', opening],
+                                    ['Net adjustments', adjustments],
+                                    ['Net invoiced', netInvoiced],
+                                  ] as const
+                                ).map(([label, value]) => (
+                                  <td
+                                    key={label}
+                                    className="min-w-0 break-words px-4 pb-4 tabular-nums text-slate-600 md:whitespace-nowrap md:py-4"
+                                  >
+                                    <span className="mb-1 block text-xs text-slate-500 md:hidden">
+                                      {label}
+                                    </span>
+                                    {formatStockQuantity(value)}{' '}
+                                    <span className="text-xs text-slate-400">
+                                      {product.unit}
+                                    </span>
+                                  </td>
+                                ))}
+                                <td className="min-w-0 break-words px-4 pb-4 md:py-4">
+                                  <span className="mb-1 block text-xs text-slate-500 md:hidden">
+                                    Available
+                                  </span>
+                                  <span className="block font-semibold tabular-nums text-slate-900 md:whitespace-nowrap">
+                                    {formatStockQuantity(quantity)}{' '}
+                                    <span className="text-xs font-normal text-slate-500">
+                                      {product.unit}
+                                    </span>
+                                  </span>
+                                  <span
+                                    className={`mt-1 inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs ${isOutOfStock(quantity) ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}
+                                  >
+                                    {isOutOfStock(quantity)
+                                      ? 'Out of stock'
+                                      : 'In stock'}
+                                  </span>
+                                </td>
+                                <td className="col-span-2 px-4 pb-4 md:py-4">
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      type="button"
+                                      size="small"
+                                      variant="outline"
+                                      aria-label={`Adjust stock for ${product.name}`}
+                                      onClick={() =>
+                                        open({ type: 'adjustment', product })
+                                      }
+                                    >
+                                      Adjust stock
+                                    </Button>
+                                    <Link
+                                      className="rounded-lg px-3 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50 focus-ring"
+                                      aria-label={`History for ${product.name}`}
+                                      to={`/inventory?view=history&product=${encodeURIComponent(product.id)}`}
+                                    >
+                                      History
+                                    </Link>
+                                  </div>
+                                </td>
+                              </tr>
+                            )
                           )}
-                          <p className="mt-2 break-words text-xl font-semibold tabular-nums text-slate-900">
-                            {formatStockQuantity(quantity)}{' '}
-                            <span className="text-sm font-normal text-slate-500">
-                              {product.unit}
-                            </span>
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                          <Button
-                            type="button"
-                            size="small"
-                            variant="outline"
-                            aria-label={`Adjust stock for ${product.name}`}
-                            onClick={() =>
-                              open({ type: 'adjustment', product })
-                            }
-                          >
-                            Adjust stock
-                          </Button>
-                          <Link
-                            className="rounded-lg px-3 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50 focus-ring"
-                            aria-label={`History for ${product.name}`}
-                            to={`/inventory?view=history&product=${encodeURIComponent(product.id)}`}
-                          >
-                            History
-                            <span className="sr-only"> for {product.name}</span>
-                          </Link>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                   <InventoryPagination
                     data={balances.data}
                     page={page}

@@ -49,6 +49,7 @@ import {
 } from '../../../utils/apiTransformers'
 import { formatCurrency, formatDateForInput } from '../../../utils/formatters'
 import { CatalogPicker } from '../catalog/CatalogPicker'
+import { InvoiceStockAvailability } from '../inventory/InvoiceStockAvailability'
 
 export interface QuickInvoiceBuilderProps {
   invoice?: Invoice | null
@@ -795,6 +796,9 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
           >
             <Plus size={17} /> Add line item
           </button>
+          {mode === 'authenticated' && (
+            <InvoiceStockAvailability items={values.lineItems ?? []} />
+          )}
           <div className="mt-9 grid gap-8 xl:grid-cols-2">
             <div className="space-y-5">
               {field(

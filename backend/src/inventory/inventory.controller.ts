@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { InventoryService } from './inventory.service';
 import {
   AdjustStockDto,
+  InventoryAvailabilityQueryDto,
   InventoryBalanceQueryDto,
   InventoryHistoryQueryDto,
   OpeningStockDto,
@@ -26,6 +27,11 @@ export class InventoryController {
   @Get('products/:id/balance')
   balance(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.inventory.balance(userId, id);
+  }
+
+  @Get('availability')
+  availability(@CurrentUser('id') userId: string, @Query() query: InventoryAvailabilityQueryDto) {
+    return this.inventory.availability(userId, query.ids);
   }
 
   @Get('history')
