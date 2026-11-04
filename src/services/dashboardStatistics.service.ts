@@ -69,7 +69,7 @@ export class DashboardStatisticsService {
 
     // Calculate total revenue from paid invoices only
     const usdInvoices = invoices.filter(
-      invoice => !invoice.currency || invoice.currency === 'USD'
+      invoice => invoice.status !== 'voided' && (!invoice.currency || invoice.currency === 'USD')
     )
     const totalRevenue = usdInvoices
       .filter(invoice => invoice.status === 'paid')

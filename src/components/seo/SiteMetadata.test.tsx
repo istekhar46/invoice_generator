@@ -25,7 +25,7 @@ describe('Route metadata', () => {
     expect(document.head.querySelector('meta[name="robots"]')).toHaveAttribute('content', 'index, follow')
   })
 
-  it.each(['/login', '/signup', '/dashboard', '/auth/callback'])('does not index %s', (pathname) => {
+  it.each(['/login', '/signup', '/dashboard', '/auth/callback', '/inventory', '/payments', '/payments/settings'])('does not index %s', (pathname) => {
     const html = renderToStaticMarkup(<SiteMetadata pathname={pathname} />)
     expect(html).toContain('noindex, follow')
     expect(html).not.toContain('rel="canonical"')

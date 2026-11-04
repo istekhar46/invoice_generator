@@ -30,6 +30,7 @@ const product: CatalogItem = {
   currency: 'USD',
   isArchived: false,
   usedAt: null,
+  stockTrackingStartedAt: null,
   createdAt: '',
   updatedAt: '',
 }
@@ -156,6 +157,32 @@ describe('Catalog invoice selection', () => {
 })
 
 describe('Catalog item editing', () => {
+  it('locks an unused tracked product identity while allowing metadata changes', async () => {
+    const tracked = {
+      ...product,
+      usedAt: null,
+      stockTrackingStartedAt: '2026-11-03',
+    }
+    render(
+      <CatalogItemForm item={tracked} onSaved={vi.fn()} onCancel={vi.fn()} />
+    )
+    expect(screen.getByLabelText('Type')).toBeDisabled()
+    expect(screen.getByLabelText('Unit')).toHaveAttribute('readonly')
+    fireEvent.change(screen.getByLabelText('Name'), {
+      target: { value: 'New name' },
+    })
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() =>
+      expect(mocks.save).toHaveBeenCalledWith({
+        id: product.id,
+        data: expect.objectContaining({
+          name: 'New name',
+          type: 'product',
+          unit: 'each',
+        }),
+      })
+    )
+  })
   it('retains the locked service type/unit when changing a used item price', async () => {
     const saved = vi.fn()
     mocks.save.mockResolvedValue({ ...service, rate: 50 })

@@ -8,6 +8,6 @@ export class UpdateInvoiceStatusDto {
     example: 'SENT',
     enum: InvoiceStatus,
   })
-  @IsEnum(InvoiceStatus, { message: 'Status must be DRAFT, SENT, or PAID' })
+  @IsEnum(InvoiceStatus, { message: 'Status must be DRAFT, SENT, PAID, or VOIDED' })
   status!: InvoiceStatus;
 }

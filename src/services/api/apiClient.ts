@@ -17,11 +17,13 @@ import {
 // Request configuration interface
 export interface RequestConfig extends AxiosRequestConfig {
   skipAuth?: boolean
+  sensitive?: boolean
 }
 
 // Extended internal config for interceptors
 interface ExtendedInternalConfig extends InternalAxiosRequestConfig {
   skipAuth?: boolean
+  sensitive?: boolean
   _retry?: boolean
 }
 
@@ -91,7 +93,7 @@ class BaseApiClient implements ApiClient {
         return config
       },
       error => {
-        if (ENV.DEV) {
+        if (ENV.DEV && !error.config?.sensitive) {
           console.error('[API] Request error:', error)
         }
         return Promise.reject(error)
@@ -117,9 +119,11 @@ class BaseApiClient implements ApiClient {
         return response
       },
       async error => {
+        // Navigation/filter changes cancel reads; preserve cancellation for Query.
+        if (axios.isCancel(error)) return Promise.reject(error)
         const originalRequest = error.config as ExtendedInternalConfig
 
-        if (ENV.DEV) {
+        if (ENV.DEV && !originalRequest?.sensitive) {
           console.error('[API] Response error:', error)
         }
 

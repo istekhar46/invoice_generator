@@ -27,6 +27,13 @@ model User {
   refreshTokens  RefreshToken[]
   invoiceDefaults InvoiceDefaults?
   catalogItems    CatalogItem[]
+  stockActions    StockAction[]
+  paymentEntries  PaymentEntry[]
+  razorpayConnections RazorpayConnection[]
+  gatewayLinks GatewayLink[]
+  gatewayPayments GatewayPayment[]
+  gatewayRefunds GatewayRefund[]
+  gatewayLinkRequests GatewayLinkRequest[]
   
   @@map("users")
 }
@@ -138,6 +145,8 @@ model Invoice {
   shippingAddress String?
   logoDataUrl    String?
   status        InvoiceStatus @default(DRAFT)
+  // Unknown for historical issued invoices; set only on future explicit issue.
+  issuedAt      DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -167,6 +176,11 @@ model Invoice {
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   customer  Customer?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
   lineItems LineItem[]
+  stockActions StockAction[]
+  paymentEntries PaymentEntry[]
+  gatewayLinks GatewayLink[]
+  gatewayPayments GatewayPayment[]
+  gatewayRefunds GatewayRefund[]
 
   // Indexes for query optimization
   @@index([userId])
@@ -178,6 +192,7 @@ model Invoice {
   @@index([userId, customerId])
   @@unique([userId, clientRequestId])
   @@unique([userId, invoiceNumber])
+  @@unique([userId, id])
   @@index([isQuickInvoice])
   @@map("invoices")
 }
@@ -210,6 +225,210 @@ enum InvoiceStatus {
   DRAFT
   SENT
   PAID
+  VOIDED
+}
+
+enum PaymentEntryKind {
+  OPENING
+  UPI
+  REVERSAL
+  RAZORPAY
+  REFUND
+}
+
+enum RazorpayMode {
+  TEST
+  LIVE
+}
+
+// One business's direct merchant credentials, isolated between provider modes.
+model RazorpayConnection {
+  id                   String @id @default(cuid())
+  userId               String
+  mode                 RazorpayMode
+  encryptedCredentials String
+  keySuffix            String @db.VarChar(4)
+  enabled              Boolean @default(true)
+  version              Int @default(1)
+  webhookCiphertext    String?
+  validatedAt          DateTime
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links                GatewayLink[]
+  webhookEvents        GatewayWebhookEvent[]
+  webhookSecrets       GatewayWebhookSecret[]
+
+  @@unique([userId, mode])
+  @@unique([userId, id, mode])
+  @@map("razorpay_connections")
+}
+
+// Amounts are signed integer currency minor units; history is append-only.
+model PaymentEntry {
+  id            String @id @default(cuid())
+  sequence      BigInt @unique @default(autoincrement())
+  userId        String
+  invoiceId     String
+  requestId     String
+  requestHash   String?
+  kind          PaymentEntryKind
+  amountMinor   BigInt
+  currency      String
+  openingSource String?
+  openingKey    String?
+  paymentDate   DateTime? @db.Date
+  reference     String?
+  notes         String @default("")
+  reversalOfId  String?
+  gatewayPaymentId String?
+  gatewayRefundId String?
+  createdAt     DateTime @default(now())
+  user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoice       Invoice @relation(fields: [userId, invoiceId], references: [userId, id], onDelete: NoAction, onUpdate: Restrict)
+  reversalOf    PaymentEntry? @relation("PaymentReversal", fields: [userId, invoiceId, reversalOfId], references: [userId, invoiceId, id], onDelete: NoAction, onUpdate: Restrict)
+  reversal      PaymentEntry? @relation("PaymentReversal")
+  gatewayPayment GatewayPayment? @relation(fields: [userId, invoiceId, gatewayPaymentId], references: [userId, invoiceId, id], onDelete: NoAction, onUpdate: Restrict)
+  gatewayRefund GatewayRefund? @relation(fields: [userId, invoiceId, gatewayRefundId], references: [userId, invoiceId, id], onDelete: NoAction, onUpdate: Restrict)
+
+  @@unique([userId, requestId])
+  @@unique([userId, openingKey])
+  @@unique([userId, invoiceId, id])
+  @@unique([userId, invoiceId, reversalOfId])
+  @@unique([userId, invoiceId, gatewayPaymentId])
+  @@unique([userId, invoiceId, gatewayRefundId])
+  @@index([userId, sequence])
+  @@index([userId, invoiceId, sequence])
+  @@index([userId, paymentDate])
+  @@map("payment_entries")
+}
+
+enum GatewayLinkState {
+  PENDING
+  ACTIVE
+  UNKNOWN
+  CANCELLING
+  PAID
+  CANCELLED
+  EXPIRED
+  FAILED
+}
+
+model GatewayLink {
+  id String @id @default(cuid())
+  userId String
+  invoiceId String
+  connectionId String
+  mode RazorpayMode
+  referenceId String @unique @db.VarChar(40)
+  amountMinor BigInt
+  activeKey String?
+  state GatewayLinkState @default(PENDING)
+  providerId String?
+  orderId String?
+  url String?
+  lastError String?
+  createAttemptedAt DateTime?
+  synchronizedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [userId, invoiceId], references: [userId, id], onDelete: NoAction, onUpdate: Restrict)
+  connection RazorpayConnection @relation(fields: [userId, connectionId, mode], references: [userId, id, mode], onDelete: NoAction, onUpdate: Restrict)
+  payments GatewayPayment[]
+  requests GatewayLinkRequest[]
+  @@unique([userId, id])
+  @@unique([userId, activeKey])
+  @@unique([connectionId, providerId])
+  @@unique([userId, invoiceId, id, connectionId])
+  @@index([userId, mode, createdAt])
+  @@index([userId, invoiceId, createdAt])
+  @@index([connectionId, orderId])
+  @@map("gateway_links")
+}
+
+// Every accepted create request replays its original link, including reuse aliases.
+model GatewayLinkRequest {
+  userId String
+  requestId String @db.VarChar(100)
+  linkId String
+  createdAt DateTime @default(now())
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  link GatewayLink @relation(fields:[userId,linkId],references:[userId,id],onDelete:NoAction,onUpdate:Restrict)
+  @@id([userId,requestId])
+  @@map("gateway_link_requests")
+}
+
+// Provider capture facts remain separate from invoice-applied ledger amounts.
+model GatewayPayment {
+  id String @id @default(cuid())
+  userId String
+  invoiceId String
+  linkId String
+  connectionId String
+  providerId String
+  receivedMinor BigInt
+  appliedMinor BigInt
+  currency String @db.VarChar(3)
+  method String @db.VarChar(32)
+  exception String?
+  providerCreatedAt DateTime
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [userId, invoiceId], references: [userId, id], onDelete: NoAction, onUpdate: Restrict)
+  link GatewayLink @relation(fields: [userId, invoiceId, linkId, connectionId], references: [userId, invoiceId, id, connectionId], onDelete: NoAction, onUpdate: Restrict)
+  refunds GatewayRefund[]
+  entry PaymentEntry?
+  @@unique([connectionId, providerId])
+  @@unique([userId, invoiceId, id])
+  @@index([userId, invoiceId, createdAt])
+  @@map("gateway_payments")
+}
+
+model GatewayRefund {
+  id String @id @default(cuid())
+  userId String
+  invoiceId String
+  paymentId String
+  connectionId String
+  providerId String
+  amountMinor BigInt
+  appliedMinor BigInt @default(0)
+  status String @db.VarChar(16)
+  providerCreatedAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [userId, invoiceId], references: [userId, id], onDelete: NoAction, onUpdate: Restrict)
+  payment GatewayPayment @relation(fields: [userId, invoiceId, paymentId], references: [userId, invoiceId, id], onDelete: NoAction, onUpdate: Restrict)
+  entry PaymentEntry?
+  @@unique([connectionId, providerId])
+  @@unique([userId, invoiceId, id])
+  @@map("gateway_refunds")
+}
+
+model GatewayWebhookEvent {
+  id String @id @default(cuid())
+  connectionId String
+  providerEventId String @db.VarChar(200)
+  digest String @db.Char(64)
+  event String @db.VarChar(100)
+  outcome String @db.VarChar(16)
+  createdAt DateTime @default(now())
+  connection RazorpayConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  @@unique([connectionId, providerEventId])
+  @@map("gateway_webhook_events")
+}
+
+// Retired secrets remain valid only through the provider's 24-hour retry window.
+model GatewayWebhookSecret {
+  id String @id @default(cuid())
+  connectionId String
+  ciphertext String
+  expiresAt DateTime
+  connection RazorpayConnection @relation(fields:[connectionId],references:[id],onDelete:Cascade)
+  @@index([connectionId, expiresAt])
+  @@map("gateway_webhook_secrets")
 }
 
 enum LineItemType {
@@ -230,12 +449,75 @@ model CatalogItem {
   currency    String
   isArchived  Boolean      @default(false)
   usedAt      DateTime?
+  // Null means untracked. Enabling tracking and opening history are atomic.
+  stockTrackingStartedAt DateTime?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   lineItems   LineItem[]
+  stockActions StockAction[]
+  stockMovements StockMovement[]
 
   @@unique([userId, sku])
+  @@unique([userId, id])
   @@index([userId, isArchived, name])
   @@map("catalog_items")
+}
+
+// An immutable owner action groups movements and records retries even with no delta.
+// Additional source/append-only invariants: prisma/constraints/inventory.sql.
+model StockAction {
+  id            String @id @default(cuid())
+  sequence      BigInt @unique @default(autoincrement())
+  userId        String
+  requestId     String @db.VarChar(100)
+  requestHash   String @db.Char(64)
+  kind          StockActionKind
+  sourceKey     String? @db.VarChar(160)
+  catalogItemId String?
+  invoiceId     String?
+  reversalOfId  String?
+  reason        String @db.VarChar(500)
+  effectiveDate DateTime @db.Date
+  createdAt     DateTime @default(now())
+
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  catalogItem CatalogItem? @relation(fields: [userId, catalogItemId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
+  invoice     Invoice? @relation(fields: [userId, invoiceId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
+  reversalOf  StockAction? @relation("StockActionReversal", fields: [userId, reversalOfId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
+  reversal    StockAction? @relation("StockActionReversal")
+  movements   StockMovement[]
+
+  @@unique([userId, id])
+  @@unique([userId, requestId])
+  @@unique([userId, sourceKey])
+  @@unique([userId, reversalOfId])
+  @@index([userId, sequence])
+  @@index([userId, catalogItemId])
+  @@index([userId, invoiceId])
+  @@map("stock_actions")
+}
+
+// The ledger sum is authoritative; no independently editable balance cache.
+model StockMovement {
+  id            String @id @default(cuid())
+  userId        String
+  actionId      String
+  catalogItemId String
+  quantityDelta Decimal @db.Decimal(18, 3)
+
+  action      StockAction @relation(fields: [userId, actionId], references: [userId, id], onDelete: Cascade, onUpdate: NoAction)
+  catalogItem CatalogItem @relation(fields: [userId, catalogItemId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([actionId, catalogItemId])
+  @@index([userId, catalogItemId])
+  @@map("stock_movements")
+}
+
+enum StockActionKind {
+  OPENING
+  ADJUSTMENT
+  INVOICE_ISSUE
+  INVOICE_EDIT
+  INVOICE_VOID
 }

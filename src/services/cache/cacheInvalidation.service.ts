@@ -118,6 +118,11 @@ export class CacheInvalidationService {
      * Called after creating, updating, or deleting invoices
      */
     invalidateAllLists: () => {
+      // Invoice posting changes stock; first use also fixes catalog identity.
+      this.queryClient.invalidateQueries({ queryKey: queryKeys.inventory })
+      this.queryClient.invalidateQueries({ queryKey: queryKeys.payments })
+      this.queryClient.invalidateQueries({ queryKey: queryKeys.gateway })
+      this.queryClient.invalidateQueries({ queryKey: ['catalog'] })
       this.queryClient.invalidateQueries({ 
         queryKey: queryKeyUtils.getAllInvoiceListKeys() 
       })
@@ -168,7 +173,7 @@ export class CacheInvalidationService {
     /**
      * Update invoice status optimistically across all queries
      */
-    updateInvoiceStatus: (invoiceId: string, status: 'DRAFT' | 'SENT' | 'PAID') => {
+    updateInvoiceStatus: (invoiceId: string, status: 'DRAFT' | 'SENT' | 'PAID' | 'VOIDED') => {
       // Update detail query
       this.queryClient.setQueryData(queryKeys.invoice(invoiceId), (old: any) => {
         if (!old) return old

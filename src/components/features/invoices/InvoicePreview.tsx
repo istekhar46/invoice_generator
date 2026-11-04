@@ -1,6 +1,10 @@
 import React from 'react'
 import type { Invoice } from '../../../types/entities'
-import { invoiceParties, documentTotals } from '../../../utils/invoiceDocument'
+import {
+  invoiceParties,
+  documentTotals,
+  documentPaymentUrl,
+} from '../../../utils/invoiceDocument'
 import type {
   InvoiceCompany,
   InvoiceCustomer,
@@ -24,6 +28,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
   const currency = invoice.currency || 'USD'
   const amount = (value = 0) => formatCurrency(value, currency)
   const totals = documentTotals(invoice)
+  const paymentUrl = documentPaymentUrl(invoice)
   const address = (party?: InvoiceCompany | InvoiceCustomer | null) =>
     party && (
       <div className="whitespace-pre-line text-sm leading-relaxed text-slate-500">
@@ -66,7 +71,9 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
           )}
         </div>
         <div className="space-y-1 text-sm sm:text-right">
-          <h1 className="mb-3 text-3xl font-bold text-slate-900">INVOICE</h1>
+          <h1 className="mb-3 text-3xl font-bold text-slate-900">
+            {invoice.status === 'voided' ? 'VOIDED INVOICE' : 'INVOICE'}
+          </h1>
           <p>{invoice.invoiceNumber || 'Preview'}</p>
           {invoice.serviceDate && (
             <p>Invoice date: {formatDate(invoice.serviceDate)}</p>
@@ -140,6 +147,21 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                 Terms & payment instructions
               </h3>
               <p className="whitespace-pre-line text-sm">{invoice.terms}</p>
+            </section>
+          )}
+          {paymentUrl && (
+            <section>
+              <h3 className="mb-2 text-xs font-semibold uppercase text-slate-400">
+                Pay by UPI
+              </h3>
+              <a
+                href={paymentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="break-all text-sm text-primary-700 underline"
+              >
+                {paymentUrl}
+              </a>
             </section>
           )}
         </div>

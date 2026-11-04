@@ -280,8 +280,9 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
     setMessage('')
     try {
       calculateInvoiceForEdit(data.lineItems, data.taxRate, data, savedInvoice)
+      const { amountPaid, ...details } = data
       const payload = {
-        ...data,
+        ...details,
         customerId: data.customerId || undefined,
         lineItems: data.lineItems.map(transformLineItemToDto),
       }
@@ -291,6 +292,7 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
             ...payload,
             isQuickInvoice: true,
             clientRequestId: draftId,
+            ...(initialGuestData && { importedGuestDraft: true, amountPaid }),
           })
       const saved = transformInvoiceResponse(result)
       setSavedInvoice(saved)
@@ -896,9 +898,25 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
                   min="0"
                   max={totals?.total}
                   step={step}
+                  readOnly={!isGuest}
                   {...register('amountPaid', numeric)}
                 />
               </label>
+              {!isGuest && (
+                <p className="text-xs leading-relaxed text-slate-500">
+                  {initialGuestData && !savedId
+                    ? 'The imported paid amount will be kept as an owner-provided opening balance; payment method and date are unknown.'
+                    : 'Paid amounts come from payment history. Issued INR invoices can receive UPI receipts.'}{' '}
+                  {savedId && (
+                    <a
+                      className="text-primary-700 underline"
+                      href={`/payments?invoice=${encodeURIComponent(savedId)}`}
+                    >
+                      View payment history
+                    </a>
+                  )}
+                </p>
+              )}
               <div className="flex justify-between rounded-xl bg-primary-50 p-4 text-base font-bold text-primary-800">
                 <span>Balance due</span>
                 <output aria-label="Balance due">
@@ -965,7 +983,11 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
             </h3>
             <label className="qi-field">
               <span>Currency</span>
-              <select aria-label="Currency" {...register('currency')}>
+              <select
+                aria-label="Currency"
+                {...register('currency')}
+                disabled={!isGuest && !!savedInvoice?.hasPaymentHistory}
+              >
                 {SUPPORTED_CURRENCIES.map(code => (
                   <option key={code} value={code}>
                     {code} — {currencyNames.of(code)}

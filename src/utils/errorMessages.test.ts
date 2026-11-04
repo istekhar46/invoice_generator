@@ -77,6 +77,12 @@ describe('getUserFriendlyErrorMessage', () => {
     expect(result.title).toBe('Email Already Registered')
     expect(result.message).toContain('already in use')
   })
+
+  it.each(['Insufficient stock.', 'Voided invoices cannot be edited. Create a new invoice instead.'])(
+    'preserves an actionable business conflict: %s', message => {
+      expect(getUserFriendlyErrorMessage({ message }, { status: 409, operation: 'update' }).message).toBe(message)
+    }
+  )
 })
 
 describe('sanitizeErrorMessage', () => {

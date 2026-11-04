@@ -2,6 +2,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useUserProfile } from './useAuth'
 import { catalogApi } from '../services/api/catalogApi'
 import type { CatalogItemInput, CatalogQuery } from '../types/catalog'
+import { queryKeys } from '../lib/queryKeys'
+
+function refreshCatalog(
+  client: ReturnType<typeof useQueryClient>,
+  userId?: string
+) {
+  return Promise.all([
+    client.invalidateQueries({ queryKey: ['catalog', userId] }),
+    client.invalidateQueries({ queryKey: [...queryKeys.inventory, userId] }),
+  ])
+}
 
 export function useCatalog(query: CatalogQuery = {}) {
   const { data: user } = useUserProfile()
@@ -21,8 +32,7 @@ export function useSaveCatalogItem() {
     retry: false,
     mutationFn: ({ id, data }: { id?: string; data: CatalogItemInput }) =>
       id ? catalogApi.update(id, data) : catalogApi.create(data),
-    onSuccess: () =>
-      client.invalidateQueries({ queryKey: ['catalog', user?.id] }),
+    onSuccess: () => refreshCatalog(client, user?.id),
   })
 }
 
@@ -33,7 +43,6 @@ export function useArchiveCatalogItem() {
     retry: false,
     mutationFn: ({ id, isArchived }: { id: string; isArchived: boolean }) =>
       catalogApi.update(id, { isArchived }),
-    onSuccess: () =>
-      client.invalidateQueries({ queryKey: ['catalog', user?.id] }),
+    onSuccess: () => refreshCatalog(client, user?.id),
   })
 }

@@ -76,6 +76,11 @@ export class UpdateCatalogItemDto extends PartialType(CreateCatalogItemDto, {
 }
 
 export class CatalogQueryDto {
+  @ApiPropertyOptional({ enum: ['tracked', 'untracked'], description: 'Stock tracking status.' })
+  @IsOptional()
+  @IsIn(['tracked', 'untracked'])
+  tracking?: 'tracked' | 'untracked';
+
   @IsOptional()
   @IsString()
   @MaxLength(200)

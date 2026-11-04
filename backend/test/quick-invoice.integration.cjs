@@ -15,6 +15,10 @@ const { DashboardService } = require('../dist/dashboard/dashboard.service.js');
 const { InvoiceDefaultsService } = require('../dist/invoice/invoice-defaults.service.js');
 const prisma = new PrismaService();
 const service = new InvoiceService(prisma);
+const { PaymentService } = require('../dist/payments/payment.service.js');
+const payments = new PaymentService(prisma);
+const createQuick = (userId, data) =>
+  service.createQuick(userId, { importedGuestDraft: true, clientRequestId: randomUUID(), ...data });
 const users = [`qi-test-${randomUUID()}`, `qi-test-${randomUUID()}`];
 const payload = {
   isQuickInvoice: true,
@@ -43,19 +47,19 @@ const payload = {
     await prisma.user.create({
       data: { id, email: `${id}@invoiceo.test`, displayName: 'Invoice integration test' },
     });
-  const first = await service.createQuick(users[0], { ...payload, clientRequestId: 'draft-1' });
+  const first = await createQuick(users[0], { ...payload, clientRequestId: 'draft-1' });
   assert.equal(first.total, 920);
   assert.equal(first.currency, 'INR');
   assert.equal(first.amountPaid, 300);
   assert.equal(first.purchaseOrderNumber, 'PO-42');
   assert.equal(first.shippingAddress, 'Client warehouse\nMumbai');
   assert.equal(
-    (await service.createQuick(users[0], { ...payload, clientRequestId: 'draft-1' })).id,
+    (await createQuick(users[0], { ...payload, clientRequestId: 'draft-1' })).id,
     first.id,
   );
-  assert.notEqual((await service.createQuick(users[1], payload)).id, first.id);
+  assert.notEqual((await createQuick(users[1], payload)).id, first.id);
   await assert.rejects(
-    () => service.createQuick(users[0], payload),
+    () => createQuick(users[0], payload),
     (error) => error.getStatus() === 409,
   );
   await assert.rejects(
@@ -76,18 +80,24 @@ const payload = {
   assert.equal(edited.notes, '');
   assert.equal(edited.terms, '');
   assert.equal(edited.quickCustomerName, 'Edited Client');
-  await service.updateStatus(users[0], first.id, { status: 'PAID' });
+  await service.updateStatus(users[0], first.id, { status: 'SENT' });
+  await payments.record(users[0], first.id, {
+    requestId: randomUUID(),
+    paymentDate: '2026-11-03',
+    amount: '630.00',
+  });
   assert.equal((await service.findById(users[0], first.id)).amountPaid, 930);
-  const usd = await service.createQuick(users[0], {
+  const usd = await createQuick(users[0], {
     ...payload,
     invoiceNumber: 'USD-001',
     currency: 'USD',
     discountValue: 0,
     shippingAmount: 0,
-    amountPaid: 0,
+    amountPaid: 100,
     lineItems: [{ ...payload.lineItems[0], rate: 100 }],
   });
-  await service.updateStatus(users[0], usd.id, { status: 'PAID' });
+  await service.updateStatus(users[0], usd.id, { status: 'SENT' });
+  assert.equal((await service.findById(users[0], usd.id)).status, 'PAID');
   const stats = await new DashboardService(prisma).getStatistics(users[0]);
   assert.equal(stats.totalRevenue, 100);
   assert.equal(stats.currencyTotals.find((value) => value.currency === 'INR').totalRevenue, 930);
@@ -96,17 +106,17 @@ const payload = {
   assert.equal(reopened.amountPaid, 930);
   assert.equal(reopened.total, 940);
   const auto = await Promise.all([
-    service.createQuick(users[0], { ...payload, invoiceNumber: '' }),
-    service.createQuick(users[0], { ...payload, invoiceNumber: '' }),
+    createQuick(users[0], { ...payload, invoiceNumber: '' }),
+    createQuick(users[0], { ...payload, invoiceNumber: '' }),
   ]);
   assert.notEqual(auto[0].invoiceNumber, auto[1].invoiceNumber);
   const imports = await Promise.all([
-    service.createQuick(users[0], {
+    createQuick(users[0], {
       ...payload,
       invoiceNumber: 'RACE-1',
       clientRequestId: 'race-1',
     }),
-    service.createQuick(users[0], {
+    createQuick(users[0], {
       ...payload,
       invoiceNumber: 'RACE-1',
       clientRequestId: 'race-1',
@@ -152,7 +162,11 @@ const payload = {
   assert.equal(detailsOnly.subtotal, 0.67);
   assert.equal(detailsOnly.total, 0.67);
   assert.equal(detailsOnly.lineItems[0].amount, 0.335);
-  assert.equal((await service.update(users[0], legacy.id, { amountPaid: 0.67 })).total, 0.67);
+  await assert.rejects(
+    () => service.update(users[0], legacy.id, { amountPaid: 0.67 }),
+    (error) => error.getStatus() === 400,
+  );
+  assert.equal((await service.findById(users[0], legacy.id)).total, 0.67);
   await assert.rejects(
     () => service.update(users[0], legacy.id, { amountPaid: 0.68 }),
     (error) => error.getStatus() === 400,

@@ -5,6 +5,12 @@ import { LineItemResponseDto } from './line-item-response.dto';
 import { CustomerResponseDto } from '../../customer/dto/customer-response.dto';
 
 export class InvoiceResponseDto {
+  @ApiProperty({
+    nullable: true,
+    description: 'Current matching Live Razorpay payment URL, otherwise null.',
+  })
+  @Expose()
+  paymentUrl!: string | null;
   @ApiProperty({ description: 'Invoice ID', example: 'cuid123456789' })
   @Expose()
   id!: string;
@@ -68,6 +74,13 @@ export class InvoiceResponseDto {
   @ApiProperty({ description: 'Invoice status', example: 'DRAFT', enum: InvoiceStatus })
   @Expose()
   status!: InvoiceStatus;
+
+  @ApiProperty({
+    description: 'Original issue time; unknown for historical invoices.',
+    nullable: true,
+  })
+  @Expose()
+  issuedAt!: Date | null;
 
   @ApiProperty({
     description: 'Whether this is a quick invoice (inline company/customer details)',
@@ -159,6 +172,12 @@ export class InvoiceResponseDto {
   @ApiProperty({ required: false })
   @Expose()
   amountPaid?: number;
+
+  @ApiProperty({
+    description: 'Whether retained payment history fixes currency and prevents draft deletion.',
+  })
+  @Expose()
+  hasPaymentHistory!: boolean;
 
   @ApiProperty({ required: false })
   @Expose()

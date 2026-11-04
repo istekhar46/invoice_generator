@@ -5,6 +5,7 @@ import { transformInvoiceResponse } from '../../../utils/apiTransformers'
  */
 
 import React, { useState, useMemo, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import type { Invoice, InvoiceStatus } from '../../../types/entities'
 import {
   usePaginatedInvoices,
@@ -39,6 +40,7 @@ import {
   MoreVertical,
   Check,
   Send,
+  Ban,
   ArrowRight,
   Calendar,
   DollarSign,
@@ -68,9 +70,10 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
   const [currentPage, setCurrentPage] = useState(1)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deletingInvoice, setDeletingInvoice] = useState<Invoice | null>(null)
-  const [showActionsMenu, setShowActionsMenu] = useState<string | null>(null)
   const [pdfError, setPdfError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [voidingInvoice, setVoidingInvoice] = useState<Invoice | null>(null)
+  const [statusError, setStatusError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
 
   // Build query parameters
@@ -78,7 +81,11 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
     () => ({
       status:
         selectedStatus !== 'all'
-          ? (selectedStatus.toUpperCase() as 'DRAFT' | 'SENT' | 'PAID')
+          ? (selectedStatus.toUpperCase() as
+              | 'DRAFT'
+              | 'SENT'
+              | 'PAID'
+              | 'VOIDED')
           : undefined,
     }),
     [selectedStatus]
@@ -109,18 +116,6 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
     smartPrefetch('invoice-list')
   }, [smartPrefetch])
 
-  // Close actions menu when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = () => {
-      setShowActionsMenu(null)
-    }
-
-    if (showActionsMenu) {
-      document.addEventListener('click', handleClickOutside)
-      return () => document.removeEventListener('click', handleClickOutside)
-    }
-  }, [showActionsMenu])
-
   const handleStatusFilter = (status: InvoiceStatus | 'all') => {
     setSelectedStatus(status)
     setCurrentPage(1) // Reset to first page when filtering
@@ -139,20 +134,35 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
     invoice: Invoice,
     newStatus: InvoiceStatus
   ) => {
+    if (newStatus === 'voided') {
+      setStatusError(null)
+      setVoidingInvoice(invoice)
+      return
+    }
+    await changeStatus(invoice, newStatus)
+  }
+
+  const changeStatus = async (invoice: Invoice, newStatus: InvoiceStatus) => {
+    setStatusError(null)
     try {
       await updateStatusMutation.mutateAsync({
         id: invoice.id,
-        status: newStatus.toUpperCase() as 'DRAFT' | 'SENT' | 'PAID',
+        status: newStatus.toUpperCase() as 'DRAFT' | 'SENT' | 'PAID' | 'VOIDED',
       })
-      setShowActionsMenu(null)
+      setVoidingInvoice(null)
     } catch (error) {
-      console.error('Status update failed:', error)
+      const problem = error as {
+        message?: string
+        data?: { details?: { available?: string } }
+      }
+      setStatusError(
+        `${problem.message || 'Unable to change invoice status.'}${problem.data?.details?.available !== undefined ? ` Available stock: ${problem.data.details.available}.` : ''}`
+      )
     }
   }
 
   const handlePdfError = (error: string) => {
     setPdfError(error)
-    setShowActionsMenu(null)
   }
 
   const clearPdfError = () => {
@@ -175,7 +185,8 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       await deleteInvoiceMutation.mutateAsync(deletingInvoice.id)
       setShowDeleteConfirm(false)
       setDeletingInvoice(null)
-    } catch (error: any) {
+    } catch (caught) {
+      const error = caught as { status?: number; message?: string }
       console.error('Delete failed:', error)
 
       // Set specific error message based on error type
@@ -195,7 +206,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
     }
   }
 
-  const getCustomerName = (invoice: any) => {
+  const getCustomerName = (invoice: Invoice) => {
     // API response has customer object, not customerId
     return invoice.quickCustomerName || invoice.customer?.name || 'Customer'
   }
@@ -273,6 +284,13 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
               >
                 Paid
               </Button>
+              <Button
+                variant={selectedStatus === 'voided' ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => handleStatusFilter('voided')}
+              >
+                Voided
+              </Button>
             </div>
           </div>
 
@@ -307,6 +325,15 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
           onRetry={() => refetchInvoices()}
           title="Failed to load invoices"
         />
+      )}
+
+      {statusError && !voidingInvoice && (
+        <p
+          role="alert"
+          className="rounded-xl border border-danger-200 bg-danger-50 p-4 text-sm text-danger-700"
+        >
+          {statusError}
+        </p>
       )}
 
       {/* PDF Error Display */}
@@ -440,14 +467,12 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
               {invoices.map((invoice, index) => (
                 <InvoiceCard
                   key={invoice.id}
-                  invoice={invoice as any}
+                  invoice={invoice}
                   customerName={getCustomerName(invoice)}
-                  onSelect={() => onInvoiceSelect?.(invoice as any)}
-                  onEdit={() => handleEditInvoice(invoice as any)}
-                  onDelete={() => handleDeleteInvoice(invoice as any)}
-                  onStatusChange={status =>
-                    handleStatusChange(invoice as any, status)
-                  }
+                  onSelect={() => onInvoiceSelect?.(invoice)}
+                  onEdit={() => handleEditInvoice(invoice)}
+                  onDelete={() => handleDeleteInvoice(invoice)}
+                  onStatusChange={status => handleStatusChange(invoice, status)}
                   onPdfError={handlePdfError}
                   index={index}
                 />
@@ -458,14 +483,12 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
               {invoices.map(invoice => (
                 <InvoiceListRow
                   key={invoice.id}
-                  invoice={invoice as any}
+                  invoice={invoice}
                   customerName={getCustomerName(invoice)}
-                  onSelect={() => onInvoiceSelect?.(invoice as any)}
-                  onEdit={() => handleEditInvoice(invoice as any)}
-                  onDelete={() => handleDeleteInvoice(invoice as any)}
-                  onStatusChange={status =>
-                    handleStatusChange(invoice as any, status)
-                  }
+                  onSelect={() => onInvoiceSelect?.(invoice)}
+                  onEdit={() => handleEditInvoice(invoice)}
+                  onDelete={() => handleDeleteInvoice(invoice)}
+                  onStatusChange={status => handleStatusChange(invoice, status)}
                   onPdfError={handlePdfError}
                 />
               ))}
@@ -487,6 +510,47 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
           className="mt-8"
         />
       )}
+
+      <Modal
+        open={!!voidingInvoice}
+        onClose={() => {
+          if (!updateStatusMutation.isPending) setVoidingInvoice(null)
+        }}
+        title="Void invoice"
+        size="small"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Void <strong>{voidingInvoice?.invoiceNumber}</strong>? Any stock
+            deducted by this invoice will be returned. The invoice stays in your
+            records and cannot be reopened.
+          </p>
+          {statusError && (
+            <p role="alert" className="text-sm text-danger-700">
+              {statusError}
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              disabled={updateStatusMutation.isPending}
+              onClick={() => setVoidingInvoice(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              loading={updateStatusMutation.isPending}
+              disabled={updateStatusMutation.isPending}
+              onClick={() => {
+                if (voidingInvoice) void changeStatus(voidingInvoice, 'voided')
+              }}
+            >
+              Void invoice
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
       <Modal
@@ -575,7 +639,7 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
     // Prefetch invoice details and customer's other invoices on hover
     prefetchInvoice(invoice.id)
     // Note: Using any type cast since API response structure may vary
-    const customerData = (invoice as any).customer
+    const customerData = invoice.customer
     if (customerData?.id) {
       prefetchCustomerInvoices(customerData.id)
     }
@@ -629,59 +693,13 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
 
               {showActionsMenu && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-medium border border-gray-200 z-10 py-2">
-                  <button
-                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                    onClick={e => {
-                      e.stopPropagation()
-                      onEdit()
-                      setShowActionsMenu(false)
-                    }}
-                  >
-                    <Edit className="h-4 w-4 mr-3 text-gray-400" />
-                    Edit Invoice
-                  </button>
-
-                  {invoice.status !== 'sent' && (
-                    <button
-                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      onClick={e => {
-                        e.stopPropagation()
-                        onStatusChange('sent')
-                        setShowActionsMenu(false)
-                      }}
-                    >
-                      <Send className="h-4 w-4 mr-3 text-secondary-500" />
-                      Mark as Sent
-                    </button>
-                  )}
-
-                  {invoice.status !== 'paid' && (
-                    <button
-                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      onClick={e => {
-                        e.stopPropagation()
-                        onStatusChange('paid')
-                        setShowActionsMenu(false)
-                      }}
-                    >
-                      <Check className="h-4 w-4 mr-3 text-success-500" />
-                      Mark as Paid
-                    </button>
-                  )}
-
-                  <div className="border-t border-gray-100 my-2" />
-
-                  <button
-                    className="flex items-center w-full px-4 py-2 text-sm text-danger-600 hover:bg-danger-50 transition-colors"
-                    onClick={e => {
-                      e.stopPropagation()
-                      onDelete()
-                      setShowActionsMenu(false)
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 mr-3" />
-                    Delete Invoice
-                  </button>
+                  <InvoiceActionItems
+                    invoice={invoice}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onStatusChange={onStatusChange}
+                    onClose={() => setShowActionsMenu(false)}
+                  />
                 </div>
               )}
             </div>
@@ -817,64 +835,117 @@ const InvoiceListRow: React.FC<InvoiceListRowProps> = ({
 
             {showActionsMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-medium border border-gray-200 z-10 py-2">
-                <button
-                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                  onClick={e => {
-                    e.stopPropagation()
-                    onEdit()
-                    setShowActionsMenu(false)
-                  }}
-                >
-                  <Edit className="h-4 w-4 mr-3 text-gray-400" />
-                  Edit Invoice
-                </button>
-
-                {invoice.status !== 'sent' && (
-                  <button
-                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                    onClick={e => {
-                      e.stopPropagation()
-                      onStatusChange('sent')
-                      setShowActionsMenu(false)
-                    }}
-                  >
-                    <Send className="h-4 w-4 mr-3 text-secondary-500" />
-                    Mark as Sent
-                  </button>
-                )}
-
-                {invoice.status !== 'paid' && (
-                  <button
-                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                    onClick={e => {
-                      e.stopPropagation()
-                      onStatusChange('paid')
-                      setShowActionsMenu(false)
-                    }}
-                  >
-                    <Check className="h-4 w-4 mr-3 text-success-500" />
-                    Mark as Paid
-                  </button>
-                )}
-
-                <div className="border-t border-gray-100 my-2" />
-
-                <button
-                  className="flex items-center w-full px-4 py-2 text-sm text-danger-600 hover:bg-danger-50 transition-colors"
-                  onClick={e => {
-                    e.stopPropagation()
-                    onDelete()
-                    setShowActionsMenu(false)
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 mr-3" />
-                  Delete Invoice
-                </button>
+                <InvoiceActionItems
+                  invoice={invoice}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onStatusChange={onStatusChange}
+                  onClose={() => setShowActionsMenu(false)}
+                />
               </div>
             )}
           </div>
         </div>
       </div>
     </Card>
+  )
+}
+
+function InvoiceActionItems({
+  invoice,
+  onEdit,
+  onDelete,
+  onStatusChange,
+  onClose,
+}: Pick<
+  InvoiceCardProps,
+  'invoice' | 'onEdit' | 'onDelete' | 'onStatusChange'
+> & { onClose: () => void }) {
+  const action =
+    (callback: () => void) => (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation()
+      callback()
+      onClose()
+    }
+  const itemClass =
+    'flex items-center w-full px-4 py-2 text-sm hover:bg-gray-50 transition-colors'
+  if (invoice.status === 'voided')
+    return (
+      <div className="px-4 py-2 text-sm text-gray-500">
+        Voided invoices are read-only.
+        <Link
+          className="mt-2 block text-primary-700 underline"
+          to={`/payments?invoice=${encodeURIComponent(invoice.id)}`}
+          onClick={onClose}
+        >
+          Payment history
+        </Link>
+        <Link className="mt-2 block text-primary-700 underline" to={`/payments/links?invoice=${encodeURIComponent(invoice.id)}&mode=LIVE`} onClick={onClose}>Payment links</Link>
+      </div>
+    )
+  return (
+    <>
+      <button className={itemClass} onClick={action(onEdit)}>
+        <Edit className="h-4 w-4 mr-3 text-gray-400" />
+        Edit Invoice
+      </button>
+      {invoice.status === 'draft' && (
+        <button
+          className={itemClass}
+          onClick={action(() => onStatusChange('sent'))}
+        >
+          <Send className="h-4 w-4 mr-3 text-secondary-500" />
+          Issue invoice
+        </button>
+      )}
+      {invoice.status === 'sent' &&
+        (invoice.currency ?? 'USD') === 'INR' &&
+        invoice.total > (invoice.amountPaid ?? 0) && (
+          <Link
+            className={itemClass}
+            to={`/payments?invoice=${encodeURIComponent(invoice.id)}&record=true`}
+            onClick={event => {
+              event.stopPropagation()
+              onClose()
+            }}
+          >
+            <Check className="h-4 w-4 mr-3 text-success-500" />
+            Record UPI payment
+          </Link>
+        )}
+      <Link
+        className={itemClass}
+        to={`/payments?invoice=${encodeURIComponent(invoice.id)}`}
+        onClick={event => {
+          event.stopPropagation()
+          onClose()
+        }}
+      >
+        <DollarSign className="h-4 w-4 mr-3 text-gray-400" />
+        Payment history
+      </Link>
+      <Link className={itemClass} to={`/payments/links?invoice=${encodeURIComponent(invoice.id)}&mode=LIVE`} onClick={event => { event.stopPropagation(); onClose() }}>Payment links</Link>
+      {invoice.status === 'sent' &&
+        !(invoice.amountPaid && invoice.amountPaid > 0) && (
+          <button
+            className={cn(itemClass, 'text-danger-600')}
+            onClick={action(() => onStatusChange('voided'))}
+          >
+            <Ban className="h-4 w-4 mr-3" />
+            Void invoice
+          </button>
+        )}
+      {invoice.status === 'draft' &&
+        !invoice.hasPaymentHistory &&
+        !(invoice.amountPaid && invoice.amountPaid > 0) && (
+          <button
+            className={cn(itemClass, 'text-danger-600')}
+            onClick={action(onDelete)}
+          >
+            <Trash2 className="h-4 w-4 mr-3" />
+            Delete Invoice
+          </button>
+        )}
+    </>
   )
 }

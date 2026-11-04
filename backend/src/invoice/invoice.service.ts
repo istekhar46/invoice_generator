@@ -1,5 +1,16 @@
 import { randomUUID } from 'node:crypto';
-import { validateCatalogReferences } from '../catalog/catalog-references';
+import { lockInvoiceRow } from './invoice-lock';
+import { createOpeningPayment, paymentBalance } from '../payments/payment-ledger';
+import { paidCache, paidStatus, savedMinor } from '../payments/payment-money';
+import { lockCatalogItems, validateCatalogReferences } from '../catalog/catalog-references';
+import { aggregateStockQuantities } from '../inventory/stock-quantity';
+import {
+  editInvoiceStock,
+  invoiceStockReturns,
+  issueInvoiceStock,
+  trackedProductIds,
+  voidInvoiceStock,
+} from '../inventory/invoice-stock';
 import {
   calculateInvoiceForEdit,
   invoicePricingChanged,
@@ -12,9 +23,9 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
-  Logger,
 } from '@nestjs/common';
 import { Invoice, LineItem, InvoiceStatus, Prisma } from '@prisma/client';
+import { invoicePaymentUrl, requireResolvedLiveLink } from '../razorpay/gateway-policy';
 import { BaseUserService } from '../common/services/base-user-service';
 import {
   CreateInvoiceDto,
@@ -33,6 +44,8 @@ export interface InvoiceTotals {
 }
 
 export interface InvoiceWithRelations extends Invoice {
+  hasPaymentHistory?: boolean;
+  paymentUrl?: string | null;
   customer: {
     id: string;
     name: string;
@@ -50,9 +63,9 @@ export interface InvoiceWithRelations extends Invoice {
 
 @Injectable()
 export class InvoiceService extends BaseUserService {
-  private readonly logger = new Logger(InvoiceService.name);
-
   async create(userId: string, createInvoiceDto: CreateInvoiceDto): Promise<InvoiceWithRelations> {
+    if ('amountPaid' in createInvoiceDto)
+      throw new BadRequestException('Record payments after issuing the invoice.');
     // Validate user exists
     await this.validateUserExists(userId);
 
@@ -77,7 +90,8 @@ export class InvoiceService extends BaseUserService {
     // Create invoice with line items in a transaction
     const invoice = await this.prisma
       .$transaction(async (tx) => {
-        await validateCatalogReferences(tx, userId, createInvoiceDto.lineItems);
+        const products = await validateCatalogReferences(tx, userId, createInvoiceDto.lineItems);
+        aggregateStockQuantities(createInvoiceDto.lineItems, trackedProductIds(products));
         // Create the invoice
         const newInvoice = await tx.invoice.create({
           data: {
@@ -131,6 +145,12 @@ export class InvoiceService extends BaseUserService {
     userId: string,
     createQuickInvoiceDto: CreateQuickInvoiceDto,
   ): Promise<InvoiceWithRelations> {
+    if ((createQuickInvoiceDto.amountPaid ?? 0) > 0 && !createQuickInvoiceDto.importedGuestDraft)
+      throw new BadRequestException(
+        'Record payments after issuing the invoice. Only a guest import may provide an opening paid balance.',
+      );
+    if (createQuickInvoiceDto.importedGuestDraft && !createQuickInvoiceDto.clientRequestId?.trim())
+      throw new BadRequestException('A guest import requires its draft request ID.');
     // Validate user exists
     await this.validateUserExists(userId);
 
@@ -172,7 +192,12 @@ export class InvoiceService extends BaseUserService {
     let invoice: Invoice;
     try {
       invoice = await this.prisma.$transaction(async (tx) => {
-        await validateCatalogReferences(tx, userId, createQuickInvoiceDto.lineItems);
+        const products = await validateCatalogReferences(
+          tx,
+          userId,
+          createQuickInvoiceDto.lineItems,
+        );
+        aggregateStockQuantities(createQuickInvoiceDto.lineItems, trackedProductIds(products));
         // Create the invoice with inline details
         const newInvoice = await tx.invoice.create({
           data: {
@@ -225,6 +250,8 @@ export class InvoiceService extends BaseUserService {
         await tx.lineItem.createMany({
           data: lineItemsData,
         });
+
+        await createOpeningPayment(tx, newInvoice);
 
         return newInvoice;
       });
@@ -317,6 +344,15 @@ export class InvoiceService extends BaseUserService {
           },
         },
         lineItems: true,
+        _count: {
+          select: { paymentEntries: true, gatewayPayments: { where: { link: { mode: 'LIVE' } } } },
+        },
+        gatewayLinks: {
+          where: { mode: 'LIVE', state: 'ACTIVE', connection: { enabled: true } },
+          select: { url: true, amountMinor: true },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
       },
       orderBy: { [sortBy]: sortOrder },
       skip,
@@ -329,7 +365,15 @@ export class InvoiceService extends BaseUserService {
     const hasPrev = page > 1;
 
     return {
-      data: invoices as InvoiceWithRelations[],
+      data: invoices.map((invoice) => {
+        const { gatewayLinks, ...details } = invoice;
+        return {
+          ...details,
+          hasPaymentHistory:
+            invoice._count.paymentEntries > 0 || invoice._count.gatewayPayments > 0,
+          paymentUrl: invoicePaymentUrl({ ...details, gatewayLinks }),
+        };
+      }),
       total,
       page,
       limit,
@@ -341,7 +385,7 @@ export class InvoiceService extends BaseUserService {
 
   async findById(userId: string, id: string): Promise<InvoiceWithRelations> {
     const invoice = await this.prisma.invoice.findFirst({
-      where: this.buildUserIsolatedWhere(userId, { id }),
+      where: { userId, id },
       include: {
         customer: {
           select: {
@@ -358,6 +402,15 @@ export class InvoiceService extends BaseUserService {
           },
         },
         lineItems: true,
+        _count: {
+          select: { paymentEntries: true, gatewayPayments: { where: { link: { mode: 'LIVE' } } } },
+        },
+        gatewayLinks: {
+          where: { mode: 'LIVE', state: 'ACTIVE', connection: { enabled: true } },
+          select: { url: true, amountMinor: true },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
       },
     });
 
@@ -365,94 +418,150 @@ export class InvoiceService extends BaseUserService {
       throw new NotFoundException('Invoice not found or access denied');
     }
 
-    return invoice as InvoiceWithRelations;
+    const { gatewayLinks, ...details } = invoice;
+    return {
+      ...details,
+      hasPaymentHistory: invoice._count.paymentEntries > 0 || invoice._count.gatewayPayments > 0,
+      paymentUrl: invoicePaymentUrl({ ...details, gatewayLinks }),
+    };
   }
 
   async update(userId: string, id: string, dto: UpdateInvoiceDto): Promise<InvoiceWithRelations> {
-    const existing = await this.findById(userId, id);
-    if (dto.customerId) await this.validateCustomerOwnership(dto.customerId, userId);
-    const serviceDate = dto.serviceDate ?? existing.serviceDate;
-    const dueDate = dto.dueDate ?? existing.dueDate;
-    this.validateInvoiceDates(serviceDate, dueDate);
-    const requestedNumber = dto.invoiceNumber?.trim();
-    const invoiceNumber = requestedNumber?.length ? requestedNumber : existing.invoiceNumber;
-    await this.ensureInvoiceNumberAvailable(userId, invoiceNumber, id);
-    const options = this.optionData(dto, dto.currency ?? existing.currency);
-    const pricing = { ...existing, ...options };
-    const lineItems = dto.lineItems ?? existing.lineItems;
-    const taxRate = dto.taxRate ?? existing.taxRate;
-    const totals = this.calculateTotals(lineItems, taxRate, pricing, existing);
-    const pricingChanged = invoicePricingChanged(lineItems, taxRate, pricing, existing);
-    const inlineFields = [
-      'quickCompanyName',
-      'quickCompanyAddress',
-      'quickCompanyCity',
-      'quickCompanyState',
-      'quickCompanyZipCode',
-      'quickCompanyPhone',
-      'quickCompanyEmail',
-      'quickCompanyTaxNumber',
-      'quickCustomerName',
-      'quickCustomerEmail',
-      'quickCustomerPhone',
-      'quickCustomerAddress',
-      'quickCustomerCity',
-      'quickCustomerState',
-      'quickCustomerZipCode',
-    ] as const;
-    if (
-      existing.isQuickInvoice &&
-      !(dto.customerId ?? existing.customerId) &&
-      !(dto.quickCustomerName ?? existing.quickCustomerName)?.trim()
-    ) {
-      throw new BadRequestException('Customer name is required.');
-    }
-    const inline = Object.fromEntries(
-      inlineFields
-        .filter((field) => existing.isQuickInvoice && dto[field] !== undefined)
-        .map((field) => [field, dto[field]]),
-    );
+    if ('amountPaid' in dto || 'importedGuestDraft' in dto)
+      throw new BadRequestException(
+        'Paid amounts come from payment history. Record or reverse a payment instead.',
+      );
     try {
-      await this.prisma.$transaction(async (tx) => {
-        await validateCatalogReferences(tx, userId, lineItems, existing.lineItems);
-        await tx.invoice.update({
-          where: { id },
-          data: {
+      await this.prisma.$transaction(
+        async (tx) => {
+          const existing = await this.lockInvoice(tx, userId, id);
+          if (existing.status === InvoiceStatus.VOIDED)
+            throw new ConflictException(
+              'Voided invoices cannot be edited. Create a new invoice instead.',
+            );
+          if (
+            dto.customerId &&
+            !(await tx.customer.findFirst({
+              where: { id: dto.customerId, userId },
+              select: { id: true },
+            }))
+          )
+            throw new NotFoundException('Customer not found or access denied');
+          const serviceDate = dto.serviceDate ?? existing.serviceDate;
+          const dueDate = dto.dueDate ?? existing.dueDate;
+          this.validateInvoiceDates(serviceDate, dueDate);
+          const requestedNumber = dto.invoiceNumber?.trim();
+          const invoiceNumber = requestedNumber?.length ? requestedNumber : existing.invoiceNumber;
+          await this.ensureInvoiceNumberAvailable(userId, invoiceNumber, id, tx);
+          const options = this.optionData(dto, dto.currency ?? existing.currency);
+          if (
+            dto.currency &&
+            dto.currency !== existing.currency &&
+            ((await tx.paymentEntry.count({ where: { userId, invoiceId: id } })) ||
+              (await tx.gatewayPayment.count({
+                where: { userId, invoiceId: id, link: { mode: 'LIVE' } },
+              })))
+          )
+            throw new ConflictException(
+              'Currency is fixed once an invoice has payment history, including reversed entries.',
+            );
+          const paid = await paymentBalance(tx, id, userId);
+          const pricing = {
+            ...existing,
             ...options,
-            ...inline,
-            invoiceNumber,
-            serviceDate,
-            dueDate,
+            amountPaid: paidCache(paid, dto.currency ?? existing.currency),
+          };
+          const lineItems = dto.lineItems ?? existing.lineItems;
+          const taxRate = dto.taxRate ?? existing.taxRate;
+          const totals = this.calculateTotals(
+            lineItems,
             taxRate,
-            ...(dto.customerId !== undefined && { customerId: dto.customerId }),
-            ...(dto.notes !== undefined && { notes: dto.notes }),
-            subtotal: totals.subtotal,
-            taxAmount: totals.taxAmount,
-            total: totals.total,
-            ...(existing.status === InvoiceStatus.PAID &&
-              totals.total > money(pricing.amountPaid, pricing.currency) && {
-                status: InvoiceStatus.SENT,
-              }),
-          },
-        });
-        if (dto.lineItems || pricingChanged) {
-          await tx.lineItem.deleteMany({ where: { invoiceId: id } });
-          await tx.lineItem.createMany({
-            data: lineItems.map((item, index) => ({
-              invoiceId: id,
-              type: item.type,
-              catalogItemId: item.catalogItemId ?? null,
-              description: item.description,
-              unit: item.unit.trim(),
-              quantity: item.quantity,
-              rate: item.rate,
-              amount: pricingChanged
-                ? money(item.quantity * item.rate, pricing.currency)
-                : existing.lineItems[index].amount,
-            })),
+            { ...pricing, amountPaid: 0 },
+            existing,
+          );
+          const paymentStatus = paidStatus(
+            existing.status,
+            savedMinor(totals.total, pricing.currency),
+            paid,
+          );
+          const pricingChanged = invoicePricingChanged(lineItems, taxRate, pricing, existing);
+          if (pricingChanged) await requireResolvedLiveLink(tx, userId, id);
+          const inlineFields = [
+            'quickCompanyName',
+            'quickCompanyAddress',
+            'quickCompanyCity',
+            'quickCompanyState',
+            'quickCompanyZipCode',
+            'quickCompanyPhone',
+            'quickCompanyEmail',
+            'quickCompanyTaxNumber',
+            'quickCustomerName',
+            'quickCustomerEmail',
+            'quickCustomerPhone',
+            'quickCustomerAddress',
+            'quickCustomerCity',
+            'quickCustomerState',
+            'quickCustomerZipCode',
+          ] as const;
+          if (
+            existing.isQuickInvoice &&
+            !(dto.customerId ?? existing.customerId) &&
+            !(dto.quickCustomerName ?? existing.quickCustomerName)?.trim()
+          ) {
+            throw new BadRequestException('Customer name is required.');
+          }
+          const inline = Object.fromEntries(
+            inlineFields
+              .filter((field) => existing.isQuickInvoice && dto[field] !== undefined)
+              .map((field) => [field, dto[field]]),
+          );
+          const products = await validateCatalogReferences(
+            tx,
+            userId,
+            lineItems,
+            existing.lineItems,
+          );
+          if (existing.status === InvoiceStatus.DRAFT)
+            aggregateStockQuantities(lineItems, trackedProductIds(products));
+          else await editInvoiceStock(tx, userId, id, existing.lineItems, lineItems, products);
+          await tx.invoice.update({
+            where: { id },
+            data: {
+              ...options,
+              ...inline,
+              invoiceNumber,
+              serviceDate,
+              dueDate,
+              taxRate,
+              ...(dto.customerId !== undefined && { customerId: dto.customerId }),
+              ...(dto.notes !== undefined && { notes: dto.notes }),
+              subtotal: totals.subtotal,
+              taxAmount: totals.taxAmount,
+              total: totals.total,
+              amountPaid: pricing.amountPaid,
+              status: paymentStatus,
+            },
           });
-        }
-      });
+          if (dto.lineItems || pricingChanged) {
+            await tx.lineItem.deleteMany({ where: { invoiceId: id } });
+            await tx.lineItem.createMany({
+              data: lineItems.map((item, index) => ({
+                invoiceId: id,
+                type: item.type,
+                catalogItemId: item.catalogItemId ?? null,
+                description: item.description,
+                unit: item.unit.trim(),
+                quantity: item.quantity,
+                rate: item.rate,
+                amount: pricingChanged
+                  ? money(item.quantity * item.rate, pricing.currency)
+                  : existing.lineItems[index].amount,
+              })),
+            });
+          }
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+      );
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException('An invoice with this number already exists in your account.');
@@ -465,65 +574,91 @@ export class InvoiceService extends BaseUserService {
   async updateStatus(
     userId: string,
     id: string,
-    updateStatusDto: UpdateInvoiceStatusDto,
+    dto: UpdateInvoiceStatusDto,
   ): Promise<InvoiceWithRelations> {
-    // Keep recorded payment and the explicit Paid action consistent.
-    const invoice = await this.findById(userId, id);
-
-    // Update invoice status with additional safety check
-    const updateResult = await this.prisma.invoice.updateMany({
-      where: this.buildUserIsolatedWhere(userId, { id }),
-      data: {
-        status: updateStatusDto.status,
-        ...(updateStatusDto.status === 'PAID' && { amountPaid: invoice.total }),
+    await this.prisma.$transaction(
+      async (tx) => {
+        const invoice = await this.lockInvoice(tx, userId, id);
+        const next = dto.status;
+        if (invoice.status === next) return;
+        if (next === InvoiceStatus.PAID)
+          throw new ConflictException(
+            'Record a payment to mark the invoice Paid. Payment status is calculated from its history.',
+          );
+        if (invoice.status === InvoiceStatus.PAID && next === InvoiceStatus.SENT)
+          throw new ConflictException('Reverse a recorded payment to reopen the balance.');
+        if (invoice.status === InvoiceStatus.VOIDED)
+          throw new ConflictException(
+            'A voided invoice cannot be reopened. Create a new invoice instead.',
+          );
+        if (next === InvoiceStatus.DRAFT)
+          throw new ConflictException(
+            'Issued invoices cannot return to Draft. Void an unpaid invoice instead.',
+          );
+        const paid = await paymentBalance(tx, id, userId);
+        if (next === InvoiceStatus.VOIDED) {
+          await requireResolvedLiveLink(tx, userId, id);
+          if (invoice.status !== InvoiceStatus.SENT || paid > 0n)
+            throw new ConflictException(
+              'Only an unpaid issued invoice can be voided. Reverse any recorded payment first.',
+            );
+          const returns = await invoiceStockReturns(tx, userId, id);
+          await lockCatalogItems(tx, userId, [
+            ...invoice.lineItems.flatMap((item) =>
+              item.catalogItemId ? [item.catalogItemId] : [],
+            ),
+            ...returns.map((item) => item.catalogItemId),
+          ]);
+          await voidInvoiceStock(tx, userId, id, returns);
+          await tx.invoice.update({ where: { id }, data: { status: next } });
+          return;
+        }
+        let issuedAt: Date | undefined;
+        if (invoice.status === InvoiceStatus.DRAFT) {
+          const products = await validateCatalogReferences(
+            tx,
+            userId,
+            invoice.lineItems,
+            invoice.lineItems,
+          );
+          issuedAt = await issueInvoiceStock(tx, userId, invoice, products);
+        }
+        await tx.invoice.update({
+          where: { id },
+          data: {
+            status: paidStatus(next, savedMinor(invoice.total, invoice.currency), paid),
+            ...(issuedAt && { issuedAt }),
+          },
+        });
       },
-    });
-
-    if (updateResult.count === 0) {
-      throw new NotFoundException('Invoice not found or access denied');
-    }
-
-    // Return updated invoice with relations
-    return await this.findById(userId, id);
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
+    return this.findById(userId, id);
   }
 
   async delete(userId: string, id: string): Promise<void> {
-    this.logger.log(`Delete invoice request - userId: ${userId}, invoiceId: ${id}`);
-
-    // Validate invoice ownership before deletion
-    await this.validateInvoiceOwnership(id, userId);
-
-    // Get line item count before deletion for logging
-    const lineItemCount = await this.prisma.lineItem.count({
-      where: { invoiceId: id },
-    });
-
-    // Delete invoice with additional safety check (line items will be deleted automatically due to cascade)
-    const deleteResult = await this.prisma.invoice.deleteMany({
-      where: this.buildUserIsolatedWhere(userId, { id }),
-    });
-
-    if (deleteResult.count === 0) {
-      this.logger.error(
-        `Delete failed - invoice not found during deletion - userId: ${userId}, invoiceId: ${id}`,
-      );
-      throw new NotFoundException('Invoice not found or access denied');
-    }
-
-    // Verify cascade deletion occurred
-    const remainingLineItems = await this.prisma.lineItem.count({
-      where: { invoiceId: id },
-    });
-
-    if (remainingLineItems > 0) {
-      this.logger.error(
-        `Delete warning - cascade deletion may have failed - userId: ${userId}, invoiceId: ${id}, remainingLineItems: ${remainingLineItems}`,
-      );
-    }
-
-    this.logger.log(
-      `Invoice deleted successfully - userId: ${userId}, invoiceId: ${id}, deletedLineItems: ${lineItemCount}`,
+    await this.prisma.$transaction(
+      async (tx) => {
+        const invoice = await this.lockInvoice(tx, userId, id);
+        if (
+          invoice.status !== InvoiceStatus.DRAFT ||
+          invoice.amountPaid > 0 ||
+          (await tx.paymentEntry.count({ where: { userId, invoiceId: id } })) ||
+          (await tx.stockAction.count({ where: { userId, invoiceId: id } }))
+        ) {
+          throw new ConflictException(
+            'Only unpaid drafts without stock or payment history can be deleted. Void an unpaid issued invoice to retain its history.',
+          );
+        }
+        await tx.invoice.delete({ where: { id } });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
     );
+  }
+
+  private async lockInvoice(tx: Prisma.TransactionClient, userId: string, id: string) {
+    await lockInvoiceRow(tx, userId, id);
+    return tx.invoice.findUniqueOrThrow({ where: { id }, include: { lineItems: true } });
   }
 
   generateInvoiceNumber(): string {
@@ -535,8 +670,9 @@ export class InvoiceService extends BaseUserService {
     userId: string,
     invoiceNumber: string,
     exceptId?: string,
+    client: Prisma.TransactionClient = this.prisma,
   ): Promise<void> {
-    const existing = await this.prisma.invoice.findFirst({
+    const existing = await client.invoice.findFirst({
       where: { userId, invoiceNumber, ...(exceptId && { id: { not: exceptId } }) },
       select: { id: true },
     });

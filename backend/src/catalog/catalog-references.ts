@@ -16,6 +16,17 @@ interface CatalogReference {
   unit: string;
 }
 
+export async function lockCatalogItems(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  ids: string[],
+) {
+  const products = new Map<string, CatalogItem>();
+  for (const id of [...new Set(ids)].sort())
+    products.set(id, await lockCatalogItem(tx, userId, id));
+  return products;
+}
+
 export async function validateCatalogReferences(
   tx: Prisma.TransactionClient,
   userId: string,
@@ -23,10 +34,12 @@ export async function validateCatalogReferences(
   existing: CatalogReference[] = [],
 ) {
   const ids = [
-    ...new Set(items.flatMap((item) => (item.catalogItemId ? [item.catalogItemId] : []))),
+    ...new Set(
+      [...items, ...existing].flatMap((item) => (item.catalogItemId ? [item.catalogItemId] : [])),
+    ),
   ].sort();
-  for (const id of ids) {
-    const catalog = await lockCatalogItem(tx, userId, id);
+  const products = await lockCatalogItems(tx, userId, ids);
+  for (const [id, catalog] of products) {
     const selected = items.filter((item) => item.catalogItemId === id);
     const retainedCount = existing.filter((item) => item.catalogItemId === id).length;
     if (catalog.isArchived && selected.length > retainedCount) {
@@ -39,7 +52,8 @@ export async function validateCatalogReferences(
         'Catalog item type or unit does not match. Choose the item again or use a one-off item.',
       );
     }
-    if (!catalog.usedAt)
+    if (selected.length && !catalog.usedAt)
       await tx.catalogItem.update({ where: { id }, data: { usedAt: new Date() } });
   }
+  return products;
 }

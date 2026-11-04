@@ -16,10 +16,11 @@ export class DashboardService {
       _count: true,
       _sum: { total: true },
     });
-    const counts = { DRAFT: 0, SENT: 0, PAID: 0 };
+    const counts = { DRAFT: 0, SENT: 0, PAID: 0, VOIDED: 0 };
     const currencies = new Map<string, { count: number; total: number; revenue: number }>();
     for (const group of groups) {
       counts[group.status] += group._count;
+      if (group.status === 'VOIDED') continue;
       const value = currencies.get(group.currency) ?? { count: 0, total: 0, revenue: 0 };
       value.count += group._count;
       value.total += group._sum.total ?? 0;
@@ -33,7 +34,7 @@ export class DashboardService {
     })).sort((a, b) => a.currency.localeCompare(b.currency));
     const usd = currencyTotals.find((value) => value.currency === 'USD');
     return {
-      totalInvoices: counts.DRAFT + counts.SENT + counts.PAID,
+      totalInvoices: counts.DRAFT + counts.SENT + counts.PAID + counts.VOIDED,
       pendingInvoices: counts.SENT,
       paidInvoices: counts.PAID,
       draftInvoices: counts.DRAFT,

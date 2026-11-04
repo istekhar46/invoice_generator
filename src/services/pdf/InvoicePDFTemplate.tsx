@@ -6,6 +6,7 @@ import {
   View,
   Image,
   StyleSheet,
+  Link,
 } from '@react-pdf/renderer'
 import type { Invoice } from '../../types/entities'
 import { invoiceParties } from '../../utils/invoiceDocument'
@@ -13,7 +14,7 @@ import type {
   InvoiceCompany,
   InvoiceCustomer,
 } from '../../utils/invoiceDocument'
-import { documentTotals } from '../../utils/invoiceDocument'
+import { documentTotals, documentPaymentUrl } from '../../utils/invoiceDocument'
 import { currencyDigits } from '../invoiceCalculation.service'
 import { formatDate } from '../../utils/formatters'
 
@@ -40,6 +41,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   muted: { color: '#64748b', fontSize: 8 },
+  voided: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 10,
+    color: '#b91c1c',
+    marginBottom: 8,
+  },
   company: { width: '52%' },
   logo: {
     width: 120,
@@ -111,7 +118,7 @@ const styles = StyleSheet.create({
     left: 42,
     right: 42,
     textAlign: 'center',
-    height: 12,
+    height: 24,
     fontSize: 8,
     color: '#64748b',
   },
@@ -137,6 +144,8 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
       maximumFractionDigits: currencyDigits(currency),
     }).format(value)
   const totals = documentTotals(invoice)
+  const paymentUrl = documentPaymentUrl(invoice)
+  const isVoided = invoice.status === 'voided'
   const partyLines = (party?: InvoiceCompany | InvoiceCustomer | null) =>
     party && (
       <>
@@ -156,7 +165,7 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
   )
   return (
     <Document
-      title={`Invoice ${invoice.invoiceNumber}`}
+      title={`${isVoided ? 'Voided invoice' : 'Invoice'} ${invoice.invoiceNumber}`}
       author={parties.company?.businessName || 'Invoiceo'}
     >
       <Page size="A4" style={styles.page}>
@@ -173,6 +182,9 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
           </View>
           <View style={styles.meta}>
             <Text style={styles.title}>INVOICE</Text>
+            {isVoided && (
+              <Text style={styles.voided}>VOIDED - No payment due</Text>
+            )}
             <Text style={{ marginBottom: 12 }}>{invoice.invoiceNumber}</Text>
             <Text>Invoice date: {formatDate(invoice.serviceDate)}</Text>
             <Text>Due date: {formatDate(invoice.dueDate)}</Text>
@@ -198,22 +210,24 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
             </View>
           )}
         </View>
-        <View style={styles.tableHead} fixed>
-          <Text style={styles.item}>ITEM / SERVICE</Text>
-          <Text style={styles.qty}>QUANTITY</Text>
-          <Text style={styles.rate}>RATE ({currency})</Text>
-          <Text style={styles.amount}>AMOUNT</Text>
-        </View>
-        {invoice.lineItems.map(item => (
-          <View key={item.id} style={styles.row} wrap={false}>
-            <Text style={styles.item}>{item.description}</Text>
-            <Text style={styles.qty}>
-              {item.quantity} {item.unit}
-            </Text>
-            <Text style={styles.rate}>{number(item.rate)}</Text>
-            <Text style={styles.amount}>{number(item.amount)}</Text>
+        <View>
+          <View style={styles.tableHead} fixed>
+            <Text style={styles.item}>ITEM / SERVICE</Text>
+            <Text style={styles.qty}>QUANTITY</Text>
+            <Text style={styles.rate}>RATE ({currency})</Text>
+            <Text style={styles.amount}>AMOUNT</Text>
           </View>
-        ))}
+          {invoice.lineItems.map(item => (
+            <View key={item.id} style={styles.row} wrap={false}>
+              <Text style={styles.item}>{item.description}</Text>
+              <Text style={styles.qty}>
+                {item.quantity} {item.unit}
+              </Text>
+              <Text style={styles.rate}>{number(item.rate)}</Text>
+              <Text style={styles.amount}>{number(item.amount)}</Text>
+            </View>
+          ))}
+        </View>
         <View style={styles.bottom}>
           <View style={styles.notes}>
             {invoice.notes && (
@@ -226,6 +240,17 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
               <View style={styles.block}>
                 <Text style={styles.label}>TERMS & PAYMENT INSTRUCTIONS</Text>
                 <Text>{invoice.terms}</Text>
+              </View>
+            )}
+            {paymentUrl && (
+              <View style={styles.block} wrap={false}>
+                <Text style={styles.label}>PAY BY UPI</Text>
+                <Link
+                  src={paymentUrl}
+                  style={{ color: '#2563eb', fontSize: 9 }}
+                >
+                  {paymentUrl}
+                </Link>
               </View>
             )}
           </View>
@@ -252,7 +277,7 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
           style={styles.footer}
           fixed
           render={({ pageNumber, totalPages }) =>
-            `Thank you for your business.  |  ${pageNumber} / ${totalPages}`
+            `Invoice ${invoice.invoiceNumber}${isVoided ? ' | VOIDED - No payment due' : ''} | ${pageNumber} / ${totalPages}`
           }
         />
       </Page>

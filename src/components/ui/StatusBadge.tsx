@@ -2,15 +2,20 @@ import React from 'react'
 import { cn } from '../../utils/classNames'
 
 export interface StatusBadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  status: 'draft' | 'sent' | 'paid'
+  status: 'draft' | 'sent' | 'paid' | 'voided'
   className?: string
 }
 
 const StatusBadge = React.forwardRef<HTMLSpanElement, StatusBadgeProps>(
   ({ status, className, ...props }, ref) => {
     // Normalize status to lowercase to handle both 'DRAFT'/'draft' formats
-    const normalizedStatus = status?.toLowerCase() as 'draft' | 'sent' | 'paid' | undefined
-    
+    const normalizedStatus = status?.toLowerCase() as
+      | 'draft'
+      | 'sent'
+      | 'paid'
+      | 'voided'
+      | undefined
+
     const styles = {
       draft: {
         bg: 'bg-gray-100',
@@ -18,20 +23,25 @@ const StatusBadge = React.forwardRef<HTMLSpanElement, StatusBadgeProps>(
         dot: 'bg-gray-400',
       },
       sent: {
-        bg: 'bg-primary-100', 
+        bg: 'bg-primary-100',
         text: 'text-primary-700',
         dot: 'bg-primary-500',
       },
+      voided: {
+        bg: 'bg-danger-100',
+        text: 'text-danger-700',
+        dot: 'bg-danger-500',
+      },
       paid: {
         bg: 'bg-success-100',
-        text: 'text-success-700', 
+        text: 'text-success-700',
         dot: 'bg-success-500',
       },
     }
 
     // Provide default fallback if status is undefined or invalid
     const style = styles[normalizedStatus || 'draft']
-    const statusLabel = normalizedStatus 
+    const statusLabel = normalizedStatus
       ? normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1)
       : 'Unknown'
 
@@ -42,7 +52,7 @@ const StatusBadge = React.forwardRef<HTMLSpanElement, StatusBadgeProps>(
           'inline-flex items-center space-x-1.5',
           'px-3 py-1.5 rounded-full text-xs font-semibold',
           'transition-all duration-200',
-          style.bg, 
+          style.bg,
           style.text,
           className
         )}
@@ -50,8 +60,8 @@ const StatusBadge = React.forwardRef<HTMLSpanElement, StatusBadgeProps>(
         aria-label={`Status: ${statusLabel}`}
         {...props}
       >
-        <span 
-          className={cn('w-1.5 h-1.5 rounded-full', style.dot)} 
+        <span
+          className={cn('w-1.5 h-1.5 rounded-full', style.dot)}
           aria-hidden="true"
         />
         <span>{statusLabel}</span>

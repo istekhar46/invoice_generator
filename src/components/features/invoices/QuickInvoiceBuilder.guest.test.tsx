@@ -125,6 +125,48 @@ describe('QuickInvoiceBuilder guest mode', () => {
     expect(onSignUp).toHaveBeenCalledOnce()
   })
 
+  it('keeps guest paid editing local, labels imported openings, and locks paid/currency on saved account invoices', async () => {
+    const imported = {
+      ...guestDraft,
+      invoiceDetails: { ...guestDraft.invoiceDetails, amountPaid: 25.5 },
+    }
+    const guest = render(
+      <QuickInvoiceBuilder mode="guest" initialGuestData={imported} />
+    )
+    expect(screen.getByLabelText('Amount paid (USD)')).not.toHaveAttribute(
+      'readonly'
+    )
+    guest.unmount()
+    const account = render(
+      <QuickInvoiceBuilder initialGuestData={imported} autoSaveImportedDraft />
+    )
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          importedGuestDraft: true,
+          amountPaid: 25.5,
+          clientRequestId: guestDraft.draftId,
+        })
+      )
+    )
+    expect(screen.getByLabelText('Amount paid (USD)')).toHaveAttribute(
+      'readonly'
+    )
+    account.unmount()
+    render(
+      <QuickInvoiceBuilder
+        invoice={{
+          ...guestDocument(imported, 'PAID-SNAPSHOT'),
+          hasPaymentHistory: true,
+        }}
+      />
+    )
+    expect(screen.getByLabelText('Currency')).toBeDisabled()
+    expect(screen.getByLabelText('Amount paid (USD)')).toHaveAttribute(
+      'readonly'
+    )
+  })
+
   it('preserves legacy saved totals in the live editor and PDF until pricing changes', async () => {
     const draft = {
       ...guestDraft,

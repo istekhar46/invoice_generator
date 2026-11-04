@@ -32,6 +32,7 @@ export function CatalogItemForm({
   onSaved: (item: CatalogItem) => void
   onCancel: () => void
 }) {
+  const identityLocked = !!(item?.usedAt || item?.stockTrackingStartedAt)
   const save = useSaveCatalogItem()
   const {
     register,
@@ -83,7 +84,7 @@ export function CatalogItemForm({
           Type
           <select
             {...register('type')}
-            disabled={!!item?.usedAt}
+            disabled={identityLocked}
             className={input}
           >
             <option value="product">Product</option>
@@ -94,7 +95,7 @@ export function CatalogItemForm({
           Unit
           <input
             {...register('unit')}
-            readOnly={!!item?.usedAt}
+            readOnly={identityLocked}
             maxLength={50}
             className={input}
             placeholder="each, hour, project…"
@@ -106,9 +107,9 @@ export function CatalogItemForm({
           )}
         </label>
       </div>
-      {item?.usedAt && (
+      {identityLocked && (
         <p className="text-xs text-slate-500">
-          Type and unit are fixed because this item has been used on an invoice.
+          Type and unit are fixed once an item is used or stock tracking starts.
         </p>
       )}
       <label className="block text-sm font-medium text-slate-700">

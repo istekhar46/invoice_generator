@@ -11,6 +11,7 @@ export interface CatalogItem {
   currency: string
   isArchived: boolean
   usedAt: string | null
+  stockTrackingStartedAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -23,6 +24,7 @@ export interface CatalogQuery {
   search?: string
   type?: LineItemType
   status?: 'active' | 'archived' | 'all'
+  tracking?: 'tracked' | 'untracked'
   page?: number
   limit?: number
 }

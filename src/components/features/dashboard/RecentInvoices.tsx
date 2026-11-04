@@ -8,54 +8,13 @@ import { formatCurrency } from '../../../utils/formatters'
 import React from 'react'
 import { Card } from '../../ui/Card'
 import type { RecentInvoiceSummary } from '../../../services/dashboardStatistics.service'
-import type { InvoiceStatus } from '../../../types/entities'
+import { StatusBadge } from '../../ui/StatusBadge'
 
 interface RecentInvoicesProps {
   invoices: RecentInvoiceSummary[]
   loading?: boolean
   onInvoiceClick?: (invoiceId: string) => void
   onViewAll?: () => void
-}
-
-/**
- * Status badge component for invoices
- */
-interface StatusBadgeProps {
-  status: InvoiceStatus
-}
-
-const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
-  // Normalize status to lowercase to handle both 'DRAFT' and 'draft' formats
-  const normalizedStatus = status?.toLowerCase() as
-    | 'draft'
-    | 'sent'
-    | 'paid'
-    | undefined
-
-  const statusConfig = {
-    draft: {
-      label: 'Draft',
-      className: 'bg-gray-100 text-gray-800',
-    },
-    sent: {
-      label: 'Pending',
-      className: 'bg-yellow-100 text-yellow-800',
-    },
-    paid: {
-      label: 'Paid',
-      className: 'bg-green-100 text-green-800',
-    },
-  }
-
-  const config = statusConfig[normalizedStatus || 'draft']
-
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config?.className || 'bg-gray-100 text-gray-800'}`}
-    >
-      {config?.label || 'Unknown'}
-    </span>
-  )
 }
 
 /**

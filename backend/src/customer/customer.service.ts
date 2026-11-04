@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { Customer } from '@prisma/client';
+import { Customer, Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { BaseUserService } from '../common/services/base-user-service';
 import {
@@ -159,28 +159,21 @@ export class CustomerService extends BaseUserService {
   }
 
   async delete(userId: string, id: string): Promise<void> {
-    // Validate ownership using base service method
-    await this.validateResourceOwnership(this.prisma.customer, id, userId, 'Customer');
-
-    // Check if customer has any invoices
-    const invoiceCount = await this.prisma.invoice.count({
-      where: this.buildUserIsolatedWhere(userId, { customerId: id }),
-    });
-
-    if (invoiceCount > 0) {
-      throw new BadRequestException(
-        'Cannot delete customer with existing invoices. Please delete all invoices first.',
-      );
-    }
-
-    // Delete customer with additional safety check
-    const deleteResult = await this.prisma.customer.deleteMany({
-      where: this.buildUserIsolatedWhere(userId, { id }),
-    });
-
-    if (deleteResult.count === 0) {
-      throw new NotFoundException('Customer not found or access denied');
-    }
+    await this.prisma.$transaction(
+      async (tx) => {
+        // Block incoming invoice FK writes while checking retained customer history.
+        const found = await tx.$queryRaw<
+          { id: string }[]
+        >`SELECT "id" FROM "customers" WHERE "id" = ${id} AND "userId" = ${userId} FOR UPDATE`;
+        if (!found[0]) throw new NotFoundException('Customer not found or access denied');
+        if (await tx.invoice.count({ where: { userId, customerId: id } }))
+          throw new BadRequestException(
+            'Cannot delete a customer with saved invoices. Retain the customer to preserve invoice history.',
+          );
+        await tx.customer.delete({ where: { id } });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
   }
 
   private validateCustomerData(data: CreateCustomerDto | UpdateCustomerDto): void {

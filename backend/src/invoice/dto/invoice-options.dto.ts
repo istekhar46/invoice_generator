@@ -33,12 +33,6 @@ export class InvoiceOptionsDto {
   @Min(0)
   shippingAmount?: number;
 
-  @ApiPropertyOptional({ default: 0 })
-  @ValidateIf((_object, value) => value !== undefined)
-  @IsNumber()
-  @Min(0)
-  amountPaid?: number;
-
   @ApiPropertyOptional()
   @ValidateIf((_object, value) => value !== undefined)
   @IsString()

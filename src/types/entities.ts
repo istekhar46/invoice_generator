@@ -78,7 +78,7 @@ export interface LineItem {
 /**
  * Invoice status types
  */
-export type InvoiceStatus = 'draft' | 'sent' | 'paid'
+export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'voided'
 
 /**
  * Invoice entity representing a billing document
@@ -98,6 +98,9 @@ export interface Invoice extends InvoiceOptions {
   total: number
   notes?: string
   status: InvoiceStatus
+  issuedAt?: Date | null
+  hasPaymentHistory?: boolean
+  paymentUrl?: string | null
   createdAt: Date
   updatedAt: Date
   // Quick invoice fields

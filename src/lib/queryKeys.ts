@@ -31,10 +31,14 @@ export const queryKeys = {
 
   // Invoice keys
   invoices: ['invoices'] as const,
+  inventory: ['inventory'] as const,
+  payments: ['payments'] as const,
+  razorpay: ['razorpay'] as const,
+  gateway: ['gateway'] as const,
   invoicesList: (params?: InvoiceQueryParams) => 
     [...queryKeys.invoices, 'list', params || {}] as const,
   invoice: (id: string) => [...queryKeys.invoices, 'detail', id] as const,
-  invoicesByStatus: (status: 'DRAFT' | 'SENT' | 'PAID', params?: Omit<InvoiceQueryParams, 'status'>) =>
+  invoicesByStatus: (status: 'DRAFT' | 'SENT' | 'PAID' | 'VOIDED', params?: Omit<InvoiceQueryParams, 'status'>) =>
     [...queryKeys.invoices, 'status', status, params || {}] as const,
   invoicesByCustomer: (customerId: string, params?: Omit<InvoiceQueryParams, 'customerId'>) =>
     [...queryKeys.invoices, 'customer', customerId, params || {}] as const,
