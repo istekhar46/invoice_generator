@@ -12,10 +12,11 @@ import { lockCatalogItem } from './catalog-references';
 @Injectable()
 export class CatalogService extends BaseUserService {
   async findAll(userId: string, query: CatalogQueryDto) {
-    const { search, type, status = 'active', page, limit } = query;
+    const { search, type, tracking, status = 'active', page, limit } = query;
     const where: Prisma.CatalogItemWhereInput = {
       userId,
       ...(type && { type }),
+      ...(tracking && { stockTrackingStartedAt: tracking === 'tracked' ? { not: null } : null }),
       ...(status !== 'all' && { isArchived: status === 'archived' }),
       ...(search?.trim() && {
         OR: ['name', 'description', 'sku'].map((field) => ({
@@ -76,12 +77,12 @@ export class CatalogService extends BaseUserService {
       return await this.prisma.$transaction(async (tx) => {
         const existing = await lockCatalogItem(tx, userId, id);
         if (
-          existing.usedAt &&
+          (existing.usedAt || existing.stockTrackingStartedAt) &&
           ((dto.type !== undefined && dto.type !== existing.type) ||
             (dto.unit !== undefined && dto.unit !== existing.unit))
         ) {
           throw new BadRequestException(
-            'Type and unit cannot change after an item has been used. Archive it and create another item.',
+            'Type and unit cannot change after an item has been used or stock tracking starts. Archive it and create another item.',
           );
         }
         return tx.catalogItem.update({ where: { id }, data: dto });

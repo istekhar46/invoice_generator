@@ -1,238 +1,58 @@
-# PDF Generation Service
+# Invoice PDF export
 
-This directory contains the PDF generation functionality for the Electrician Invoice Generation Web App.
+Standard, account quick and guest invoices share `InvoicePDFTemplate.tsx` through `@react-pdf/renderer`. The renderer/template are loaded on demand. No server or database is needed to render an export from an invoice object.
 
-## Overview
+## Contracts
 
-The PDF generation system uses `@react-pdf/renderer` to create professional, branded invoice PDFs that can be downloaded or previewed by users.
+- Print saved line amounts, subtotal, tax and total; do not reprice a saved invoice. This preserves historical rounding snapshots until an actual pricing edit.
+- Show discount, shipping, amount paid and remaining balance using the invoice currency's precision. Currency codes avoid unsupported currency-symbol glyphs in the built-in Helvetica font.
+- Only a saved payable INR invoice with a server-selected active Live URL includes a clickable Pay by UPI link. Test links never enter the invoice contract. Saved list/preview PDF actions fetch current charges, paid balance and URL before export; unsaved editor/guest exports have no gateway URL.
+- Voided invoices retain saved charges/terms but display `VOIDED - No payment due` and zero balance. Metadata and every page identify the invoice and its cancellation state.
+- Quick invoices use saved sender/customer snapshots. Standard invoices use the provided company/customer. Guest drafts use `guestDocument` and the same template.
+- Rows stay together across page breaks, table headings repeat while the table continues, and fixed footers contain invoice identity and page numbers.
 
-## Components
+## Application usage
 
-### 1. PDF Generator Service (`pdfGenerator.service.ts`)
+`pdfGenerator.service.ts` generates a Blob and supplies download/preview helpers:
 
-The core service that handles PDF generation, download, and preview functionality.
-
-**Key Features:**
-- Generate PDF blobs from invoice data
-- Download PDFs to user's device
-- Preview PDFs in a new browser tab
-- Error handling and validation
-
-**Usage:**
-```typescript
+```ts
 import { downloadInvoicePDF, previewInvoicePDF } from '@/services/pdf'
 
-// Download PDF
 await downloadInvoicePDF(invoice, company, customer)
-
-// Preview PDF
 await previewInvoicePDF(invoice, company, customer)
 ```
 
-### 2. Invoice PDF Template (`InvoicePDFTemplate.tsx`)
+The hook validates supplied data and exposes loading/error state; callers provide the current invoice and related parties:
 
-React component that defines the PDF layout and styling using `@react-pdf/renderer`.
-
-**Features:**
-- Professional invoice layout
-- Company branding with logo support
-- Customer information display
-- Line items table with proper formatting
-- Totals calculation display
-- Notes section
-- Professional footer
-
-**Styling:**
-- Uses Roboto font family for professional typography
-- Responsive layout optimized for A4 paper size
-- Color scheme matching the application design
-- Proper spacing and alignment
-
-### 3. PDF Actions Component (`PDFActions.tsx`)
-
-React component providing UI buttons for PDF operations.
-
-**Features:**
-- Download button with loading state
-- Preview button with loading state
-- Error handling
-- Compact and default variants
-- Disabled state when data is unavailable
-
-**Usage:**
-```typescript
-import { PDFActions } from '@/components/features/invoices'
-
-<PDFActions
-  invoice={invoice}
-  onError={(error) => console.error(error)}
-/>
+```ts
+const { downloadInvoicePDFDirect, isGenerating, error } = usePDFGeneration()
+await downloadInvoicePDFDirect(invoice, customer, company)
 ```
 
-### 4. PDF Generation Hook (`usePDFGeneration.ts`)
+`PDFActions.tsx` connects these actions to invoice lists/previews. Quick-invoice sender data can come from the invoice snapshot without a saved company profile.
 
-Custom React hook that integrates PDF generation with Zustand stores.
+## Verification
 
-**Features:**
-- Automatic data fetching from stores
-- Loading state management
-- Error handling
-- Validation of required data
+Run focused tests, including actual account and guest PDF generation:
 
-**Usage:**
-```typescript
-import { usePDFGeneration } from '@/hooks/usePDFGeneration'
-
-const { downloadPDF, previewPDF, isGenerating, error } = usePDFGeneration()
-
-// Download by invoice ID
-await downloadPDF('invoice-123')
-
-// Preview by invoice ID
-await previewPDF('invoice-123')
+```sh
+npm test -- src/services/pdf/InvoicePDFTemplate.test.tsx src/utils/guestPDFGeneration.test.ts
 ```
 
-## Requirements Validation
+Export eight deterministic fictional fixtures using the real services. Exporting must not mutate account invoices or the guest draft:
 
-This implementation satisfies the following requirements:
-
-### Requirement 6.1: PDF Generation
-✅ Generates formatted PDF documents on user request
-
-### Requirement 6.2: Company Information
-✅ Includes company logo (if uploaded), business information, and contact details
-
-### Requirement 6.3: Customer Information
-✅ Includes customer name, email, phone, and full address
-
-### Requirement 6.4: Invoice Metadata
-✅ Displays invoice number, service date, and due date
-
-### Requirement 6.5: Line Items Table
-✅ Shows all line items with descriptions, quantities, rates, and amounts
-
-### Requirement 6.6: Totals Display
-✅ Prominently displays subtotal, tax amount, and total
-
-### Requirement 6.7: Notes Section
-✅ Includes user-added notes in the PDF
-
-### Requirement 6.8: Download Functionality
-✅ Allows users to download the generated PDF file
-
-## PDF Template Structure
-
-The PDF template follows this structure:
-
-```
-┌─────────────────────────────────────────┐
-│ Header                                  │
-│ ┌─────────────┐  ┌──────────────────┐  │
-│ │ Logo        │  │ INVOICE          │  │
-│ │ Company Info│  │ #INV-2024-001    │  │
-│ └─────────────┘  └──────────────────┘  │
-├─────────────────────────────────────────┤
-│ Customer & Invoice Details              │
-│ ┌──────────────┐  ┌──────────────────┐ │
-│ │ Bill To      │  │ Invoice Details  │ │
-│ │ Customer Info│  │ Dates & Status   │ │
-│ └──────────────┘  └──────────────────┘ │
-├─────────────────────────────────────────┤
-│ Line Items Table                        │
-│ ┌─────────────────────────────────────┐ │
-│ │ Description | Qty | Rate | Amount  │ │
-│ │ Item 1      | 2   | $100 | $200    │ │
-│ │ Item 2      | 1   | $50  | $50     │ │
-│ └─────────────────────────────────────┘ │
-├─────────────────────────────────────────┤
-│ Totals                                  │
-│                    Subtotal:    $250.00 │
-│                    Tax (8.0%):   $20.00 │
-│                    Total:       $270.00 │
-├─────────────────────────────────────────┤
-│ Notes (if provided)                     │
-│ Additional information...               │
-├─────────────────────────────────────────┤
-│ Footer                                  │
-│ Thank you for your business!            │
-└─────────────────────────────────────────┘
+```sh
+node scripts/export-invoice-pdf-fixtures.mjs release-artifacts.local/pdf-check
 ```
 
-## Error Handling
+For independent PDF content/geometry checks and page PNGs, install inspection tools in an isolated environment, outside application dependencies:
 
-The PDF generation system includes comprehensive error handling:
-
-1. **Missing Company Profile**: Validates that company profile exists before generation
-2. **Missing Customer**: Validates that customer information is available
-3. **Empty Line Items**: Validates that invoice has at least one line item
-4. **PDF Generation Failures**: Catches and reports PDF rendering errors
-5. **Download/Preview Failures**: Handles browser API errors gracefully
-
-## Testing
-
-Unit tests are provided in `pdfGenerator.service.test.ts` to verify:
-- PDF blob generation
-- Download functionality
-- Preview functionality
-- Error handling
-
-## Integration
-
-To integrate PDF generation into your components:
-
-1. **Using the Hook (Recommended):**
-```typescript
-import { usePDFGeneration } from '@/hooks/usePDFGeneration'
-
-const MyComponent = () => {
-  const { downloadPDF, isGenerating, error } = usePDFGeneration()
-  
-  return (
-    <button onClick={() => downloadPDF(invoiceId)} disabled={isGenerating}>
-      {isGenerating ? 'Generating...' : 'Download PDF'}
-    </button>
-  )
-}
+```sh
+python3 -m venv /tmp/invoice-pdf-verification-venv
+/tmp/invoice-pdf-verification-venv/bin/python -m pip install pdfplumber pypdf
+/tmp/invoice-pdf-verification-venv/bin/python scripts/verify-invoice-pdf-fixtures.py release-artifacts.local/pdf-check
 ```
 
-2. **Using the Component:**
-```typescript
-import { PDFActions } from '@/components/features/invoices'
+The inspector checks actual saved totals/rows, discount/tax/shipping, partial/full/voided balances, INR/USD/JPY precision, metadata, invoice/cancellation context on every page, page numbering, text bounds and multi-page row preservation. It writes `verification.json` and renders all pages through PDFium for **manual visual review**. Passing content checks alone does not establish correct layout.
 
-const MyComponent = () => {
-  return <PDFActions invoice={invoice} />
-}
-```
-
-3. **Direct Service Usage:**
-```typescript
-import { downloadInvoicePDF } from '@/services/pdf'
-
-const handleDownload = async () => {
-  await downloadInvoicePDF(invoice, company, customer)
-}
-```
-
-## Browser Compatibility
-
-The PDF generation system works in all modern browsers that support:
-- Blob API
-- URL.createObjectURL
-- File download via anchor tags
-- window.open for preview
-
-## Performance Considerations
-
-- PDF generation is asynchronous and non-blocking
-- Large invoices with many line items may take longer to generate
-- Logo images are embedded as base64 data URLs
-- Font loading is handled automatically by @react-pdf/renderer
-
-## Future Enhancements
-
-Potential improvements for future versions:
-- Email PDF directly to customers
-- Batch PDF generation for multiple invoices
-- Custom PDF templates
-- Additional export formats (Excel, CSV)
-- PDF encryption and password protection
+Fixtures cover partial-payment Sent, unpaid Voided, historical 0.335-row/0.67-total Sent/Voided, fully paid JPY, a long multi-page voided invoice a guest draft and a payable invoice with a fictional Live UPI URL. Generated artifacts are private/gitignored under `release-artifacts.local/`.

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Package, Pencil, Plus } from 'lucide-react'
 import { useArchiveCatalogItem, useCatalog } from '../hooks/useCatalog'
 import type { CatalogItem } from '../types/catalog'
@@ -8,9 +9,12 @@ import { ResponsiveContainer } from '../components/layout/ResponsiveLayout'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { CatalogItemForm } from '../components/features/catalog/CatalogItemForm'
+import { StockActionDialog } from '../components/features/inventory/StockActionDialog'
 
 export function ProductsPage() {
   const [search, setSearch] = useState('')
+  const [tracking, setTracking] = useState<CatalogItem | null>(null)
+  const [stockSaved, setStockSaved] = useState(false)
   const [type, setType] = useState<LineItemType | ''>('')
   const [status, setStatus] = useState<'active' | 'archived' | 'all'>('active')
   const [page, setPage] = useState(1)
@@ -49,6 +53,17 @@ export function ProductsPage() {
           </Button>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          {stockSaved && (
+            <p
+              role="status"
+              className="m-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800"
+            >
+              Stock tracking started.{' '}
+              <Link to="/inventory" className="underline">
+                View inventory
+              </Link>
+            </p>
+          )}
           <div className="flex flex-wrap gap-3 border-b border-slate-100 p-4">
             <input
               aria-label="Search products and services"
@@ -166,7 +181,30 @@ export function ProductsPage() {
                         / {item.unit}
                       </span>
                     </p>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2 sm:max-w-72">
+                      {item.type === 'product' &&
+                        (item.stockTrackingStartedAt ? (
+                          <Link
+                            to={`/inventory?view=history&product=${encodeURIComponent(item.id)}`}
+                            className="rounded-lg px-3 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50"
+                          >
+                            Stock history
+                          </Link>
+                        ) : (
+                          !item.isArchived && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="small"
+                              onClick={() => {
+                                setStockSaved(false)
+                                setTracking(item)
+                              }}
+                            >
+                              Track stock
+                            </Button>
+                          )
+                        ))}
                       <Button
                         type="button"
                         size="small"
@@ -230,6 +268,16 @@ export function ProductsPage() {
           )}
         </div>
       </div>
+      {tracking && (
+        <StockActionDialog
+          target={{ type: 'opening', product: tracking }}
+          onClose={() => setTracking(null)}
+          onSaved={() => {
+            setTracking(null)
+            setStockSaved(true)
+          }}
+        />
+      )}
       <Modal
         open={editing !== undefined}
         onClose={() => setEditing(undefined)}

@@ -24,7 +24,14 @@
     "db:migrate": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "test:invoice-integration": "node test/quick-invoice.integration.cjs",
-    "test:catalog-integration": "node test/catalog.integration.cjs"
+    "test:catalog-integration": "node test/catalog.integration.cjs",
+    "test:inventory-schema": "node test/inventory-schema.integration.cjs",
+    "test:inventory-api": "node test/inventory-api.integration.cjs",
+    "test:invoice-stock": "node test/invoice-stock.integration.cjs",
+    "test:payments": "node test/payments.integration.cjs",
+    "test:payment-migration": "node test/payment-migration.integration.cjs",
+    "test:razorpay-connections": "node test/razorpay-connections.integration.cjs",
+    "test:gateway": "node test/gateway.integration.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.2.8",
@@ -61,6 +68,7 @@
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.16.3",
+    "razorpay": "2.9.8",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },

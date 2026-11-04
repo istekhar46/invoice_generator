@@ -8,6 +8,8 @@ import {
 import { Link, NavLink } from 'react-router-dom'
 import {
   Building2,
+  Boxes,
+  Wallet,
   FileText,
   HelpCircle,
   LayoutDashboard,
@@ -40,6 +42,8 @@ const navigationGroups = [
     name: 'Business',
     items: [
       { name: 'Products & Services', href: '/products', icon: Package },
+      { name: 'Inventory', href: '/inventory', icon: Boxes },
+      { name: 'Payments', href: '/payments', icon: Wallet },
       { name: 'Customers', href: '/customers', icon: Users },
       { name: 'Company Profile', href: '/company', icon: Building2 },
     ],

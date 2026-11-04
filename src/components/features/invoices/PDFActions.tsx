@@ -9,6 +9,8 @@ import { Button } from '../../ui/Button'
 import { usePDFGeneration } from '../../../hooks/usePDFGeneration'
 import { useCompanyProfile } from '../../../hooks/useCompany'
 import type { Invoice } from '../../../types/entities'
+import { invoiceApi } from '../../../services/api/invoiceApi'
+import { transformInvoiceResponse } from '../../../utils/apiTransformers'
 
 interface PDFActionsProps {
   invoice?: Invoice
@@ -26,6 +28,7 @@ export const PDFActions: React.FC<PDFActionsProps> = ({
   className,
   onError,
 }) => {
+  const [isFetching, setIsFetching] = React.useState(false)
   const {
     isGenerating,
     error,
@@ -56,10 +59,23 @@ export const PDFActions: React.FC<PDFActionsProps> = ({
     }
 
     try {
-      await downloadInvoicePDFDirect(invoice, customer, companyProfile)
+      setIsFetching(true)
+      const current = transformInvoiceResponse(
+        await invoiceApi.getInvoice(invoice.id)
+      )
+      await downloadInvoicePDFDirect(
+        current,
+        current.customer || customer,
+        companyProfile
+      )
     } catch (err) {
-      // Error is handled by the hook and passed to onError
-      console.error('PDF download failed:', err)
+      onError?.(
+        err instanceof Error
+          ? err.message
+          : 'Could not load the current invoice.'
+      )
+    } finally {
+      setIsFetching(false)
     }
   }
 
@@ -70,14 +86,27 @@ export const PDFActions: React.FC<PDFActionsProps> = ({
     }
 
     try {
-      await previewInvoicePDFDirect(invoice, customer, companyProfile)
+      setIsFetching(true)
+      const current = transformInvoiceResponse(
+        await invoiceApi.getInvoice(invoice.id)
+      )
+      await previewInvoicePDFDirect(
+        current,
+        current.customer || customer,
+        companyProfile
+      )
     } catch (err) {
-      // Error is handled by the hook and passed to onError
-      console.error('PDF preview failed:', err)
+      onError?.(
+        err instanceof Error
+          ? err.message
+          : 'Could not load the current invoice.'
+      )
+    } finally {
+      setIsFetching(false)
     }
   }
 
-  const isDisabled = isGenerating || !invoice || !hasDocumentData
+  const isDisabled = isFetching || isGenerating || !invoice || !hasDocumentData
 
   if (variant === 'compact') {
     return (

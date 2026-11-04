@@ -7,6 +7,7 @@ describe('InvoiceService quick-invoice idempotency', () => {
       userId: 'user-1',
       customer: null,
       lineItems: [],
+      _count: { paymentEntries: 0, gatewayPayments: 0 },
     };
     const prisma = {
       user: {
@@ -16,7 +17,7 @@ describe('InvoiceService quick-invoice idempotency', () => {
         findFirst: jest
           .fn()
           .mockResolvedValueOnce({ id: 'invoice-1' })
-          .mockResolvedValueOnce(existingInvoice),
+          .mockResolvedValueOnce({ ...existingInvoice, gatewayLinks: [] }),
       },
       $transaction: jest.fn(),
     };
@@ -40,7 +41,7 @@ describe('InvoiceService quick-invoice idempotency', () => {
       ],
     });
 
-    expect(result).toBe(existingInvoice);
+    expect(result).toEqual({ ...existingInvoice, hasPaymentHistory: false, paymentUrl: null });
     expect(prisma.invoice.findFirst).toHaveBeenNthCalledWith(1, {
       where: { userId: 'user-1', clientRequestId: 'guest-draft-1' },
       select: { id: true },

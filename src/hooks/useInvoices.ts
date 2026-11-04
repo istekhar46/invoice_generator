@@ -121,7 +121,7 @@ export function useInvoice(id: string) {
  * Convenience hook that wraps useInvoices with status-specific filtering
  */
 export function useInvoicesByStatus(
-  status: 'DRAFT' | 'SENT' | 'PAID',
+  status: 'DRAFT' | 'SENT' | 'PAID' | 'VOIDED',
   options: Omit<InvoiceQueryParams, 'status'> = {}
 ) {
   const params: InvoiceQueryParams = {
@@ -478,7 +478,7 @@ export function useUpdateInvoiceStatus() {
   const { isOnline } = useOnlineStatus()
 
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'DRAFT' | 'SENT' | 'PAID' }) =>
+    mutationFn: ({ id, status }: { id: string; status: 'DRAFT' | 'SENT' | 'PAID' | 'VOIDED' }) =>
       invoiceApi.updateInvoiceStatus(id, status),
     // Enhanced retry logic for offline support
     retry: (failureCount, error: any) => {
@@ -487,7 +487,7 @@ export function useUpdateInvoiceStatus() {
       // Don't retry on authentication errors
       if (error?.status === 401 || error?.status === 403) return false
       // Don't retry on validation errors
-      if (error?.status === 400 || error?.status === 422) return false
+      if (error?.status === 400 || error?.status === 409 || error?.status === 422) return false
       // Don't retry on not found errors
       if (error?.status === 404) return false
       // Retry once for other errors
@@ -521,7 +521,7 @@ export function useUpdateInvoiceStatus() {
       } else if (err?.status === 404) {
         error('Invoice not found', 'The invoice may have been deleted')
       } else {
-        error('Failed to update status', 'Please try again')
+        error('Failed to update status', err?.message || 'Please try again')
       }
     },
     onSuccess: (_, { status }) => {

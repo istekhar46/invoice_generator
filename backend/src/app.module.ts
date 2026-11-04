@@ -12,6 +12,9 @@ import { UserModule } from './user/user.module';
 import { CompanyModule } from './company/company.module';
 import { CustomerModule } from './customer/customer.module';
 import { CatalogModule } from './catalog/catalog.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { PaymentModule } from './payments/payment.module';
+import { RazorpayModule } from './razorpay/razorpay.module';
 import { InvoiceModule } from './invoice/invoice.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HealthModule } from './health/health.module';
@@ -48,6 +51,9 @@ import { initializeCloudinary } from './config/cloudinary.config';
     // Customer management module
     CustomerModule,
     CatalogModule,
+    InventoryModule,
+    PaymentModule,
+    RazorpayModule,
 
     // Invoice management module
     InvoiceModule,

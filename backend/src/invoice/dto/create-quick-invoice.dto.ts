@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsString,
   IsDate,
@@ -12,11 +12,32 @@ import {
   Max,
   MaxLength,
   IsBoolean,
+  ValidateIf,
 } from 'class-validator';
 import { CreateLineItemDto } from './create-line-item.dto';
 import { InvoiceOptionsDto } from './invoice-options.dto';
 
 export class CreateQuickInvoiceDto extends InvoiceOptionsDto {
+  @ApiProperty({
+    required: false,
+    description:
+      'Owner-declared import of a guest draft; paid amount becomes an unverified opening balance.',
+  })
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @Transform(({ obj, key }: { obj: Record<string, unknown>; key: string }) => obj[key])
+  @IsBoolean()
+  importedGuestDraft?: boolean;
+
+  @ApiProperty({
+    required: false,
+    description: 'Opening paid amount, only for an imported guest draft.',
+  })
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @Transform(({ obj, key }: { obj: Record<string, unknown>; key: string }) => obj[key])
+  @IsNumber()
+  @Min(0)
+  amountPaid?: number;
+
   @ApiProperty({
     description: 'Flag to identify this as a quick invoice',
     example: true,

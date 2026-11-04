@@ -39,11 +39,33 @@ export function documentTotals(invoice: Partial<Invoice>) {
       invoice.discountType === 'fixed'
         ? money(discount, currency)
         : money(((invoice.subtotal || 0) * discount) / 100, currency),
-    balanceDue: paymentBalance(
-      invoice.total || 0,
-      invoice.amountPaid || 0,
-      currency
-    ),
+    balanceDue:
+      invoice.status === 'voided'
+        ? 0
+        : paymentBalance(invoice.total || 0, invoice.amountPaid || 0, currency),
+  }
+}
+
+/** Only persisted account invoices receive a server-selected active Live URL. */
+export function documentPaymentUrl(invoice: Partial<Invoice>) {
+  if (
+    !invoice.userId ||
+    invoice.status !== 'sent' ||
+    invoice.currency !== 'INR' ||
+    documentTotals(invoice).balanceDue <= 0 ||
+    !invoice.paymentUrl
+  )
+    return null
+  try {
+    const url = new URL(invoice.paymentUrl)
+    return url.protocol === 'https:' &&
+      url.hostname === 'rzp.io' &&
+      !url.username &&
+      !url.password
+      ? url.href
+      : null
+  } catch {
+    return null
   }
 }
 

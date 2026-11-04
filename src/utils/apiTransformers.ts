@@ -58,7 +58,8 @@ export const transformInvoiceResponse = (dto: InvoiceResponseDto): Invoice => ({
   taxAmount: dto.taxAmount,
   total: dto.total,
   notes: dto.notes,
-  status: dto.status.toLowerCase() as 'draft' | 'sent' | 'paid',
+  status: dto.status.toLowerCase() as 'draft' | 'sent' | 'paid' | 'voided',
+  issuedAt: dto.issuedAt ? new Date(dto.issuedAt) : null,
   createdAt: new Date(dto.createdAt),
   updatedAt: new Date(dto.updatedAt),
 })

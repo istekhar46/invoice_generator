@@ -453,6 +453,7 @@ const InvoiceBuilderForm: React.FC<
         notes: data.notes ?? '',
         taxRate: data.taxRate,
       }
+      delete payload.amountPaid
 
       if (invoice) {
         // Update existing invoice
@@ -710,7 +711,11 @@ const InvoiceBuilderForm: React.FC<
           <FormGrid columns={2} gap="lg">
             <label className="qi-field">
               <span>Currency</span>
-              <select aria-label="Currency" {...register('currency')}>
+              <select
+                aria-label="Currency"
+                {...register('currency')}
+                disabled={!!invoice?.hasPaymentHistory}
+              >
                 {SUPPORTED_CURRENCIES.map(code => (
                   <option key={code} value={code}>
                     {code}
@@ -851,6 +856,22 @@ const InvoiceBuilderForm: React.FC<
                 <span>{displayTotal(totals?.total)}</span>
               </div>
             </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Amount paid:</span>
+              <span>{displayTotal(watchedValues.amountPaid ?? 0)}</span>
+            </div>
+            <div className="flex justify-between text-sm font-semibold">
+              <span>Balance due:</span>
+              <span>{displayTotal(totals?.balanceDue)}</span>
+            </div>
+            {invoice && (
+              <a
+                className="inline-block text-sm text-primary-700 underline"
+                href={`/payments?invoice=${encodeURIComponent(invoice.id)}`}
+              >
+                View payment history
+              </a>
+            )}
           </div>
         </CardContent>
       </Card>

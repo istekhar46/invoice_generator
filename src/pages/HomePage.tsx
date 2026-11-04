@@ -1,5 +1,5 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { GuestInvoiceSection } from '../components/guest/GuestInvoiceSection'
 import heroImage from '../assets/hero_image.png'
 import { BsCloudDownload } from 'react-icons/bs'
@@ -7,6 +7,13 @@ import { FaMedapps } from 'react-icons/fa6'
 import { GoStopwatch } from 'react-icons/go'
 
 export const HomePage: React.FC = () => {
+  const location = useLocation()
+  useEffect(() => {
+    if (location.hash)
+      document
+        .getElementById(location.hash.slice(1))
+        ?.scrollIntoView({ block: 'start' })
+  }, [location.hash, location.key])
   const features = [
     {
       id: 'fast-creation',
@@ -87,7 +94,10 @@ export const HomePage: React.FC = () => {
       <GuestInvoiceSection className="animate-fade-in" />
 
       {/* Features Section */}
-      <section className="bg-white py-10 px-4 sm:py-16 sm:px-6 lg:py-20 lg:px-8 animate-fade-in">
+      <section
+        id="features"
+        className="scroll-mt-24 bg-white py-10 px-4 sm:py-16 sm:px-6 lg:py-20 lg:px-8 animate-fade-in"
+      >
         <div className="max-w-7xl mx-auto">
           <h2 className="text-3xl sm:text-4xl font-bold text-center text-gray-900 mb-8 sm:mb-16">
             Everything You Need to Get Paid
@@ -119,13 +129,16 @@ export const HomePage: React.FC = () => {
         aria-labelledby="invoice-how-to"
       >
         <div className="mx-auto max-w-4xl space-y-6">
-          <h2 id="invoice-how-to" className="text-3xl font-bold text-gray-900">
+          <h2
+            id="invoice-how-to"
+            className="scroll-mt-24 text-3xl font-bold text-gray-900"
+          >
             How do I create a PDF invoice?
           </h2>
           <ol className="list-decimal space-y-3 pl-5 text-gray-600 leading-relaxed">
             <li>
-              Enter your business and customer details in the invoice editor
-              below.
+              Enter your business and customer details in the invoice editor on
+              this page.
             </li>
             <li>
               Choose your currency and dates, then add line items, discounts,
@@ -156,7 +169,7 @@ export const HomePage: React.FC = () => {
               ],
               [
                 'How are invoice totals calculated?',
-                'Each line item amount is its quantity multiplied by its rate. The subtotal adds the line item amounts; the tax rate you enter is applied to that subtotal. Review the calculated tax and total before issuing your invoice.',
+                'Each line amount is its quantity multiplied by its rate. The subtotal adds those amounts. Discounts are applied before tax, shipping is added after tax, and recorded payments reduce the balance due. Review the calculated totals before issuing your invoice.',
               ],
               [
                 'Does Invoiceo decide which tax rate I should use?',

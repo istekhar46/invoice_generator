@@ -173,6 +173,10 @@ function getConflictErrorMessage(
     }
   }
 
+  if (errorMessage && !isTechnicalMessage(errorMessage)) {
+    return { title: 'Conflict', message: errorMessage }
+  }
+
   return {
     title: 'Conflict',
     message: 'This action conflicts with existing data. Please refresh and try again',

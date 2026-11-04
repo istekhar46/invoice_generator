@@ -58,6 +58,8 @@ describe('Console navigation', () => {
       'Dashboard',
       'Quick Invoice',
       'Products & Services',
+      'Inventory',
+      'Payments',
       'Customers',
       'Company Profile',
     ]) {
@@ -68,7 +70,7 @@ describe('Console navigation', () => {
     ).toHaveAttribute('href', '/invoices?create=true')
     expect(
       within(sidebar).queryByText(
-        /Purchases|Expenses|Subscriptions|Inventory|Quotations/
+        /Purchases|Expenses|Subscriptions|Quotations/
       )
     ).not.toBeInTheDocument()
   })

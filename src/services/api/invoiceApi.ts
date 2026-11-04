@@ -12,7 +12,7 @@ export interface CreateLineItemDto {
   rate: number
 }
 
-export interface CreateInvoiceDto extends InvoiceOptions {
+export interface CreateInvoiceDto extends Omit<InvoiceOptions, 'amountPaid'> {
   invoiceNumber?: string
   customerId: string
   serviceDate: Date
@@ -23,6 +23,7 @@ export interface CreateInvoiceDto extends InvoiceOptions {
 }
 
 export interface CreateQuickInvoiceDto extends InvoiceOptions {
+  importedGuestDraft?: boolean
   invoiceNumber?: string
   isQuickInvoice: true
   clientRequestId?: string
@@ -50,11 +51,11 @@ export interface CreateQuickInvoiceDto extends InvoiceOptions {
 }
 
 export type UpdateInvoiceDto = Partial<
-  Omit<CreateQuickInvoiceDto, 'isQuickInvoice' | 'clientRequestId'>
+  Omit<CreateQuickInvoiceDto, 'isQuickInvoice' | 'clientRequestId' | 'amountPaid' | 'importedGuestDraft'>
 >
 
 export interface UpdateInvoiceStatusDto {
-  status: 'DRAFT' | 'SENT' | 'PAID'
+  status: 'DRAFT' | 'SENT' | 'PAID' | 'VOIDED'
 }
 
 export interface LineItemResponseDto {
@@ -69,6 +70,8 @@ export interface LineItemResponseDto {
 }
 
 export interface InvoiceResponseDto extends InvoiceOptions {
+  hasPaymentHistory?: boolean
+  paymentUrl?: string | null
   customerId?: string | null
   isQuickInvoice?: boolean
   quickCompanyName?: string | null
@@ -97,14 +100,15 @@ export interface InvoiceResponseDto extends InvoiceOptions {
   taxAmount: number
   total: number
   notes?: string
-  status: 'DRAFT' | 'SENT' | 'PAID'
+  status: 'DRAFT' | 'SENT' | 'PAID' | 'VOIDED'
   lineItems: LineItemResponseDto[]
+  issuedAt?: Date | null
   createdAt: Date
   updatedAt: Date
 }
 
 export interface InvoiceQueryParams {
-  status?: 'DRAFT' | 'SENT' | 'PAID'
+  status?: 'DRAFT' | 'SENT' | 'PAID' | 'VOIDED'
   customerId?: string
   dateFrom?: Date
   dateTo?: Date
@@ -218,7 +222,7 @@ export class InvoiceApi {
    */
   async updateInvoiceStatus(
     id: string,
-    status: 'DRAFT' | 'SENT' | 'PAID'
+    status: 'DRAFT' | 'SENT' | 'PAID' | 'VOIDED'
   ): Promise<InvoiceResponseDto> {
     return apiClient.patch<InvoiceResponseDto>(
       `${this.basePath}/${id}/status`,
@@ -241,7 +245,7 @@ export class InvoiceApi {
    * Convenience method for status-only filtering
    */
   async getInvoicesByStatus(
-    status: 'DRAFT' | 'SENT' | 'PAID',
+    status: 'DRAFT' | 'SENT' | 'PAID' | 'VOIDED',
     params: Omit<InvoiceQueryParams, 'status'> = {}
   ): Promise<PaginatedInvoiceResponse> {
     return this.getInvoices({ ...params, status })
