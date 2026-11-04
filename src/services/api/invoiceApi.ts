@@ -51,7 +51,10 @@ export interface CreateQuickInvoiceDto extends InvoiceOptions {
 }
 
 export type UpdateInvoiceDto = Partial<
-  Omit<CreateQuickInvoiceDto, 'isQuickInvoice' | 'clientRequestId' | 'amountPaid' | 'importedGuestDraft'>
+  Omit<
+    CreateQuickInvoiceDto,
+    'isQuickInvoice' | 'clientRequestId' | 'amountPaid' | 'importedGuestDraft'
+  >
 >
 
 export interface UpdateInvoiceStatusDto {
@@ -70,6 +73,8 @@ export interface LineItemResponseDto {
 }
 
 export interface InvoiceResponseDto extends InvoiceOptions {
+  sourceQuoteId?: string | null
+  sourceQuote?: { id: string; quoteNumber: string } | null
   hasPaymentHistory?: boolean
   paymentUrl?: string | null
   customerId?: string | null

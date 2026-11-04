@@ -24,6 +24,9 @@ model User {
   companyProfile CompanyProfile?
   customers      Customer[]
   invoices       Invoice[]
+  quotes         Quote[]
+  documentCounters DocumentCounter[]
+  documentNumbers DocumentNumber[]
   refreshTokens  RefreshToken[]
   invoiceDefaults InvoiceDefaults?
   catalogItems    CatalogItem[]
@@ -111,6 +114,7 @@ model Customer {
   // Relations
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   invoices Invoice[]
+  quotes   Quote[]
   
   // Indexes for query optimization
   @@index([userId])
@@ -171,9 +175,11 @@ model Invoice {
 
   // Flag to identify quick invoices
   isQuickInvoice Boolean @default(false)
+  sourceQuoteId String?
 
   // Relations
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceQuote Quote? @relation(fields: [userId, sourceQuoteId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
   customer  Customer?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
   lineItems LineItem[]
   stockActions StockAction[]
@@ -193,6 +199,7 @@ model Invoice {
   @@unique([userId, clientRequestId])
   @@unique([userId, invoiceNumber])
   @@unique([userId, id])
+  @@unique([userId, sourceQuoteId])
   @@index([isQuickInvoice])
   @@map("invoices")
 }
@@ -455,6 +462,7 @@ model CatalogItem {
   updatedAt   DateTime     @updatedAt
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   lineItems   LineItem[]
+  quoteLineItems QuoteLineItem[]
   stockActions StockAction[]
   stockMovements StockMovement[]
 
@@ -520,4 +528,95 @@ enum StockActionKind {
   INVOICE_ISSUE
   INVOICE_EDIT
   INVOICE_VOID
+}
+
+// Account sequences serialize automatic and manually numbered document creation.
+model DocumentCounter {
+  userId String
+  kind String
+  value BigInt @default(0)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([userId, kind])
+  @@map("document_counters")
+}
+
+enum QuoteStatus {
+  DRAFT
+  ISSUED
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+model Quote {
+  id String @id @default(cuid())
+  userId String
+  customerId String
+  clientRequestId String @db.VarChar(100)
+  requestHash String @db.Char(64)
+  quoteNumber String
+  status QuoteStatus @default(DRAFT)
+  version Int @default(1)
+  quoteDate DateTime @db.Date
+  validUntil DateTime @db.Date
+  issuedAt DateTime?
+  acceptedAt DateTime?
+  companySnapshot Json
+  customerSnapshot Json
+  logoDataUrl String @default("")
+  currency String
+  discountType String @default("percentage")
+  discountValue Float @default(0)
+  shippingAmount Float @default(0)
+  subtotal Float
+  taxRate Float
+  taxAmount Float
+  total Float
+  paymentTerms String @default("")
+  notes String @default("")
+  terms String @default("")
+  purchaseOrderNumber String @default("")
+  shippingAddress String @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  lineItems QuoteLineItem[]
+  convertedInvoice Invoice?
+  @@unique([userId, id])
+  @@unique([userId, quoteNumber])
+  @@unique([userId, clientRequestId])
+  @@index([userId, status, createdAt])
+  @@map("quotes")
+}
+
+model QuoteLineItem {
+  id String @id @default(cuid())
+  userId String
+  quoteId String
+  position Int
+  type LineItemType
+  catalogItemId String?
+  description String
+  unit String
+  quantity Float
+  rate Float
+  amount Float
+  quote Quote @relation(fields: [userId, quoteId], references: [userId, id], onDelete: Cascade)
+  catalogItem CatalogItem? @relation(fields: [userId, catalogItemId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
+  @@unique([quoteId, position])
+  @@index([userId, catalogItemId])
+  @@map("quote_line_items")
+}
+
+// Retained after document deletion/renumbering so no other document can reuse a number.
+model DocumentNumber {
+  userId String
+  kind String
+  number String
+  documentId String
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([userId, kind, number])
+  @@map("document_numbers")
 }

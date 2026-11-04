@@ -11,14 +11,28 @@ interface Item {
 }
 
 /** Mount only for signed-in editors. One batch lookup covers all linked product rows. */
-export function InvoiceStockAvailability({ items }: { items: Item[] }) {
+export function InvoiceStockAvailability({
+  items,
+  context = 'invoice',
+}: {
+  items: Item[]
+  context?: 'invoice' | 'quotation'
+}) {
   const products = items.filter(
     item => item.type === 'product' && item.catalogItemId
   )
-  return products.length ? <Availability items={products} /> : null
+  return products.length ? (
+    <Availability items={products} context={context} />
+  ) : null
 }
 
-function Availability({ items }: { items: Item[] }) {
+function Availability({
+  items,
+  context = 'invoice',
+}: {
+  items: Item[]
+  context?: 'invoice' | 'quotation'
+}) {
   const query = useStockAvailability(items.map(item => item.catalogItemId!))
   if (query.isPending)
     return (
@@ -45,15 +59,20 @@ function Availability({ items }: { items: Item[] }) {
   )
   return (
     <section
-      aria-label="Invoice stock availability"
+      aria-label={
+        context === 'quotation'
+          ? 'Quotation stock availability'
+          : 'Invoice stock availability'
+      }
       className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4"
     >
       <h3 className="text-sm font-semibold text-slate-800">
         Current stock availability
       </h3>
       <p className="mt-1 text-xs leading-relaxed text-slate-500">
-        Drafts do not reserve stock. Issuing deducts stock; current availability
-        already includes issued invoices.
+        {context === 'quotation'
+          ? 'Quotations do not reserve or deduct stock. Stock is checked when the resulting invoice is issued.'
+          : 'Drafts do not reserve stock. Issuing deducts stock; current availability already includes issued invoices.'}
       </p>
       <ul className="mt-3 space-y-2">
         {items.map((item, index) => {
@@ -72,7 +91,8 @@ function Availability({ items }: { items: Item[] }) {
                 {balance.product.isArchived ? ' (archived)' : ''}
               </Link>
               <span className="text-slate-600">
-                Invoice quantity: {item.quantity} {balance.product.unit}
+                {context === 'quotation' ? 'Quote' : 'Invoice'} quantity:{' '}
+                {item.quantity} {balance.product.unit}
               </span>
               <span
                 className={

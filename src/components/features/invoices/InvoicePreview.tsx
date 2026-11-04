@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import type { Invoice } from '../../../types/entities'
 import {
   invoiceParties,
@@ -16,6 +17,7 @@ interface InvoicePreviewProps {
   company?: InvoiceCompany | null
   customer?: InvoiceCustomer | null
   className?: string
+  quotation?: { status: string }
 }
 
 export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
@@ -23,12 +25,15 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
   company,
   customer,
   className = '',
+  quotation,
 }) => {
   const parties = invoiceParties(invoice, company, customer || invoice.customer)
   const currency = invoice.currency || 'USD'
+  const dateLabel = (date: Date) =>
+    quotation ? date.toISOString().slice(0, 10) : formatDate(date)
   const amount = (value = 0) => formatCurrency(value, currency)
   const totals = documentTotals(invoice)
-  const paymentUrl = documentPaymentUrl(invoice)
+  const paymentUrl = quotation ? null : documentPaymentUrl(invoice)
   const address = (party?: InvoiceCompany | InvoiceCustomer | null) =>
     party && (
       <div className="whitespace-pre-line text-sm leading-relaxed text-slate-500">
@@ -48,11 +53,11 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
   )
   return (
     <article
-      className={`rounded-xl border border-slate-200 bg-white p-5 sm:p-8 ${className}`}
-      aria-label="Invoice preview"
+      className={`min-w-0 break-words rounded-xl border border-slate-200 bg-white p-5 sm:p-8 ${className}`}
+      aria-label={quotation ? 'Quotation preview' : 'Invoice preview'}
     >
       <div className="mb-8 flex flex-wrap justify-between gap-6">
-        <div>
+        <div className="min-w-0">
           {parties.company?.logoUrl && (
             <img
               src={parties.company.logoUrl}
@@ -70,15 +75,39 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
             </p>
           )}
         </div>
-        <div className="space-y-1 text-sm sm:text-right">
+        <div className="min-w-0 space-y-1 text-sm sm:text-right">
           <h1 className="mb-3 text-3xl font-bold text-slate-900">
-            {invoice.status === 'voided' ? 'VOIDED INVOICE' : 'INVOICE'}
+            {quotation
+              ? 'QUOTATION'
+              : invoice.status === 'voided'
+                ? 'VOIDED INVOICE'
+                : 'INVOICE'}
           </h1>
+          {quotation && <p>{quotation.status}</p>}
+          {invoice.sourceQuote && !quotation && (
+            <p>
+              From quotation{' '}
+              <Link
+                className="text-primary-700 underline"
+                to={`/quotes?id=${encodeURIComponent(invoice.sourceQuote.id)}`}
+              >
+                {invoice.sourceQuote.quoteNumber}
+              </Link>
+            </p>
+          )}
           <p>{invoice.invoiceNumber || 'Preview'}</p>
           {invoice.serviceDate && (
-            <p>Invoice date: {formatDate(invoice.serviceDate)}</p>
+            <p>
+              {quotation ? 'Quotation date' : 'Invoice date'}:{' '}
+              {dateLabel(invoice.serviceDate)}
+            </p>
           )}
-          {invoice.dueDate && <p>Due date: {formatDate(invoice.dueDate)}</p>}
+          {invoice.dueDate && (
+            <p>
+              {quotation ? 'Valid until (UTC)' : 'Due date'}:{' '}
+              {dateLabel(invoice.dueDate)}
+            </p>
+          )}
           {invoice.paymentTerms && <p>Payment terms: {invoice.paymentTerms}</p>}
           {invoice.purchaseOrderNumber && (
             <p>PO number: {invoice.purchaseOrderNumber}</p>
@@ -89,7 +118,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
       <div className="mb-8 grid gap-6 sm:grid-cols-2">
         <div>
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            Bill to
+            {quotation ? 'Quote for' : 'Bill to'}
           </h3>
           <p className="font-semibold">{parties.customer?.name}</p>
           {address(parties.customer)}
@@ -122,7 +151,9 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                 <td className="p-3 text-right">
                   {item.quantity} {item.unit}
                 </td>
-                <td className="p-3 text-right">{amount(item.rate)}</td>
+                <td className="p-3 text-right">
+                  {quotation ? `${currency} ${item.rate}` : amount(item.rate)}
+                </td>
                 <td className="p-3 text-right font-medium">
                   {amount(item.amount)}
                 </td>
@@ -176,10 +207,12 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
           <div className="border-t pt-3 font-bold">
             {row('Total', invoice.total || 0)}
           </div>
-          {row('Amount paid', invoice.amountPaid || 0)}
-          <div className="rounded-lg bg-blue-50 p-3 font-bold">
-            {row('Balance due', totals.balanceDue)}
-          </div>
+          {!quotation && row('Amount paid', invoice.amountPaid || 0)}
+          {!quotation && (
+            <div className="rounded-lg bg-blue-50 p-3 font-bold">
+              {row('Balance due', totals.balanceDue)}
+            </div>
+          )}
         </div>
       </div>
     </article>

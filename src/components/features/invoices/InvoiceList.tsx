@@ -516,14 +516,17 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
         onClose={() => {
           if (!updateStatusMutation.isPending) setVoidingInvoice(null)
         }}
-        title="Void invoice"
+        title={
+          voidingInvoice?.status === 'draft' ? 'Cancel draft' : 'Void invoice'
+        }
         size="small"
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
             Void <strong>{voidingInvoice?.invoiceNumber}</strong>? Any stock
-            deducted by this invoice will be returned. The invoice stays in your
-            records and cannot be reopened.
+            deducted by this invoice will be returned. Cancelling an unissued
+            draft makes no stock change. The invoice stays in your records and
+            cannot be reopened.
           </p>
           {statusError && (
             <p role="alert" className="text-sm text-danger-700">
@@ -546,7 +549,9 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                 if (voidingInvoice) void changeStatus(voidingInvoice, 'voided')
               }}
             >
-              Void invoice
+              {voidingInvoice?.status === 'draft'
+                ? 'Cancel draft'
+                : 'Void invoice'}
             </Button>
           </div>
         </div>
@@ -880,7 +885,13 @@ function InvoiceActionItems({
         >
           Payment history
         </Link>
-        <Link className="mt-2 block text-primary-700 underline" to={`/payments/links?invoice=${encodeURIComponent(invoice.id)}&mode=LIVE`} onClick={onClose}>Payment links</Link>
+        <Link
+          className="mt-2 block text-primary-700 underline"
+          to={`/payments/links?invoice=${encodeURIComponent(invoice.id)}&mode=LIVE`}
+          onClick={onClose}
+        >
+          Payment links
+        </Link>
       </div>
     )
   return (
@@ -924,18 +935,29 @@ function InvoiceActionItems({
         <DollarSign className="h-4 w-4 mr-3 text-gray-400" />
         Payment history
       </Link>
-      <Link className={itemClass} to={`/payments/links?invoice=${encodeURIComponent(invoice.id)}&mode=LIVE`} onClick={event => { event.stopPropagation(); onClose() }}>Payment links</Link>
-      {invoice.status === 'sent' &&
+      <Link
+        className={itemClass}
+        to={`/payments/links?invoice=${encodeURIComponent(invoice.id)}&mode=LIVE`}
+        onClick={event => {
+          event.stopPropagation()
+          onClose()
+        }}
+      >
+        Payment links
+      </Link>
+      {(invoice.status === 'sent' ||
+        (invoice.status === 'draft' && !!invoice.sourceQuoteId)) &&
         !(invoice.amountPaid && invoice.amountPaid > 0) && (
           <button
             className={cn(itemClass, 'text-danger-600')}
             onClick={action(() => onStatusChange('voided'))}
           >
             <Ban className="h-4 w-4 mr-3" />
-            Void invoice
+            {invoice.status === 'draft' ? 'Cancel draft' : 'Void invoice'}
           </button>
         )}
       {invoice.status === 'draft' &&
+        !invoice.sourceQuoteId &&
         !invoice.hasPaymentHistory &&
         !(invoice.amountPaid && invoice.amountPaid > 0) && (
           <button

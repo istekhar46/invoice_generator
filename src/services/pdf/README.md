@@ -56,3 +56,14 @@ python3 -m venv /tmp/invoice-pdf-verification-venv
 The inspector checks actual saved totals/rows, discount/tax/shipping, partial/full/voided balances, INR/USD/JPY precision, metadata, invoice/cancellation context on every page, page numbering, text bounds and multi-page row preservation. It writes `verification.json` and renders all pages through PDFium for **manual visual review**. Passing content checks alone does not establish correct layout.
 
 Fixtures cover partial-payment Sent, unpaid Voided, historical 0.335-row/0.67-total Sent/Voided, fully paid JPY, a long multi-page voided invoice a guest draft and a payable invoice with a fictional Live UPI URL. Generated artifacts are private/gitignored under `release-artifacts.local/`.
+
+## Quotation exports
+
+Quotations reuse this layout through `quotePDF.ts` and a presentation-only adapter. They show QUOTATION, owner-recorded status, quote date/valid-until in UTC, saved parties, exact unit rates and financial snapshots. They exclude invoice payment links, amount paid and balance due. Invoice/guest rendering is unchanged.
+
+```sh
+node scripts/export-quote-pdf-fixtures.mjs release-artifacts.local/quote-pdf-check
+/tmp/invoice-pdf-verification-venv/bin/python scripts/verify-quote-pdf-fixtures.py release-artifacts.local/quote-pdf-check
+```
+
+Inspect the generated page PNGs as well as the text/geometry report. Fictional fixtures cover an accepted quote and a long cancelled quote; export must not mutate them.

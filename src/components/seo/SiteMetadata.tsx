@@ -22,6 +22,7 @@ const accountPageTitles: Record<string, string> = {
   '/signup': 'Create your account',
   '/dashboard': 'Dashboard',
   '/invoices': 'Invoices',
+  '/quotes': 'Quotations',
   '/customers': 'Customers',
   '/products': 'Products & Services',
   '/inventory': 'Inventory',

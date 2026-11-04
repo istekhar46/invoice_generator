@@ -9,6 +9,7 @@ import type { StockDialogTarget } from '../components/features/inventory/StockAc
 import type { StockAction, StockProduct } from '../types/inventory'
 import { formatStockQuantity } from '../types/inventory'
 import { ApiError } from '../services/api/apiClient'
+import { queryKeys } from '../lib/queryKeys'
 import { CacheInvalidationService } from '../services/cache/cacheInvalidation.service'
 
 const mocks = vi.hoisted(() => ({
@@ -548,6 +549,9 @@ it('invoice mutations invalidate stock and catalog snapshots alongside invoice l
   const client = new QueryClient()
   client.setQueryData(['inventory', 'owner-a', 'balances'], [])
   client.setQueryData(['catalog', 'owner-a', {}], [])
+  client.setQueryData(queryKeys.profile(), { id: 'owner-a' })
+  client.setQueryData(['quotes', 'owner-a', 'list'], [])
+  client.setQueryData(['quotes', 'owner-b', 'list'], [])
   new CacheInvalidationService(client).invoices.invalidateInvoice('invoice-1')
   expect(
     client.getQueryState(['inventory', 'owner-a', 'balances'])?.isInvalidated
@@ -555,4 +559,10 @@ it('invoice mutations invalidate stock and catalog snapshots alongside invoice l
   expect(client.getQueryState(['catalog', 'owner-a', {}])?.isInvalidated).toBe(
     true
   )
+  expect(
+    client.getQueryState(['quotes', 'owner-a', 'list'])?.isInvalidated
+  ).toBe(true)
+  expect(
+    client.getQueryState(['quotes', 'owner-b', 'list'])?.isInvalidated
+  ).toBe(false)
 })

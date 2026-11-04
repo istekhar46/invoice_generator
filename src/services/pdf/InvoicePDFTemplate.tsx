@@ -128,15 +128,19 @@ export interface InvoicePDFTemplateProps {
   invoice: Invoice
   company?: InvoiceCompany | null
   customer?: InvoiceCustomer | null
+  quotation?: { status: string }
 }
 
 export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
   invoice,
   company,
   customer,
+  quotation,
 }) => {
   const parties = invoiceParties(invoice, company, customer)
   const currency = invoice.currency || 'USD'
+  const dateLabel = (date: Date) =>
+    quotation ? date.toISOString().slice(0, 10) : formatDate(date)
   // Codes are unambiguous and render with the built-in PDF fonts for every currency.
   const number = (value: number) =>
     new Intl.NumberFormat('en-US', {
@@ -144,8 +148,9 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
       maximumFractionDigits: currencyDigits(currency),
     }).format(value)
   const totals = documentTotals(invoice)
-  const paymentUrl = documentPaymentUrl(invoice)
-  const isVoided = invoice.status === 'voided'
+  const paymentUrl = quotation ? null : documentPaymentUrl(invoice)
+  const isVoided = !quotation && invoice.status === 'voided'
+  const documentLabel = quotation ? 'Quotation' : 'Invoice'
   const partyLines = (party?: InvoiceCompany | InvoiceCustomer | null) =>
     party && (
       <>
@@ -165,7 +170,7 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
   )
   return (
     <Document
-      title={`${isVoided ? 'Voided invoice' : 'Invoice'} ${invoice.invoiceNumber}`}
+      title={`${quotation ? 'Quotation' : isVoided ? 'Voided invoice' : 'Invoice'} ${invoice.invoiceNumber}`}
       author={parties.company?.businessName || 'Invoiceo'}
     >
       <Page size="A4" style={styles.page}>
@@ -181,13 +186,24 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
             )}
           </View>
           <View style={styles.meta}>
-            <Text style={styles.title}>INVOICE</Text>
+            <Text style={styles.title}>
+              {quotation ? 'QUOTATION' : 'INVOICE'}
+            </Text>
+            {quotation && (
+              <Text style={{ marginBottom: 8 }}>{quotation.status}</Text>
+            )}
             {isVoided && (
               <Text style={styles.voided}>VOIDED - No payment due</Text>
             )}
             <Text style={{ marginBottom: 12 }}>{invoice.invoiceNumber}</Text>
-            <Text>Invoice date: {formatDate(invoice.serviceDate)}</Text>
-            <Text>Due date: {formatDate(invoice.dueDate)}</Text>
+            <Text>
+              {quotation ? 'Quotation date' : 'Invoice date'}:{' '}
+              {dateLabel(invoice.serviceDate)}
+            </Text>
+            <Text>
+              {quotation ? 'Valid until (UTC)' : 'Due date'}:{' '}
+              {dateLabel(invoice.dueDate)}
+            </Text>
             {invoice.paymentTerms && (
               <Text>Payment terms: {invoice.paymentTerms}</Text>
             )}
@@ -199,7 +215,9 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
         </View>
         <View style={styles.columns}>
           <View style={styles.half}>
-            <Text style={styles.label}>BILL TO</Text>
+            <Text style={styles.label}>
+              {quotation ? 'QUOTE FOR' : 'BILL TO'}
+            </Text>
             <Text style={styles.name}>{parties.customer?.name}</Text>
             {partyLines(parties.customer)}
           </View>
@@ -223,7 +241,9 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
               <Text style={styles.qty}>
                 {item.quantity} {item.unit}
               </Text>
-              <Text style={styles.rate}>{number(item.rate)}</Text>
+              <Text style={styles.rate}>
+                {quotation ? String(item.rate) : number(item.rate)}
+              </Text>
               <Text style={styles.amount}>{number(item.amount)}</Text>
             </View>
           ))}
@@ -267,17 +287,19 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
             <View style={styles.total}>
               {totalRow(`Total (${currency})`, invoice.total)}
             </View>
-            {totalRow('Amount paid', invoice.amountPaid || 0)}
-            <View style={styles.balance}>
-              {totalRow(`Balance due (${currency})`, totals.balanceDue)}
-            </View>
+            {!quotation && totalRow('Amount paid', invoice.amountPaid || 0)}
+            {!quotation && (
+              <View style={styles.balance}>
+                {totalRow(`Balance due (${currency})`, totals.balanceDue)}
+              </View>
+            )}
           </View>
         </View>
         <Text
           style={styles.footer}
           fixed
           render={({ pageNumber, totalPages }) =>
-            `Invoice ${invoice.invoiceNumber}${isVoided ? ' | VOIDED - No payment due' : ''} | ${pageNumber} / ${totalPages}`
+            `${documentLabel} ${invoice.invoiceNumber}${quotation ? ` | ${quotation.status}` : ''}${isVoided ? ' | VOIDED - No payment due' : ''} | ${pageNumber} / ${totalPages}`
           }
         />
       </Page>
