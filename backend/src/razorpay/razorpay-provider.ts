@@ -113,9 +113,9 @@ export class RazorpayProvider {
 
   async findLink(
     credentials: RazorpayCredentials,
-    filter: { reference_id?: string; payment_id?: string },
+    filter: { reference_id: string },
   ): Promise<ProviderLink | null> {
-    // SDK forwards additional documented filters despite omitting them in its pagination type.
+    // SDK forwards reference_id despite omitting it in its pagination type.
     const params = { ...filter, count: 2 };
     const value = await this.request(credentials, (client) => client.paymentLink.all(params));
     const rows = object(value).payment_links;
@@ -134,6 +134,7 @@ export class RazorpayProvider {
     if (!['created', 'authorized', 'captured', 'refunded', 'failed'].includes(status))
       throw invalidProvider();
     const captured = row.captured === true && ['captured', 'refunded'].includes(status);
+    const notes = row.notes && !Array.isArray(row.notes) ? object(row.notes) : {};
     const refunds: ProviderRefund[] = [];
     const seen = new Set<string>();
     if (captured)
@@ -166,6 +167,7 @@ export class RazorpayProvider {
       }
     return {
       id,
+      sourceId: typeof notes.invoiceo_link === 'string' ? notes.invoiceo_link : null,
       amount: minor(row.amount),
       currency: text(row.currency, 3),
       method: text(row.method, 32),

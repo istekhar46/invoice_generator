@@ -116,15 +116,28 @@ export class GatewayWebhookService {
         if (payment) {
           target = { id: payment.linkId };
           paymentHint = paymentId;
-        } else {
-          const remote = await this.provider.findLink(this.secrets.credentials(connection), {
-            payment_id: paymentId,
-          });
-          if (remote)
+        } else if (
+          // Ignore payments already recorded for this owner's other connection.
+          !(await this.prisma.gatewayPayment.findFirst({
+            where: {
+              userId: connection.userId,
+              providerId: paymentId,
+              connectionId: { not: connectionId },
+            },
+            select: { id: true },
+          }))
+        ) {
+          // Link creation stores our source ID in provider notes. The documented
+          // payment_id list filter can return unrelated links; never route on it.
+          const remote = await this.provider.fetchPayment(
+            this.secrets.credentials(connection),
+            paymentId,
+          );
+          if (remote.sourceId)
             target = await this.prisma.gatewayLink.findFirst({
               where: {
                 connectionId,
-                OR: [{ providerId: remote.id }, { referenceId: remote.referenceId }],
+                id: remote.sourceId,
               },
               select: { id: true },
             });

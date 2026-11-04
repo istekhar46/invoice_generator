@@ -60,9 +60,7 @@ class GatewayProviderFixture {
     const rows = [...this.links.values()].filter(
       (row) =>
         row.key === credentials.keyId &&
-        (filter.reference_id
-          ? row.referenceId === filter.reference_id
-          : row.paymentIds.includes(filter.payment_id)),
+        row.referenceId === filter.reference_id,
     );
     if (rows.length > 1) throw Error('Fixture reference collision');
     return rows[0] ? this.value(rows[0]) : null;
@@ -84,6 +82,7 @@ class GatewayProviderFixture {
     const payment = {
       key: link.key,
       id,
+      sourceId: link.sourceId,
       amount,
       currency: 'INR',
       method: 'upi',

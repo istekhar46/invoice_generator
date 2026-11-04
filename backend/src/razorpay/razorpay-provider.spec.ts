@@ -44,3 +44,45 @@ describe('Razorpay read-only verification', () => {
     expect(jest.getTimerCount()).toBe(0);
   });
 });
+
+describe('Razorpay authenticated payment source metadata', () => {
+  const credentials = { keyId: 'rzp_test_Fictional', keySecret: 'private-secret' };
+  const fetchPayment = jest.fn();
+  const fetchRefunds = jest.fn();
+  const payment = {
+    id: 'pay_Parent',
+    amount: 100,
+    currency: 'INR',
+    method: 'upi',
+    order_id: 'order_Parent',
+    status: 'captured',
+    captured: true,
+    created_at: 1793800000,
+  };
+
+  beforeEach(() => {
+    MockRazorpay.mockImplementation(
+      () =>
+        ({
+          payments: { fetch: fetchPayment, fetchMultipleRefund: fetchRefunds },
+        }) as unknown as Razorpay,
+    );
+    fetchRefunds.mockResolvedValue({ items: [] });
+  });
+
+  it('reads the source hint from authenticated payment notes', async () => {
+    fetchPayment.mockResolvedValue({ ...payment, notes: { invoiceo_link: 'owned-link-id' } });
+    const result = await new RazorpayProvider().fetchPayment(credentials, payment.id);
+    expect(result.sourceId).toBe('owned-link-id');
+    expect(fetchPayment).toHaveBeenCalledWith(payment.id);
+  });
+
+  it.each([undefined, [], {}, { other: 'value' }, { invoiceo_link: 123 }])(
+    'does not invent a source for unrelated payment notes %p',
+    async (notes) => {
+      fetchPayment.mockResolvedValue({ ...payment, notes });
+      const result = await new RazorpayProvider().fetchPayment(credentials, payment.id);
+      expect(result.sourceId).toBeNull();
+    },
+  );
+});
