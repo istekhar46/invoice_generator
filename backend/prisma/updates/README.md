@@ -1,5 +1,7 @@
 # Invoice schema rollout
 
+**Hosted development target, 4 November 2026:** all one-time upgrades through `20261104_razorpay_gateway.sql` are applied. Do not rerun them or schema-push this target. Matching API commit `df27525` is live, Test webhook setup/delivery is verified, and frontend deployment remains pending. See `docs/implementation/signed-in-dashboard-features.md` for recovery/evidence. Fresh-target instructions below still apply to genuinely new databases.
+
 The project currently uses `prisma db push` and has no baseline Prisma migration history. The editor requires the updated `schema.prisma` before the new API starts.
 
 For an **existing database on the pre-editor schema**, back it up, stop writes, and apply `20261101_quick_invoice_editor.sql` once using your normal PostgreSQL deployment tooling. The transaction adds the editor fields, replaces global invoice-number uniqueness with `(userId, invoiceNumber)`, and records existing `PAID` invoices as fully paid. Existing numbers and invoice records are preserved. Review the generated SQL against the actual target schema before running it.
