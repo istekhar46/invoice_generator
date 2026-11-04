@@ -23,6 +23,7 @@ export interface ProviderRefund {
 }
 export interface ProviderPayment {
   id: string;
+  sourceId: string | null;
   amount: bigint;
   currency: string;
   method: string;
