@@ -6,6 +6,7 @@ import type {
 } from '../types/entities'
 import type { GuestInvoiceData } from '../types/guest'
 import type { QuickInvoiceFormData } from '../types/forms'
+import { validUpiDetails } from './directUpi'
 import {
   calculateInvoiceForEdit,
   invoicePricingChanged,
@@ -53,6 +54,7 @@ export function documentPaymentUrl(invoice: Partial<Invoice>) {
     invoice.status !== 'sent' ||
     invoice.currency !== 'INR' ||
     documentTotals(invoice).balanceDue <= 0 ||
+    invoice.directUpi ||
     !invoice.paymentUrl
   )
     return null
@@ -68,6 +70,37 @@ export function documentPaymentUrl(invoice: Partial<Invoice>) {
   } catch {
     return null
   }
+}
+
+/** Current payable amount plus the invoice's explicit receiving snapshot. */
+export function documentDirectUpi(invoice: Partial<Invoice>) {
+  const details = invoice.directUpi
+  const balance = documentTotals(invoice).balanceDue
+  if (
+    !invoice.id ||
+    invoice.status !== 'sent' ||
+    invoice.currency !== 'INR' ||
+    !details ||
+    !validUpiDetails(details) ||
+    !/^[a-f0-9]{32}$/.test(details.reference) ||
+    !Number.isFinite(balance) ||
+    balance <= 0
+  )
+    return null
+  const fields = {
+    pa: details.upiId,
+    pn: details.payeeName,
+    am: balance.toFixed(2),
+    cu: 'INR',
+    tr: details.reference,
+    tn: Array.from(`Invoice ${invoice.invoiceNumber || ''}`)
+      .slice(0, 80)
+      .join(''),
+  }
+  const query = Object.entries(fields)
+    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+    .join('&')
+  return { ...details, amount: balance, uri: `upi://pay?${query}` }
 }
 
 export function invoiceOptions(data: InvoiceOptions): InvoiceOptions {

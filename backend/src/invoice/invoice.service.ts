@@ -31,6 +31,7 @@ import {
 } from '@nestjs/common';
 import { Invoice, LineItem, InvoiceStatus, Prisma } from '@prisma/client';
 import { invoicePaymentUrl, requireResolvedLiveLink } from '../razorpay/gateway-policy';
+import { invoiceUpiDetails } from '../payments/direct-upi-policy';
 import { BaseUserService } from '../common/services/base-user-service';
 import {
   CreateInvoiceDto,
@@ -51,6 +52,7 @@ export interface InvoiceTotals {
 export interface InvoiceWithRelations extends Invoice {
   hasPaymentHistory?: boolean;
   paymentUrl?: string | null;
+  directUpi?: ReturnType<typeof invoiceUpiDetails>;
   customer: {
     id: string;
     name: string;
@@ -382,6 +384,7 @@ export class InvoiceService extends BaseUserService {
           hasPaymentHistory:
             invoice._count.paymentEntries > 0 || invoice._count.gatewayPayments > 0,
           paymentUrl: invoicePaymentUrl({ ...details, gatewayLinks }),
+          directUpi: invoiceUpiDetails(details),
         };
       }),
       total,
@@ -434,6 +437,7 @@ export class InvoiceService extends BaseUserService {
       ...details,
       hasPaymentHistory: invoice._count.paymentEntries > 0 || invoice._count.gatewayPayments > 0,
       paymentUrl: invoicePaymentUrl({ ...details, gatewayLinks }),
+      directUpi: invoiceUpiDetails(details),
     };
   }
 

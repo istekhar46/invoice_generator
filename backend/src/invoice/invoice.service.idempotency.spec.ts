@@ -41,7 +41,12 @@ describe('InvoiceService quick-invoice idempotency', () => {
       ],
     });
 
-    expect(result).toEqual({ ...existingInvoice, hasPaymentHistory: false, paymentUrl: null });
+    expect(result).toEqual({
+      ...existingInvoice,
+      hasPaymentHistory: false,
+      paymentUrl: null,
+      directUpi: null,
+    });
     expect(prisma.invoice.findFirst).toHaveBeenNthCalledWith(1, {
       where: { userId: 'user-1', clientRequestId: 'guest-draft-1' },
       select: { id: true },

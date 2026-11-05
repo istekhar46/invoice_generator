@@ -14,7 +14,11 @@ import type {
   InvoiceCompany,
   InvoiceCustomer,
 } from '../../utils/invoiceDocument'
-import { documentTotals, documentPaymentUrl } from '../../utils/invoiceDocument'
+import {
+  documentTotals,
+  documentPaymentUrl,
+  documentDirectUpi,
+} from '../../utils/invoiceDocument'
 import { currencyDigits } from '../invoiceCalculation.service'
 import { formatDate } from '../../utils/formatters'
 
@@ -151,6 +155,7 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
     }).format(value)
   const totals = documentTotals(invoice)
   const paymentUrl = quotation ? null : documentPaymentUrl(invoice)
+  const directUpi = quotation ? null : documentDirectUpi(invoice)
   const isVoided = !quotation && invoice.status === 'voided'
   const documentLabel = quotation ? 'Quotation' : 'Invoice'
   const partyLines = (party?: InvoiceCompany | InvoiceCustomer | null) =>
@@ -284,6 +289,31 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
                 >
                   {paymentUrl}
                 </Link>
+              </View>
+            )}
+            {directUpi && (
+              <View wrap={false} style={{ marginTop: 12 }}>
+                <Text style={styles.label}>Pay directly by UPI</Text>
+                {paymentQr?.url === directUpi.uri && (
+                  <Image
+                    src={paymentQr.dataUrl}
+                    style={{ width: 112, height: 112, marginBottom: 4 }}
+                  />
+                )}
+                {/* Bound unbroken receiving details without inserting hyphens into a UPI ID. */}
+                <Text style={{ fontFamily: 'Courier', fontSize: 9 }}>
+                  {directUpi.payeeName.match(/.{1,40}/g)?.join('\n')}
+                </Text>
+                <Text>UPI ID:</Text>
+                <Text style={{ fontFamily: 'Courier', fontSize: 9 }}>
+                  {directUpi.upiId.match(/.{1,40}/g)?.join('\n')}
+                </Text>
+                <Text>Amount: INR {number(directUpi.amount)}</Text>
+                <Text>Reference: {directUpi.reference}</Text>
+                <Text style={{ marginTop: 4 }}>
+                  Scan with your UPI app. Check the recipient and amount before
+                  paying. The sender confirms and records payment manually.
+                </Text>
               </View>
             )}
           </View>

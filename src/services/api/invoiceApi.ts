@@ -77,6 +77,7 @@ export interface InvoiceResponseDto extends InvoiceOptions {
   sourceQuote?: { id: string; quoteNumber: string } | null
   hasPaymentHistory?: boolean
   paymentUrl?: string | null
+  directUpi?: import('../../types/directUpi').DirectUpiSnapshot | null
   customerId?: string | null
   isQuickInvoice?: boolean
   quickCompanyName?: string | null

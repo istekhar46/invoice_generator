@@ -11,7 +11,20 @@ export class QuotationSourceResponseDto {
   quoteNumber!: string;
 }
 
+export class DirectUpiResponseDto {
+  @Expose()
+  upiId!: string;
+  @Expose()
+  payeeName!: string;
+  @Expose()
+  reference!: string;
+}
+
 export class InvoiceResponseDto {
+  @ApiProperty({ nullable: true, type: DirectUpiResponseDto })
+  @Expose()
+  @Type(() => DirectUpiResponseDto)
+  directUpi!: DirectUpiResponseDto | null;
   @ApiProperty({ nullable: true, description: 'Retained source quotation ID, when converted.' })
   @Expose()
   sourceQuoteId!: string | null;

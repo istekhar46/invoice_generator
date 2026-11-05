@@ -202,6 +202,10 @@ export class GatewayService {
         throw new ConflictException('Enable this Razorpay connection in Payment settings first.');
       await lockInvoiceRow(tx, userId, dto.invoiceId);
       const invoice = await tx.invoice.findUniqueOrThrow({ where: { id: dto.invoiceId } });
+      if (dto.mode === 'LIVE' && invoice.directUpiReference)
+        throw new ConflictException(
+          'Remove direct UPI from this invoice before creating a Live Razorpay payment link.',
+        );
       const active = await tx.gatewayLink.findFirst({
         where: { userId, invoiceId: dto.invoiceId, mode: dto.mode, activeKey: { not: null } },
       });

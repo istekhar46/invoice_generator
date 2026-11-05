@@ -158,7 +158,7 @@ function SharedDocument({ token }: { token: string }) {
           <InvoicePreview
             invoice={{
               ...publicInvoiceModel(document),
-              ...(downloading ? { paymentUrl: null } : {}),
+              ...(downloading ? { paymentUrl: null, directUpi: null } : {}),
             }}
             company={document.company}
             customer={document.customer}

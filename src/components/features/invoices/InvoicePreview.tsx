@@ -5,6 +5,7 @@ import {
   invoiceParties,
   documentTotals,
   documentPaymentUrl,
+  documentDirectUpi,
 } from '../../../utils/invoiceDocument'
 import type {
   InvoiceCompany,
@@ -35,6 +36,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
   const amount = (value = 0) => formatCurrency(value, currency)
   const totals = documentTotals(invoice)
   const paymentUrl = quotation ? null : documentPaymentUrl(invoice)
+  const directUpi = quotation ? null : documentDirectUpi(invoice)
   const address = (party?: InvoiceCompany | InvoiceCustomer | null) =>
     party && (
       <div className="whitespace-pre-line text-sm leading-relaxed text-slate-500">
@@ -195,6 +197,24 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
               >
                 {paymentUrl}
               </a>
+            </section>
+          )}
+          {directUpi && (
+            <section aria-label="Direct UPI payment">
+              <h3 className="mb-2 text-xs font-semibold uppercase text-slate-400">
+                Pay directly by UPI
+              </h3>
+              <PaymentQr url={directUpi.uri} directUpi />
+              <p className="text-sm font-medium">{directUpi.payeeName}</p>
+              <p className="break-all text-sm">UPI ID: {directUpi.upiId}</p>
+              <p className="mt-1 text-sm">Amount: {amount(directUpi.amount)}</p>
+              <p className="break-all text-xs text-slate-500">
+                Reference: {directUpi.reference}
+              </p>
+              <p className="mt-2 text-xs text-slate-500">
+                Check the recipient and amount in your UPI app. The sender
+                confirms and records your payment manually.
+              </p>
             </section>
           )}
         </div>

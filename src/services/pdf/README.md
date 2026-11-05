@@ -7,6 +7,7 @@ Standard, account quick and guest invoices share `InvoicePDFTemplate.tsx` throug
 - Print saved line amounts, subtotal, tax and total; do not reprice a saved invoice. This preserves historical rounding snapshots until an actual pricing edit.
 - Show discount, shipping, amount paid and remaining balance using the invoice currency's precision. Currency codes avoid unsupported currency-symbol glyphs in the built-in Helvetica font.
 - Only a saved payable INR invoice with a server-selected active Live URL includes a clickable Pay by UPI link and a locally generated QR that opens the same secure payment page. The QR is not a direct UPI-app payment payload. Test links never enter the invoice contract. Saved list/preview PDF actions fetch current charges, paid balance and URL before export; unsaved editor/guest exports have no gateway URL.
+- An explicitly enabled direct-UPI invoice instead uses its saved receiving ID/name, public payment reference and current INR balance. Its locally generated QR encodes a direct UPI payload; the sender verifies and records payment manually. The document shows one collection route. Paid/voided/draft/non-INR invoices and quotations have no payable direct QR. Changes to account defaults do not replace invoice payees, and old printed/downloaded QRs remain static after removal. Long receiving details use bounded lines without adding hyphens to the UPI ID.
 - Voided invoices retain saved charges/terms but display `VOIDED - No payment due` and zero balance. Metadata and every page identify the invoice and its cancellation state.
 - Quick invoices use saved sender/customer snapshots. Standard invoices use the provided company/customer. Guest drafts use `guestDocument` and the same template.
 - Rows stay together across page breaks, table headings repeat while the table continues, and fixed footers contain invoice identity and page numbers.
@@ -39,7 +40,7 @@ Run focused tests, including actual account and guest PDF generation:
 npm test -- src/services/pdf/InvoicePDFTemplate.test.tsx src/utils/guestPDFGeneration.test.ts
 ```
 
-Export nine deterministic fictional fixtures using the real services. Exporting must not mutate account invoices or the guest draft:
+Export eleven deterministic fictional fixtures using the real services. Exporting must not mutate account invoices or the guest draft:
 
 ```sh
 node scripts/export-invoice-pdf-fixtures.mjs release-artifacts.local/pdf-check
@@ -55,7 +56,9 @@ python3 -m venv /tmp/invoice-pdf-verification-venv
 
 The inspector checks actual saved totals/rows, discount/tax/shipping, partial/full/voided balances, INR/USD/JPY precision, metadata, invoice/cancellation context on every page, page numbering, text bounds and multi-page row preservation. It writes `verification.json` and renders all pages through PDFium for **manual visual review**. Passing content checks alone does not establish correct layout.
 
-Fixtures cover partial-payment Sent, unpaid Voided, historical 0.335-row/0.67-total Sent/Voided, fully paid JPY, a long multi-page voided invoice a guest draft and single/multi-page payable invoices with fictional Live UPI URLs. The independent ZXing decoder checks that QR pixels rendered from each payable PDF encode exactly the intended URL; other fixtures must contain no payment QR. Generated artifacts are private/gitignored under `release-artifacts.local/`.
+Fixtures cover partial-payment Sent, unpaid Voided, historical 0.335-row/0.67-total Sent/Voided, fully paid JPY, a long multi-page voided invoice, a guest draft and single/multi-page payable invoices with fictional Live UPI URLs. The independent ZXing decoder checks that QR pixels rendered from each payable PDF encode exactly the intended destination; non-payable fixtures must contain no payment QR. Generated artifacts are private/gitignored under `release-artifacts.local/`.
+
+The additional direct-UPI fixtures cover ordinary and maximum-length receiving details. The inspector independently decodes the exact payee, current amount, currency, public reference and invoice note, checks that printed UPI IDs are preserved across lines, and detects page overflow. Gateway and direct-UPI expectations are checked separately.
 
 ## Quotation exports
 

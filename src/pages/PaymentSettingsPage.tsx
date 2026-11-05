@@ -7,6 +7,7 @@ import { razorpayApi } from '../services/api/razorpayApi'
 import { queryKeys } from '../lib/queryKeys'
 import type { RazorpaySetupConnection, RazorpayMode } from '../types/razorpay'
 import { RazorpaySetupGuide } from '../components/features/payments/RazorpaySetupGuide'
+import { DirectUpiSettings } from '../components/features/payments/DirectUpiSettings'
 import { ResponsiveContainer } from '../components/layout/ResponsiveLayout'
 import { Button } from '../components/ui/Button'
 
@@ -314,11 +315,13 @@ export function PaymentSettingsPage() {
             </Button>
           </div>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500">
-            Connect your business’s Razorpay account. Test and Live credentials
-            are stored separately. Secrets are encrypted on the server and are
-            never returned.
+            Set up direct UPI for manually recorded receipts, or connect your
+            business’s Razorpay account for automatic payment updates. Razorpay
+            Test and Live credentials are stored separately; secrets are
+            encrypted on the server and never returned.
           </p>
         </div>
+        <DirectUpiSettings />
         <p className="mb-6 rounded-xl border border-primary-100 bg-primary-50 p-4 text-sm leading-relaxed text-primary-800">
           Connecting verifies API access. It does not create payment links,
           collect money or send messages.

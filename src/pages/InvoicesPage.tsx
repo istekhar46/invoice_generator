@@ -209,7 +209,11 @@ export const InvoicesPage: React.FC = () => {
                 <InvoicePreview
                   invoice={
                     refreshingInvoice
-                      ? { ...selectedInvoice, paymentUrl: null }
+                      ? {
+                          ...selectedInvoice,
+                          paymentUrl: null,
+                          directUpi: null,
+                        }
                       : selectedInvoice
                   }
                   company={companyProfile}

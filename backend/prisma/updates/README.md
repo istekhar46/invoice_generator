@@ -1,12 +1,12 @@
 # Invoice schema rollout
 
-**Hosted development target, 5 November 2026:** all one-time upgrades through `20261105_invoice_sharing.sql` are applied. Do not rerun them or schema-push this target. API/frontend serve dev merge `a0d7aa6`, including public-sharing PR #22 and invoice quantity/discount fix PR #23; hosted sharing/PDF/revocation checks passed. The subsequent local guided-payment-setup increment needs no migration. See [public sharing recovery/evidence](../../../docs/implementation/public-invoice-sharing.md) and the [dashboard release history](../../../docs/implementation/signed-in-dashboard-features.md). Fresh-target instructions below still apply to genuinely new databases.
+**Hosted development target, 5 November 2026:** all one-time upgrades through `20261105_invoice_sharing.sql` are applied. Do not rerun them or schema-push this target. API/frontend now serve guided-setup merge `9be8572`; the deployed guided-setup increment added no migration. The direct-UPI upgrade below remains local and unapplied. Existing public sharing/PDF/revocation checks are complete. See [guided setup recovery](../../../docs/implementation/razorpay-guided-setup.md) for completed hosted read/copy/refresh/retry verification and [dashboard release history](../../../docs/implementation/signed-in-dashboard-features.md). Fresh-target instructions below still apply to genuinely new databases.
 
 The project currently uses `prisma db push` and has no baseline Prisma migration history. The editor requires the updated `schema.prisma` before the new API starts.
 
 For an **existing database on the pre-editor schema**, back it up, stop writes, and apply `20261101_quick_invoice_editor.sql` once using your normal PostgreSQL deployment tooling. The transaction adds the editor fields, replaces global invoice-number uniqueness with `(userId, invoiceNumber)`, and records existing `PAID` invoices as fully paid. Existing numbers and invoice records are preserved. Review the generated SQL against the actual target schema before running it.
 
-For a **new empty database**, push the current Prisma schema, then install both its inventory and payment invariants once as described below. Do not apply the upgrade SQL after pushing the new schema; its columns and indexes would already exist.
+For a **new empty database**, push the current Prisma schema, then install its inventory, payment, Razorpay, quotation and direct-UPI invariants once in that order. Do not apply the upgrade SQL after pushing the new schema; its columns and indexes would already exist.
 
 Then run `npm run db:generate`, build the API/frontend, and deploy them together. The API's retained dashboard scalar money fields now represent USD only; `currencyTotals` contains separate summaries for every currency. This avoids adding different denominations together. Automatic invoice numbers use UUIDs to avoid concurrent number allocation races; custom numbers remain supported per account.
 
@@ -146,3 +146,15 @@ psql -X -v ON_ERROR_STOP=1 -f prisma/updates/20261104_razorpay_gateway.sql
 The first transaction commits RAZORPAY/REFUND enum labels before guards use them. The second transaction adds link intents and immutable request aliases, captured/refund source facts, source receipt references, webhook event digests and encrypted secret history, with bounded locks/timeouts and `\ir ../constraints/razorpay.sql`. It extends payment/source/currency guards, protects link identity/history, and defers owner/source FKs and source/ledger reconciliation until commit so normal account deletion still works. Keep `updates/` and `constraints/` together. No invoice, stock, existing receipt or merchant credential data is backfilled or repriced. Earlier outstanding hosted upgrades (VOIDED → receipts → connections) must precede these two. Deploy the matching API before frontend; the old manual-payment API cannot understand gateway receipts/refunds or active-link guards.
 
 For a new empty target, push the complete schema then install `inventory.sql`, `payments.sql`, `razorpay.sql` once, each transactionally. Do not apply any one-time upgrade after schema push. Prisma alone cannot install native invariants. Fresh/upgraded local diffs are empty; 112 native objects (including 15 functions and 26 triggers) match. Existing invoice/receipt/credential/stock preservation was checked on the exact additive upgrade. `GATEWAY_TEST_DATABASE_URL=postgresql://... npm run test:gateway` requires a disposable `stock_schema_*` localhost database and compiled API; it never contacts the merchant. Real Test probes are separate and never authorize Live operations or hosted migrations.
+
+## Direct UPI QR (5 November 2026 — local, not applied to hosted DB)
+
+For an existing database already upgraded through invoice sharing, apply once before deploying the matching API/frontend:
+
+```sh
+psql -X -v ON_ERROR_STOP=1 -f prisma/updates/20261105_direct_upi.sql
+```
+
+This additive transaction creates account-owned `upi_payment_preferences` and three nullable invoice receiving-snapshot fields. It installs format/completeness checks from `constraints/direct-upi.sql`; keep the two directories together. It performs no invoice/payment/stock backfill and needs no secret. Existing clients continue using their existing fields. Do not rerun it or apply it after fresh schema push. For a fresh target, install `constraints/direct-upi.sql` once after the existing inventory, payment, Razorpay and quotation guard files.
+
+Local rehearsal preserved all 23 previous tables and their original-row fingerprints; incomplete snapshots were rejected, and Prisma's model comparison reports no difference. `SHARING_TEST_DATABASE_URL=postgresql://... npm run test:invoice-sharing` now also verifies direct-UPI preferences/snapshots, owner isolation, concurrent route selection and active/UNKNOWN gateway conflicts on an explicitly disposable `stock_schema_*` localhost database. The provider is fictional; no transfer is made. See [direct UPI implementation](../../../docs/implementation/direct-upi-qr.md) for UI/PDF evidence and the remaining release step.

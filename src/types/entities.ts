@@ -103,6 +103,7 @@ export interface Invoice extends InvoiceOptions {
   sourceQuote?: { id: string; quoteNumber: string } | null
   hasPaymentHistory?: boolean
   paymentUrl?: string | null
+  directUpi?: import('./directUpi').DirectUpiSnapshot | null
   createdAt: Date
   updatedAt: Date
   // Quick invoice fields
