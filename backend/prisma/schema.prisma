@@ -188,6 +188,8 @@ model Invoice {
   gatewayPayments GatewayPayment[]
   gatewayRefunds GatewayRefund[]
 
+  publicShare InvoiceShare?
+
   // Indexes for query optimization
   @@index([userId])
   @@index([customerId])
@@ -202,6 +204,18 @@ model Invoice {
   @@unique([userId, sourceQuoteId])
   @@index([isQuickInvoice])
   @@map("invoices")
+}
+
+// Active public capability; revocation deletes the mapping without changing the invoice.
+model InvoiceShare {
+  id        String   @id @db.VarChar(43)
+  userId    String
+  invoiceId String
+  createdAt DateTime @default(now())
+  invoice   Invoice  @relation(fields: [userId, invoiceId], references: [userId, id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([userId, invoiceId])
+  @@map("invoice_shares")
 }
 
 // Line item model

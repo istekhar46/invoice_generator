@@ -14,6 +14,9 @@ vi.mock('../services/api/invoiceApi', () => ({
 vi.mock('../components/features/payments/InvoicePaymentPanel', () => ({
   InvoicePaymentPanel: () => <p>Payment controls</p>,
 }))
+vi.mock('../components/features/invoices/InvoiceSharePanel', () => ({
+  InvoiceSharePanel: () => <p>Sharing controls</p>,
+}))
 
 const fixture = vi.hoisted(() => ({
   id: 'invoice-one',

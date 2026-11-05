@@ -25,6 +25,7 @@ import { InventoryPage } from '../pages/InventoryPage'
 import { PaymentsPage } from '../pages/PaymentsPage'
 import { PaymentSettingsPage } from '../pages/PaymentSettingsPage'
 import { PaymentLinksPage } from '../pages/PaymentLinksPage'
+import { PublicInvoicePage } from '../pages/PublicInvoicePage'
 
 export const router = createBrowserRouter([
   {
@@ -174,6 +175,7 @@ export const router = createBrowserRouter([
       },
     ],
   },
+  { path: '/shared/invoice', element: <PublicInvoicePage /> },
 ])
 
 // Route metadata for breadcrumbs and navigation

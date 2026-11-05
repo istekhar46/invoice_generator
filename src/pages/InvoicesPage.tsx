@@ -13,6 +13,7 @@ import { useCustomer } from '../hooks/useCustomers'
 import { useInvoice } from '../hooks/useInvoices'
 import { invoiceApi } from '../services/api/invoiceApi'
 import { InvoicePaymentPanel } from '../components/features/payments/InvoicePaymentPanel'
+import { InvoiceSharePanel } from '../components/features/invoices/InvoiceSharePanel'
 import { usePDFGeneration } from '../hooks/usePDFGeneration'
 import { transformInvoiceResponse } from '../utils/apiTransformers'
 import type { Invoice } from '../types/entities'
@@ -195,6 +196,11 @@ export const InvoicesPage: React.FC = () => {
           )}
           {selectedInvoice && !detail.error && (
             <>
+              <InvoiceSharePanel
+                key={selectedInvoice.id}
+                invoice={selectedInvoice}
+                refreshing={!!refreshingInvoice}
+              />
               <InvoicePaymentPanel
                 invoice={selectedInvoice}
                 refreshing={!!refreshingInvoice}

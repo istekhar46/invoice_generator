@@ -17,6 +17,7 @@ import { PaymentModule } from './payments/payment.module';
 import { RazorpayModule } from './razorpay/razorpay.module';
 import { QuoteModule } from './quotes/quote.module';
 import { InvoiceModule } from './invoice/invoice.module';
+import { InvoiceSharingModule } from './invoice-sharing/invoice-sharing.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HealthModule } from './health/health.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
@@ -58,6 +59,7 @@ import { initializeCloudinary } from './config/cloudinary.config';
 
     // Invoice management module
     InvoiceModule,
+    InvoiceSharingModule,
     QuoteModule,
 
     // Dashboard module
