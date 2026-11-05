@@ -199,6 +199,26 @@ invoicePdfFixtures.push({
   },
 })
 
+const directUpi = {
+  upiId: 'demo.shop@bank',
+  payeeName: 'Demo & Co + Friends',
+  reference: '1a'.repeat(16),
+}
+invoicePdfFixtures.push(
+  { name: 'direct-upi-inr', invoice: { ...base, directUpi } },
+  {
+    name: 'direct-upi-long',
+    invoice: {
+      ...base,
+      directUpi: {
+        ...directUpi,
+        upiId: 'a'.repeat(245) + '@bank.test',
+        payeeName: 'Long receiving business name '.repeat(3).slice(0, 80),
+      },
+    },
+  }
+)
+
 export const guestPdfFixture: GuestInvoiceData = {
   draftId: 'guest-pdf-fixture',
   company: pdfCompany,

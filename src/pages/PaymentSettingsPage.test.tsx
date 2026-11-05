@@ -22,6 +22,9 @@ vi.mock('../hooks/useAuth', () => ({
   useUserProfile: () => ({ data: { id: mocks.owner } }),
 }))
 vi.mock('../services/api/razorpayApi', () => ({ razorpayApi: mocks }))
+vi.mock('../components/features/payments/DirectUpiSettings', () => ({
+  DirectUpiSettings: () => null,
+}))
 const saved = {
   id: 'connection-a',
   mode: 'TEST',

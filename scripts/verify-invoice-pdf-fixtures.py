@@ -17,7 +17,7 @@ def require(condition, message):
 
 root = Path(sys.argv[1] if len(sys.argv) > 1 else "release-artifacts.local/invoice-pdf-20261103")
 manifest = json.loads((root / "manifest.json").read_text())
-require(len(manifest) == 9, "Expected all nine invoice/guest/gateway fixtures")
+require(len(manifest) == 11, "Expected all eleven invoice/guest/gateway/direct-UPI fixtures")
 report = []
 for fixture in manifest:
     name = fixture["name"]
@@ -46,7 +46,7 @@ for fixture in manifest:
                 require("VOIDED - No payment due" in normalized, f"{name} page {index + 1}: missing cancellation")
             outside = [char["text"] for char in page.chars if char["x0"] < 0 or char["x1"] > page.width or char["top"] < 0 or char["bottom"] > page.height]
             require(not outside, f"{name} page {index + 1}: text outside the page: {outside}")
-            image = page.to_image(resolution=110)
+            image = page.to_image(resolution=160)
             image.save(root / f"{name}-page-{index+1}.png")
             qr_destinations.extend(code.text for code in zxingcpp.read_barcodes(image.original))
             require(all(img['x0'] >= 0 and img['x1'] <= page.width and img['top'] >= 0 and img['bottom'] <= page.height for img in page.images), f'{name}: image outside page')
@@ -75,7 +75,19 @@ for fixture in manifest:
         expect_total("Shipping", fixture["shipping"])
     full_text = "\n".join(text_pages)
     links = [str(annotation.get_object().get('/A', {}).get('/URI', '')) for page in reader.pages for annotation in page.get('/Annots', [])]
-    if name.startswith('gateway-live-'):
+    if fixture.get('directUpi'):
+        from urllib.parse import urlparse, parse_qsl
+        require(len(qr_destinations) == 1, f'{name}: expected exactly one direct UPI QR')
+        uri = urlparse(qr_destinations[0])
+        require(uri.scheme == 'upi' and uri.netloc == 'pay', f'{name}: incorrect UPI scheme')
+        details = fixture['directUpi']
+        expected = {'pa': details['upiId'], 'pn': details['payeeName'], 'am': f'{balance:.2f}', 'cu': 'INR', 'tr': details['reference'], 'tn': f'Invoice {fixture["invoiceNumber"]}'[:80]}
+        require(dict(parse_qsl(uri.query)) == expected, f'{name}: incorrect receiving details or amount')
+        printed_id = full_text.split('UPI ID:')[1].split('Amount:')[0]
+        require(re.sub(r'\s+', '', printed_id) == details['upiId'], f'{name}: receiving ID was changed or truncated')
+        require('manually' in full_text, f'{name}: missing manual confirmation notice')
+        require(not any('rzp.io' in url or url.startswith('upi:') for url in links), f'{name}: unexpected payment annotation')
+    elif name.startswith('gateway-live-'):
         require('PAY BY UPI' in full_text and fixture['paymentUrl'] in links, 'Live payment URL must be visible and clickable')
         require('Scan to open secure payment page' in full_text, 'Missing QR explanation')
         require(qr_destinations == [fixture['paymentUrl']], f'{name}: rendered QR destination mismatch: {qr_destinations}')

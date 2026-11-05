@@ -27,11 +27,18 @@ psql -X -v ON_ERROR_STOP=1 --single-transaction -f prisma/constraints/inventory.
 psql -X -v ON_ERROR_STOP=1 --single-transaction -f prisma/constraints/payments.sql
 psql -X -v ON_ERROR_STOP=1 --single-transaction -f prisma/constraints/razorpay.sql
 psql -X -v ON_ERROR_STOP=1 --single-transaction -f prisma/constraints/quotations.sql
+psql -X -v ON_ERROR_STOP=1 --single-transaction -f prisma/constraints/direct-upi.sql
 npm run build
 npm run start:dev
 ```
 
 `npm run build` generates the Prisma client before compiling. `PORT` determines the listen port (default 3001); every API route uses `/api/v1`.
+
+### Direct UPI QR (local implementation)
+
+Payment settings supports owner-provided receiving UPI details independently of Razorpay. `GET`/`PUT`/`DELETE /api/v1/payments/upi/preferences` reads, replaces or removes account defaults. `PUT /api/v1/payments/upi/invoices/:id` explicitly enables a saved receiving snapshot using the reviewed `{ upiId, payeeName }`; `DELETE` removes it from current views. Preferences never redirect existing invoice snapshots. Active/unresolved Live Razorpay links and direct UPI are mutually exclusive under the invoice lock; Test mode remains isolated.
+
+Invoice previews, shared pages and PDFs show the current INR balance QR for eligible issued invoices. Receipts are verified by the owner and recorded through the existing UPI ledger. Removing a QR cannot revoke printed/downloaded copies. No new environment variable, credential or QR dependency is needed. Before deploying this API to an existing database, apply `prisma/updates/20261105_direct_upi.sql` once; it is **not applied to the hosted development DB yet**. See the [implementation and verification record](../docs/implementation/direct-upi-qr.md).
 
 Nest CLI and Prisma CLI are development/build dependencies. Install development dependencies before generating/building or running schema checks; production starts the compiled application directly. Keep Prisma CLI/client/adapter versions aligned. Parent-scoped security overrides currently select Multer 2.5.0 for the Nest Express adapter and js-yaml 5.4.1 for Swagger; their rationale, actual resolved versions and regression evidence are in the implementation document. Review/remove each override when its upstream parent declares a patched dependency.
 
@@ -39,7 +46,7 @@ Nest CLI and Prisma CLI are development/build dependencies. Install development 
 
 Read [schema rollout instructions](prisma/updates/README.md) and the [current release recovery state](../docs/implementation/signed-in-dashboard-features.md#e-recovery-state) before deployment.
 
-**Last verified hosted development state (5 November 2026):** schema upgrades through public sharing are applied; API/frontend serve dev merge `a0d7aa6` containing invoice quantity/discount fix PR #23 and public-sharing PR #22. Hosted signed-out sharing/PDF/revocation and API readiness200 are verified. Both Render services auto-deploy dev commits. Secure/HttpOnly/SameSite=None refresh cookies and existing Razorpay Test setup are retained. No Live charge/refund was performed. Do not rerun applied upgrades or regenerate the sharing key. Guided payment setup is verified locally only on `feat/razorpay-guided-setup`; see its implementation document before publication.
+**Last verified hosted development state (5 November 2026):** schema upgrades through public sharing are applied. Guided Razorpay setup PR #24 is Live as `9be8572`; hosted1440px/390px read/copy/receipt/refresh and simulated failure/retry checks passed with merchant metadata unchanged. Earlier public-sharing/PDF/revocation and quantity/discount verification are complete. Both services retain commit auto-deploy and existing credentials. Test is connected; Live is not connected. No migration/key/provider operation was needed. See the guided setup recovery document.
 
 This repository has no baseline Prisma migration history. Existing databases use the reviewed, one-time SQL upgrades in `prisma/updates/`; `npm run db:migrate` does not apply these files. Do not run schema push against an existing pre-catalog database to rename its enum. Do not rerun upgrades after a fresh schema push.
 
@@ -169,6 +176,6 @@ Authenticated `/invoices/:id/share` GET/POST/DELETE reads status, creates/reuses
 
 POST requires a strict boolean `createIfMissing`: true for explicit create, false for copy-only. A stale copy returns409 if the link was revoked, preserving revocation until a new explicit create action. Run `SHARING_TEST_DATABASE_URL=<disposable localhost stock_schema_* URL> npm run test:invoice-sharing` after a backend build; its gateway is a controlled fixture and never contacts Razorpay. Full implementation/evidence: `docs/implementation/public-invoice-sharing.md`.
 
-### Guided Razorpay setup (local implementation)
+### Guided Razorpay setup (deployed and verified)
 
-The setup read `GET /api/v1/razorpay/connections` now adds per-connection `lastWebhook: { receivedAt, event, outcome } | null`, selecting only the latest accepted signed callback from existing owned Test/Live event records. `SYNCED` means processed for a link; `IGNORED` is receipt evidence without invoice changes. Credential command metadata is unchanged. The UI uses the configured API base to display/copy the full endpoint, shows separate setup steps and receipt history, and refreshes application metadata without calling Razorpay. A saved secret or historical callback does not establish current provider configuration or Live settlement readiness. No migration, dependency or environment variable is added. This increment is not deployed yet; [implementation and verification](../docs/implementation/razorpay-guided-setup.md) record its release boundary.
+The setup read `GET /api/v1/razorpay/connections` adds per-connection `lastWebhook: { receivedAt, event, outcome } | null`, selecting only the latest accepted signed callback from existing owned Test/Live event records. `SYNCED` means processed for a link; `IGNORED` is receipt evidence without invoice changes. Credential command metadata is unchanged. The UI displays/copies the full endpoint, shows separate setup steps/receipt history and refreshes application metadata without calling Razorpay. A saved secret or historical callback does not establish current provider configuration or Live settlement readiness. No migration, dependency or environment variable is added. PR #24 is deployed; hosted desktop/mobile read/copy/receipt/refresh and simulated failure/retry checks passed with settings preserved. [Implementation and verification](../docs/implementation/razorpay-guided-setup.md) record the evidence and release boundary.

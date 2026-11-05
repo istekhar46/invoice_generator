@@ -25,8 +25,10 @@ export function invoicePaymentUrl(invoice: {
   total: number;
   amountPaid: number;
   gatewayLinks: { url: string | null; amountMinor: bigint }[];
+  directUpiReference?: string | null;
 }) {
-  if (invoice.status !== 'SENT' || invoice.currency !== 'INR') return null;
+  if (invoice.status !== 'SENT' || invoice.currency !== 'INR' || invoice.directUpiReference)
+    return null;
   const balance =
     savedMinor(invoice.total, invoice.currency) - savedMinor(invoice.amountPaid, invoice.currency);
   if (balance <= 0n) return null;

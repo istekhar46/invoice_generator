@@ -11,6 +11,7 @@ import {
 import { formatCurrency } from '../../../utils/formatters'
 import { Button } from '../../ui/Button'
 import { CreatePaymentLinkDialog } from './CreatePaymentLinkDialog'
+import { DirectUpiInvoiceControls } from './DirectUpiInvoiceControls'
 
 /** Owner controls stay outside the printable/customer document. */
 export function InvoicePaymentPanel({
@@ -47,16 +48,28 @@ export function InvoicePaymentPanel({
         className="no-print mb-5 rounded-xl border border-slate-200 bg-slate-50 p-4"
       >
         <p className="mb-2 text-sm text-slate-600">{message}</p>
+        {invoice.directUpi && (
+          <DirectUpiInvoiceControls invoice={invoice} refreshing={refreshing} />
+        )}
         {history}
       </section>
     )
   }
   return (
-    <LiveInvoicePayments
-      key={invoice.id}
-      invoice={invoice}
-      refreshing={refreshing}
-    />
+    <>
+      <DirectUpiInvoiceControls
+        key={`upi-${invoice.id}`}
+        invoice={invoice}
+        refreshing={refreshing}
+      />
+      {!invoice.directUpi && (
+        <LiveInvoicePayments
+          key={invoice.id}
+          invoice={invoice}
+          refreshing={refreshing}
+        />
+      )}
+    </>
   )
 }
 

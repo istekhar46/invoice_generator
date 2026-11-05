@@ -38,6 +38,7 @@ export interface PublicInvoiceDocument {
   shippingAddress: string | null
   logoDataUrl: string | null
   paymentUrl: string | null
+  directUpi?: import('../../types/directUpi').DirectUpiSnapshot | null
   lineItems: {
     type: 'PRODUCT' | 'SERVICE'
     description: string
@@ -105,6 +106,7 @@ export function publicInvoiceModel(document: PublicInvoiceDocument): Invoice {
     userId: '',
     customerId: null,
     invoiceNumber: document.invoiceNumber,
+    directUpi: document.directUpi ?? null,
     status: document.status.toLowerCase() as Invoice['status'],
     serviceDate: new Date(document.serviceDate),
     dueDate: new Date(document.dueDate),

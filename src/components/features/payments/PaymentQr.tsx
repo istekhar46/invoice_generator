@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react'
 import { paymentQrDataUrl } from '../../../utils/paymentQr'
 
-export function PaymentQr({ url }: { url: string }) {
+export function PaymentQr({
+  url,
+  directUpi = false,
+}: {
+  url: string
+  directUpi?: boolean
+}) {
   const [attempt, setAttempt] = useState(0)
   const [result, setResult] = useState<{
     url: string
@@ -20,15 +26,16 @@ export function PaymentQr({ url }: { url: string }) {
           setResult({
             url,
             attempt,
-            error:
-              'QR could not be generated. Use the payment link or try again.',
+            error: directUpi
+              ? 'QR could not be generated. Use the payment details below or try again.'
+              : 'QR could not be generated. Use the payment link or try again.',
           })
       }
     )
     return () => {
       active = false
     }
-  }, [url, attempt])
+  }, [url, attempt, directUpi])
   const current =
     result?.url === url && result.attempt === attempt ? result : null
   return (
@@ -52,22 +59,34 @@ export function PaymentQr({ url }: { url: string }) {
       )}
       {current?.image && (
         <>
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Open secure payment page"
-          >
+          {directUpi ? (
             <img
               src={current.image}
-              alt="QR code to open the secure Razorpay payment page"
+              alt="QR code to pay the saved UPI ID directly"
               width={160}
               height={160}
               className="h-40 w-40 bg-white"
             />
-          </a>
+          ) : (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open secure payment page"
+            >
+              <img
+                src={current.image}
+                alt="QR code to open the secure Razorpay payment page"
+                width={160}
+                height={160}
+                className="h-40 w-40 bg-white"
+              />
+            </a>
+          )}
           <figcaption className="mt-1 text-xs text-slate-500">
-            Scan to open secure payment page
+            {directUpi
+              ? 'Scan with your UPI app'
+              : 'Scan to open secure payment page'}
           </figcaption>
         </>
       )}

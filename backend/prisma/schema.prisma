@@ -29,6 +29,7 @@ model User {
   documentNumbers DocumentNumber[]
   refreshTokens  RefreshToken[]
   invoiceDefaults InvoiceDefaults?
+  upiPaymentPreference UpiPaymentPreference?
   catalogItems    CatalogItem[]
   stockActions    StockAction[]
   paymentEntries  PaymentEntry[]
@@ -52,6 +53,16 @@ model InvoiceDefaults {
   user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("invoice_defaults")
+}
+
+// Owner-provided receiving details, not bank/provider-verified credentials.
+model UpiPaymentPreference {
+  userId    String @id
+  upiId     String @db.VarChar(255)
+  payeeName String @db.VarChar(80)
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("upi_payment_preferences")
 }
 
 // Refresh token model for secure token management
@@ -151,6 +162,10 @@ model Invoice {
   status        InvoiceStatus @default(DRAFT)
   // Unknown for historical issued invoices; set only on future explicit issue.
   issuedAt      DateTime?
+  // Explicit owner-enabled receiving snapshot; preferences never rewrite this.
+  directUpiId String? @db.VarChar(255)
+  directUpiPayeeName String? @db.VarChar(80)
+  directUpiReference String? @db.VarChar(32)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 

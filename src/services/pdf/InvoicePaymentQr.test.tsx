@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from 'vitest'
+import { documentDirectUpi } from '../../utils/invoiceDocument'
 import { PDFGeneratorServiceImpl } from './pdfGenerator.service'
 import {
   invoicePdfFixtures,
@@ -17,6 +18,27 @@ const invoice = invoicePdfFixtures.find(
 beforeEach(() => {
   vi.resetAllMocks()
   encode.mockImplementation(actual.paymentQrDataUrl)
+})
+it('exports direct UPI from the saved snapshot and excludes it from quotations', async () => {
+  const direct = {
+    ...invoice,
+    directUpi: {
+      upiId: 'demo@bank',
+      payeeName: 'Demo Shop',
+      reference: 'ab'.repeat(16),
+    },
+  }
+  const service = new PDFGeneratorServiceImpl()
+  const before = JSON.stringify(direct)
+  const blob = await service.generateInvoicePDF(direct, pdfCompany, pdfCustomer)
+  expect(encode).toHaveBeenCalledExactlyOnceWith(documentDirectUpi(direct)!.uri)
+  expect(blob.size).toBeGreaterThan(2000)
+  expect(JSON.stringify(direct)).toBe(before)
+  encode.mockClear()
+  await service.generateInvoicePDF(direct, pdfCompany, pdfCustomer, {
+    status: 'Accepted',
+  })
+  expect(encode).not.toHaveBeenCalled()
 })
 it('exports a payable saved invoice with a locally generated QR for its exact server-selected URL', async () => {
   const before = JSON.stringify(invoice)

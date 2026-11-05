@@ -5,7 +5,10 @@
 
 import React from 'react'
 import type { Invoice } from '../../types/entities'
-import { documentPaymentUrl } from '../../utils/invoiceDocument'
+import {
+  documentDirectUpi,
+  documentPaymentUrl,
+} from '../../utils/invoiceDocument'
 import { paymentQrDataUrl } from '../../utils/paymentQr'
 import type {
   InvoiceCompany,
@@ -52,7 +55,9 @@ export class PDFGeneratorServiceImpl implements PDFGeneratorService {
         import('@react-pdf/renderer'),
         import('./InvoicePDFTemplate'),
       ])
-      const paymentUrl = quotation ? null : documentPaymentUrl(invoice)
+      const paymentUrl = quotation
+        ? null
+        : (documentDirectUpi(invoice)?.uri ?? documentPaymentUrl(invoice))
       const paymentQr = paymentUrl
         ? { url: paymentUrl, dataUrl: await paymentQrDataUrl(paymentUrl) }
         : undefined

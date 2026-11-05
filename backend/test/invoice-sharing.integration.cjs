@@ -277,16 +277,147 @@ async function invoice(extra = {}) {
     amount: '40.00',
   });
   assert.equal((await read(capability)).amountPaid, 40);
+  // Direct UPI preferences and invoice receiving snapshots are independent of the ledger.
+  const upi = { upiId: 'demo.shop@bank', payeeName: 'Demo & Store' };
+  const upiPath = `/payments/upi/invoices/${draft.id}`;
+  await http('GET', '/payments/upi/preferences', undefined, 401, null);
+  assert.equal(await http('GET', '/payments/upi/preferences'), null);
+  for (const invalid of [
+    { upiId: 'upi://pay?pa=demo@bank' },
+    { upiId: 'demo@bank&am=1' },
+    { upiId: 'demo@bank@other' },
+    { upiId: 1 },
+    { payeeName: 12 },
+    { payeeName: '' },
+    { payeeName: 'Hidden\u202ename' },
+    { userId: other },
+    { reference: 'injected' },
+  ])
+    await http('PUT', '/payments/upi/preferences', { ...upi, ...invalid }, 400);
+  assert.deepEqual(
+    await http('PUT', '/payments/upi/preferences', {
+      upiId: ` ${upi.upiId} `,
+      payeeName: ` ${upi.payeeName} `,
+    }),
+    upi,
+  );
+  assert.equal(await http('GET', '/payments/upi/preferences', undefined, 200, foreign), null);
+  await http('PUT', upiPath, upi, 404, foreign);
+  await http('DELETE', upiPath, undefined, 404, foreign);
+  const ineligibleUpi = await invoice();
+  await http('PUT', `/payments/upi/invoices/${ineligibleUpi.id}`, upi, 409);
+  const nonInrUpi = await invoice({ currency: 'USD' });
+  await http('PATCH', `/invoices/${nonInrUpi.id}/status`, { status: 'SENT' }, 200);
+  await http('PUT', `/payments/upi/invoices/${nonInrUpi.id}`, upi, 409);
+  const unchangedBeforeUpi = await summary(draft.id);
+  const direct = await http('PUT', upiPath, upi);
+  assert.deepEqual({ upiId: direct.upiId, payeeName: direct.payeeName }, upi);
+  assert.match(direct.reference, /^[a-f0-9]{32}$/);
+  assert.deepEqual(
+    await http('PUT', upiPath, upi),
+    direct,
+    'Retries preserve the invoice reference',
+  );
+  const unchangedAfterUpi = await summary(draft.id);
+  for (const key of [
+    'subtotal',
+    'taxRate',
+    'taxAmount',
+    'total',
+    'amountPaid',
+    'status',
+    'currency',
+    'lineItems',
+    'paymentEntries',
+    'stockActions',
+  ])
+    assert.deepEqual(
+      unchangedAfterUpi[key],
+      unchangedBeforeUpi[key],
+      `UPI configuration changed ${key}`,
+    );
+  assert.deepEqual((await http('GET', `/invoices/${draft.id}`)).directUpi, direct);
+  assert.deepEqual(
+    (await http('GET', '/invoices')).data.find((row) => row.id === draft.id).directUpi,
+    direct,
+  );
+  const changedUpi = { upiId: 'new.receiving@bank', payeeName: 'New receiving details' };
+  await http('PUT', '/payments/upi/preferences', changedUpi);
+  assert.deepEqual(
+    (await read(capability)).directUpi,
+    direct,
+    'Public view must retain the invoice payee',
+  );
+  assert.equal((await read(capability)).paymentUrl, null);
+  await http('PUT', upiPath, changedUpi, 409);
+  await http('DELETE', '/payments/upi/preferences');
+  assert.deepEqual((await http('GET', `/invoices/${draft.id}`)).directUpi, direct);
+  await http('DELETE', upiPath);
+  await http('PATCH', `/invoices/${ineligibleUpi.id}/status`, { status: 'SENT' }, 200);
+  await http('PUT', `/payments/upi/invoices/${ineligibleUpi.id}`, upi, 409);
+  await http('PUT', '/payments/upi/preferences', changedUpi);
+  await http('PUT', `/payments/upi/invoices/${ineligibleUpi.id}`, upi, 409, token);
+  await http('PUT', '/payments/upi/preferences', upi);
+  await http('PUT', upiPath, upi);
   for (const mode of ['TEST', 'LIVE'])
     await http('PUT', `/razorpay/connections/${mode}`, {
       keyId: `rzp_${mode.toLowerCase()}_ShareFixture`,
       keySecret: 'fictional-only',
     });
+  const beforeBlockedLink = provider.created;
+  await http(
+    'POST',
+    '/razorpay/links',
+    { invoiceId: draft.id, mode: 'LIVE', requestId: randomUUID() },
+    409,
+  );
+  assert.equal(
+    provider.created,
+    beforeBlockedLink,
+    'Blocked route must not call/create a provider link',
+  );
+  // Simulated links stay isolated from the invoice collection route and paid balance.
+  await http('POST', '/razorpay/links', {
+    invoiceId: draft.id,
+    mode: 'TEST',
+    requestId: randomUUID(),
+  });
+  assert.deepEqual((await read(capability)).directUpi.upiId, upi.upiId);
+  await http('DELETE', upiPath);
+  assert.equal((await read(capability)).directUpi, null);
+
+  // Invoice locking makes concurrent route selection exclusive.
+  const routeRace = await invoice();
+  await http('PATCH', `/invoices/${routeRace.id}/status`, { status: 'SENT' }, 200);
+  const beforeRouteRace = await summary(routeRace.id);
+  const raceResponses = await Promise.all([
+    fetch(`${base}/payments/upi/invoices/${routeRace.id}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(upi),
+    }),
+    fetch(`${base}/razorpay/links`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ invoiceId: routeRace.id, mode: 'LIVE', requestId: randomUUID() }),
+    }),
+  ]);
+  requests += 2;
+  assert.equal(raceResponses.filter((response) => response.ok).length, 1);
+  assert.equal(raceResponses.filter((response) => response.status === 409).length, 1);
+  const racedInvoice = await summary(routeRace.id);
+  const activeRaceLinks = racedInvoice.gatewayLinks.filter(
+    (link) => link.mode === 'LIVE' && link.activeKey,
+  );
+  assert.equal(Number(!!racedInvoice.directUpiReference) + activeRaceLinks.length, 1);
+  assert.equal(racedInvoice.amountPaid, 0);
+  assert.deepEqual(racedInvoice.stockActions, beforeRouteRace.stockActions);
   const live = await http('POST', '/razorpay/links', {
     invoiceId: draft.id,
     mode: 'LIVE',
     requestId: randomUUID(),
   });
+  await http('PUT', upiPath, upi, 409);
   const providerBefore = provider.created;
   document = await read(capability);
   assert.equal(document.paymentUrl, live.url);
@@ -299,12 +430,28 @@ async function invoice(extra = {}) {
   );
   await http('POST', `/razorpay/links/${live.id}/cancel`, undefined, 200);
   assert.equal((await read(capability)).paymentUrl, null);
+  const uncertainInvoice = await invoice();
+  await http('PATCH', `/invoices/${uncertainInvoice.id}/status`, { status: 'SENT' }, 200);
+  provider.nextCreateFailure = 'uncertain';
+  await http(
+    'POST',
+    '/razorpay/links',
+    { invoiceId: uncertainInvoice.id, mode: 'LIVE', requestId: randomUUID() },
+    503,
+  );
+  const uncertainLink = await prisma.gatewayLink.findFirstOrThrow({
+    where: { userId: owner, invoiceId: uncertainInvoice.id, mode: 'LIVE' },
+  });
+  assert.equal(uncertainLink.state, 'UNKNOWN');
+  await http('PUT', `/payments/upi/invoices/${uncertainInvoice.id}`, upi, 409);
+  await http('POST', `/razorpay/links/${uncertainLink.id}/cancel`, undefined, 200);
   await http('POST', '/razorpay/links', {
     invoiceId: draft.id,
     mode: 'TEST',
     requestId: randomUUID(),
   });
   assert.equal((await read(capability)).paymentUrl, null, 'Test checkout must never be public');
+  const retainedPaidUpi = await http('PUT', upiPath, upi);
   await http('POST', `/payments/invoices/${draft.id}/receipts`, {
     requestId: randomUUID(),
     paymentDate: today,
@@ -314,6 +461,11 @@ async function invoice(extra = {}) {
   assert.equal(document.status, 'PAID');
   assert.equal(document.amountPaid, 100);
   assert.equal(document.paymentUrl, null);
+  assert.equal(document.directUpi, null, 'Paid public documents have no direct UPI instructions');
+  assert.deepEqual((await http('GET', `/invoices/${draft.id}`)).directUpi, retainedPaidUpi);
+  await http('PUT', upiPath, upi, 409);
+  await http('DELETE', upiPath);
+  assert.equal(document.directUpi, null);
   await http('DELETE', `/invoices/${draft.id}/share`, undefined, 204);
   await read(capability, 404);
   await http('POST', `/invoices/${draft.id}/share`, { createIfMissing: false }, 409);
@@ -329,10 +481,12 @@ async function invoice(extra = {}) {
   const unpaid = await invoice();
   await http('PATCH', `/invoices/${unpaid.id}/status`, { status: 'SENT' }, 200);
   const unpaidShare = await share(unpaid);
+  await http('PUT', `/payments/upi/invoices/${unpaid.id}`, upi);
   await http('PATCH', `/invoices/${unpaid.id}/status`, { status: 'VOIDED' }, 200);
   document = await read(unpaidShare.token);
   assert.equal(document.status, 'VOIDED');
   assert.equal(document.paymentUrl, null);
+  assert.equal(document.directUpi, null, 'Voided public documents have no direct UPI instructions');
   assert.equal(
     (await share(unpaid)).token,
     unpaidShare.token,
@@ -388,6 +542,9 @@ async function invoice(extra = {}) {
       paidVoidAndTestIsolation: true,
       readSideEffects: false,
       legacySnapshotPreserved: legacyChecked,
+      directUpiSnapshotsAndPreferenceIsolation: true,
+      exclusiveConcurrentCollectionRoute: true,
+      unknownLinkBlocksDirectUpi: true,
       provider: 'controlled fixture only',
     }),
   );

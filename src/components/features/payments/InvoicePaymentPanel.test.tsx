@@ -13,6 +13,9 @@ const mocks = vi.hoisted(() => ({
   create: vi.fn(),
 }))
 vi.mock('../../../hooks/useRazorpay', () => ({ useRazorpaySetup: mocks.setup }))
+vi.mock('./DirectUpiInvoiceControls', () => ({
+  DirectUpiInvoiceControls: () => null,
+}))
 vi.mock('../../../hooks/useGateway', () => ({
   useGatewayLinks: mocks.links,
   useGatewayCommand: () => ({
@@ -62,6 +65,21 @@ beforeEach(() => {
     error: null,
     refetch: mocks.linksRetry,
   })
+})
+it('does not offer Razorpay creation while the invoice has direct UPI enabled', () => {
+  mount({
+    ...invoice,
+    directUpi: {
+      upiId: 'demo@bank',
+      payeeName: 'Demo Shop',
+      reference: 'ab'.repeat(16),
+    },
+  })
+  expect(mocks.setup).not.toHaveBeenCalled()
+  expect(mocks.links).not.toHaveBeenCalled()
+  expect(
+    screen.queryByRole('button', { name: 'Create payment link' })
+  ).not.toBeInTheDocument()
 })
 it('uses explicit Live invoice-scoped creation and the existing review dialog', () => {
   mount({ ...invoice, paymentUrl: null })

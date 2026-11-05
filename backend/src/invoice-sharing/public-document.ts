@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { invoicePaymentUrl } from '../razorpay/gateway-policy';
+import { invoiceUpiDetails } from '../payments/direct-upi-policy';
 
 const party = {
   name: true,
@@ -24,6 +25,9 @@ export const publicInvoiceSelect = {
   discountValue: true,
   shippingAmount: true,
   amountPaid: true,
+  directUpiId: true,
+  directUpiPayeeName: true,
+  directUpiReference: true,
   notes: true,
   terms: true,
   paymentTerms: true,
@@ -141,5 +145,9 @@ export function publicDocument(documentId: string, invoice: PublicInvoiceSource)
       amount: item.amount,
     })),
     paymentUrl: invoicePaymentUrl(invoice),
+    directUpi:
+      invoice.status === 'SENT' && invoice.currency === 'INR' && invoice.total > invoice.amountPaid
+        ? invoiceUpiDetails(invoice)
+        : null,
   };
 }
