@@ -1,6 +1,6 @@
 # Invoice schema rollout
 
-**Hosted development target, 4 November 2026:** all one-time upgrades through `20261104_razorpay_gateway.sql` are applied. Do not rerun them or schema-push this target. Matching API commit `df27525` is live, Test webhook setup/delivery is verified, and frontend deployment remains pending. See `docs/implementation/signed-in-dashboard-features.md` for recovery/evidence. Fresh-target instructions below still apply to genuinely new databases.
+**Hosted development target, 5 November 2026:** all one-time upgrades through `20261105_invoice_sharing.sql` are applied. Do not rerun them or schema-push this target. API/frontend still serve dev merge `32fad0e` (payment QR); public-sharing PR #22 awaits the owner's merge, with its backend signing key already configured. See [public sharing recovery/evidence](../../../docs/implementation/public-invoice-sharing.md) and the [dashboard release history](../../../docs/implementation/signed-in-dashboard-features.md). Fresh-target instructions below still apply to genuinely new databases.
 
 The project currently uses `prisma db push` and has no baseline Prisma migration history. The editor requires the updated `schema.prisma` before the new API starts.
 

@@ -39,7 +39,7 @@ Nest CLI and Prisma CLI are development/build dependencies. Install development 
 
 Read [schema rollout instructions](prisma/updates/README.md) and the [current release recovery state](../docs/implementation/signed-in-dashboard-features.md#e-recovery-state) before deployment.
 
-**Last verified hosted development state (5 November 2026, QR release):** schema upgrades through quotations are applied; API/frontend serve dev merge `32fad0e` from PR #21 on Render. Both services auto-deploy dev commits. Secure/HttpOnly/SameSite=None refresh cookies and the existing verified Razorpay Test setup are retained. Actual Test capture/refund and routing checks are complete; no Live charge/refund was performed. Do not rerun applied upgrades. The subsequent public-sharing upgrade is prepared locally only. See the implementation documents for release evidence.
+**Last verified hosted development state (5 November 2026):** schema upgrades through public sharing are applied; API/frontend still serve dev merge `32fad0e` from PR #21 on Render. Public-sharing PR #22 awaits the owner's merge; its independent backend signing key is configured and read-back verified. Both services auto-deploy dev commits. Secure/HttpOnly/SameSite=None refresh cookies and the existing verified Razorpay Test setup are retained. Actual Test capture/refund and routing checks are complete; no Live charge/refund was performed. Do not rerun applied upgrades. See the implementation documents for release evidence.
 
 This repository has no baseline Prisma migration history. Existing databases use the reviewed, one-time SQL upgrades in `prisma/updates/`; `npm run db:migrate` does not apply these files. Do not run schema push against an existing pre-catalog database to rename its enum. Do not rerun upgrades after a fresh schema push.
 
@@ -161,7 +161,7 @@ Run `QUOTES_TEST_DATABASE_URL=<disposable localhost stock_schema_* URL> npm run 
 
 ### Public invoice sharing
 
-For an existing database upgraded through quotations, apply `prisma/updates/20261105_invoice_sharing.sql` once before deploying the matching API/frontend. It adds only the account-bound active share table; existing invoices and amounts are unchanged. Fresh schema push includes this table and uses the same four existing native guard files. This new upgrade is not applied to hosting by feature development.
+For an existing database upgraded through quotations, apply `prisma/updates/20261105_invoice_sharing.sql` once before deploying the matching API/frontend. It adds only the account-bound active share table; existing invoices and amounts are unchanged. Fresh schema push includes this table and uses the same four existing native guard files. The hosted development target received this upgrade on 5 November 2026 during authorized pre-merge preparation; all 22 existing tables retained identical data fingerprints. Do not rerun it there. The backend signing key is configured; matching PR #22 code still awaits the owner's merge/deployment.
 
 Set `INVOICE_SHARE_SECRET` privately to 32 random bytes in canonical base64 (`openssl rand -base64 32`), separately from account JWT/payment encryption keys. Keep it stable: rotation invalidates existing public links. Missing configuration disables sharing only; malformed nonempty configuration fails startup. Signed capabilities use fixed algorithm/issuer/audience and a random share ID, without owner identities. No usable bearer token is stored in the database.
 
