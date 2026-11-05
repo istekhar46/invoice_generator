@@ -1,0 +1,48 @@
+# Guided Razorpay setup
+
+Updated: 5 November 2026. Implementation and local verification are complete on `feat/razorpay-guided-setup`, based on deployed `dev` merge `a0d7aa6`. The owner requested a PR into `dev`; publication is in progress. The new guided setup is not deployed. Hosted public-sharing verification is complete and tracked only in [public-invoice-sharing.md](public-invoice-sharing.md).
+
+## A. Original requirements
+
+The owner asked how businesses connect their own accounts to receive payment. After explaining the existing manual Live/Test keys and webhook setup, the next proposed task was: finish hosted public-sharing verification/update stale release notes, then add a guided Razorpay setup checklist, copyable full webhook URL and webhook-delivery confirmation. The owner said **“go ahead.”**
+
+Keep the established single-account ownership, per-business Razorpay merchant, separate Test/Live modes, encrypted credentials and existing UPI checkout/ledger rules. Reuse existing setup and signed webhook event records. No bank/KYC form, OAuth/partner onboarding, payment-method change, real charge/refund, message, migration, secret replacement or automatic provider call is included. The subsequent request authorizes publishing the PR into `dev`; merging/deploying this increment is not requested.
+
+Acceptance: the owner can see the setup steps for each mode, copy the complete endpoint using the configured API origin, and see when a signed webhook was last accepted. A configured secret alone must not be described as a received webhook or payment/settlement readiness. Loading/error/disabled/no-event states, account isolation, credential privacy and desktop/mobile behavior must remain correct. Refreshing status performs read-only application queries.
+
+## B. Technical assessment
+
+- `PaymentSettingsPage` already has separate Test/Live forms, verified/enabled/disabled metadata, encrypted-secret submission, a webhook-secret form and eight supported event instructions. Preserve these; do not build a second connection flow.
+- The UI currently prints only `connection.webhookPath`, asking users to prepend the backend address themselves. `ENV.API_BASE_URL` already contains `/api/v1`; construct the full URL without duplicating that prefix. Keep localhost setup explicit; HTTPS is required for a public hosted webhook.
+- `RazorpayService.list` returns masked account/mode-owned metadata, but no callback receipt evidence. `GatewayWebhookEvent` already stores connection, event, outcome and creation time after signature validation/processing. A restricted latest-event projection can supply confirmation without a migration or new webhook handling.
+- Signature validation precedes persistence. An `IGNORED` event is still an accepted signed callback; it is not proof of invoice payment, merchant activation, bank settlement, enabled event selection or the current secret after a later rotation. Show the received time and processing outcome with accurate wording.
+- Existing tests cover connection isolation, failed-save preservation, masking and secret exclusion from client query/mutation caches. Extend the relevant setup tests and real HTTP fixture as needed. Do not send test events to real Razorpay or create provider links just to populate the indicator.
+- Verified native event outcomes are `SYNCED`/`IGNORED`; the relation is `RazorpayConnection.webhookEvents`. Extend only the setup-list response with required nullable `lastWebhook: { receivedAt, event, outcome }`; credential command responses retain their existing metadata contract. Read the latest relation row per owned connection using a restricted projection; expose no event IDs/digests/payloads. No schema change or new webhook mutation is required.
+- URL construction reuses `ENV.API_BASE_URL` and the server's absolute `/api/v1/...` path via `new URL`, so `/api/v1` is not duplicated. Display/copy only the configured backend endpoint; flag localhost/non-HTTPS as unsuitable for public webhook delivery. Keep secret saving separate from the copy action.
+- Official [setup guidance](https://razorpay.com/docs/webhooks/setup-edit-payments) confirms dashboard URL/secret/event configuration and public URLs; [validation guidance](https://razorpay.com/docs/webhooks/validate-test) confirms signed raw payload validation and secret-rotation implications. A persisted receipt is historical evidence of an accepted signed callback, not verification of every configured event/current secret, Live checkout or settlement. Refresh is an authenticated setup read, without provider calls or payment probes.
+
+## C. Implementation checklist
+
+| ID | Status | Completion criterion / dependency |
+| --- | --- | --- |
+| RGS-A01 | DONE | Trace existing setup UI/API/credential/webhook contracts and define a minimal additive approach. |
+| RGS-D01 | DONE | Metadata/URL/receipt contracts, existing native outcomes/relation and official provider guidance verified above. |
+| RGS-B01 | DONE | Setup-list receipt projection verified by unit and real HTTP/PostgreSQL tests, including owner/mode isolation and zero provider calls from reads. |
+| RGS-U01 | DONE | Per-mode checklist, full URL/copy/manual fallback, historical receipt and read-only refresh/retry pass unit and desktop/phone browser checks. |
+| RGS-V01 | DONE | 492 frontend/344 backend tests, 30 real API requests, both production builds, scoped lint/format/diff checks and browser review pass; limits recorded. |
+| RGS-REL01 | IN PROGRESS | Commit/push the verified feature and release notes, create a PR into `dev`, then verify its head/base/checks and record the URL. Leave it open for review. |
+
+## D. Work evidence
+
+- Inspected `PaymentSettingsPage`, its tests, Razorpay setup service/controller/types and signed webhook persistence. Current hosted owner UI shows Test connected with a saved webhook secret and Live not connected. No merchant settings were changed.
+- Created the branch from the clean combined deployed merge. Hosted sharing verification was completed first in its existing document, without any payment/stock action.
+- `RazorpayService.list` includes only the latest event/time/outcome per owned connection. The dedicated `RazorpaySetupConnection` type extends list responses; command metadata is unchanged. There is no new schema, endpoint, provider call, credential write or dependency. Native `SYNCED`/`IGNORED` meanings are retained, including accepted ignored events as receipt evidence without payment claims.
+- `RazorpaySetupGuide` reuses current forms and shows independent Test/Live progress, a complete readonly URL using the existing API base, clipboard success/manual fallback, explicit unsuitable-local-address feedback, and the last accepted event/time/outcome. `PaymentSettingsPage` has a read-only status refresh/retry; existing key/secret cache protections remain tested. A past callback does not assert current event configuration, latest secret, payment or settlement readiness.
+- Tests: **492 frontend /62 files**, **344 backend /35 suites**, both production builds pass. **30 actual HTTP/JWT/PostgreSQL requests** on a disposable PostgreSQL17 database with all four native guard files pass, including null receipt, latest timestamp, owner/Test/Live isolation, restricted fields, read-only provider counts and preserved invoices/payments/stock. The verifier and seeded events were fictional local fixtures; no real Razorpay operation was used. Added8 guide cases,1 page-refresh case and3 backend cases. Scoped frontend/backend lint has0 errors/warnings; TS formatting and diff checks pass. Existing Vite chunk advisory remains.
+- Initial full backend/Vite runs encountered sandbox port-binding EPERM; reruns with local-port access passed. Type-aware lint identified array-index nullability; the final code uses `at(0)` and passed the final full backend suite and repeated real API checks. No fallback hid these failures.
+- Actual Chrome with isolated local API fixtures passed at1440px and390px: full endpoint contains `/api/v1` once; actual clipboard copy succeeded; receipt appeared after Refresh; ignored outcome was labelled without invoice changes; a failed status refresh showed Retry while retaining historical receipt, and retry recovered. Every observed fixture request was a setup GET; both layouts had no page overflow. Screenshots were visually reviewed. This is UI fixture evidence, not a hosted merchant/payment test.
+- Logs and sanitized browser evidence are under ignored `release-artifacts.local/razorpay-guided-setup-20261105/`. Local Vite5190 and its verification tab were closed and the task-only PostgreSQL container removed. Pre-existing Redis and the owner's hosted merchant keys/webhooks were untouched. The owner's hosted page was restored to Payment settings after the separate sharing check.
+
+## E. Recovery state
+
+All RGS implementation/local verification tasks and PIS-REL03 are DONE; RGS-REL01 is IN PROGRESS at the owner's request. GitHub login works, `origin/dev` remains the verified `a0d7aa6` base, and no PR exists yet for this branch. Next: commit/push the explicit feature/docs, create the PR into `dev`, and record its URL/head/checks. Do not merge or deploy it in this task. No migration/new key/provider action is needed for the later release; deploy matching API/UI so the setup list includes `lastWebhook`, then verify the hosted read/copy/refresh flow without replacing keys or charging. Current hosting remains `a0d7aa6`; shared invoice release verification is complete. Preserve existing credentials, modes, native guards and private QA evidence. Actual Live payment readiness and the known date-only issue remain separate.

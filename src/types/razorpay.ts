@@ -11,7 +11,14 @@ export interface RazorpayConnection {
 }
 export interface RazorpaySetup {
   setupAvailable: boolean
-  connections: RazorpayConnection[]
+  connections: RazorpaySetupConnection[]
+}
+export interface RazorpaySetupConnection extends RazorpayConnection {
+  lastWebhook: {
+    receivedAt: string
+    event: string
+    outcome: 'SYNCED' | 'IGNORED'
+  } | null
 }
 export interface RazorpayCredentials {
   keyId: string

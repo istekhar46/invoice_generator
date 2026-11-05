@@ -5,7 +5,8 @@ import { ShieldCheck } from 'lucide-react'
 import { useRazorpaySetup } from '../hooks/useRazorpay'
 import { razorpayApi } from '../services/api/razorpayApi'
 import { queryKeys } from '../lib/queryKeys'
-import type { RazorpayConnection, RazorpayMode } from '../types/razorpay'
+import type { RazorpaySetupConnection, RazorpayMode } from '../types/razorpay'
+import { RazorpaySetupGuide } from '../components/features/payments/RazorpaySetupGuide'
 import { ResponsiveContainer } from '../components/layout/ResponsiveLayout'
 import { Button } from '../components/ui/Button'
 
@@ -16,7 +17,7 @@ function ConnectionForm({
   refresh,
 }: {
   mode: RazorpayMode
-  connection?: RazorpayConnection
+  connection?: RazorpaySetupConnection
   available: boolean
   refresh: () => Promise<unknown>
 }) {
@@ -106,6 +107,11 @@ function ConnectionForm({
           {message}
         </p>
       )}
+      <RazorpaySetupGuide
+        key={connection?.id ?? mode}
+        mode={mode}
+        connection={connection}
+      />
       <form
         className="mt-5 space-y-4"
         noValidate
@@ -227,16 +233,13 @@ function ConnectionForm({
           </h3>
           <p className="mt-2 text-xs leading-relaxed text-slate-500">
             {connection.hasWebhookSecret ? 'Webhook secret configured. ' : ''}In
-            Razorpay’s {label} webhook settings, use your public HTTPS API
-            address followed by the path below. Enable payment_link.paid,
+            Razorpay’s {label} webhook settings, use the full webhook URL from
+            the checklist above. Enable payment_link.paid,
             payment_link.partially_paid, payment_link.cancelled,
             payment_link.expired, payment.captured, refund.created,
             refund.processed and refund.failed. Use the same secret here and in
             Razorpay.
           </p>
-          <code className="mt-3 block break-all rounded-lg bg-slate-50 p-3 text-xs">
-            {connection.webhookPath}
-          </code>
           <label className="mt-4 block text-sm font-medium text-slate-700">
             {label} webhook secret
             <input
@@ -296,9 +299,20 @@ export function PaymentSettingsPage() {
             size={28}
             aria-hidden="true"
           />
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Payment settings
-          </h1>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              Payment settings
+            </h1>
+            <Button
+              type="button"
+              variant="outline"
+              size="small"
+              disabled={query.isFetching}
+              onClick={() => void query.refetch()}
+            >
+              {query.isFetching ? 'Refreshing setup…' : 'Refresh setup status'}
+            </Button>
+          </div>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500">
             Connect your business’s Razorpay account. Test and Live credentials
             are stored separately. Secrets are encrypted on the server and are

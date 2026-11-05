@@ -35,8 +35,26 @@ export class RazorpayService {
     const connections = await this.prisma.razorpayConnection.findMany({
       where: { userId },
       orderBy: { mode: 'desc' },
+      include: {
+        webhookEvents: {
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          take: 1,
+          select: { createdAt: true, event: true, outcome: true },
+        },
+      },
     });
-    return { setupAvailable: this.secrets.available, connections: connections.map(metadata) };
+    return {
+      setupAvailable: this.secrets.available,
+      connections: connections.map((connection) => {
+        const latest = connection.webhookEvents.at(0);
+        return {
+          ...metadata(connection),
+          lastWebhook: latest
+            ? { receivedAt: latest.createdAt, event: latest.event, outcome: latest.outcome }
+            : null,
+        };
+      }),
+    };
   }
 
   async save(userId: string, mode: RazorpayMode, dto: SaveRazorpayConnectionDto) {
