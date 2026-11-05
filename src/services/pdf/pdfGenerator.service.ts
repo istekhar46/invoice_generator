@@ -5,6 +5,8 @@
 
 import React from 'react'
 import type { Invoice } from '../../types/entities'
+import { documentPaymentUrl } from '../../utils/invoiceDocument'
+import { paymentQrDataUrl } from '../../utils/paymentQr'
 import type {
   InvoiceCompany,
   InvoiceCustomer,
@@ -50,6 +52,10 @@ export class PDFGeneratorServiceImpl implements PDFGeneratorService {
         import('@react-pdf/renderer'),
         import('./InvoicePDFTemplate'),
       ])
+      const paymentUrl = quotation ? null : documentPaymentUrl(invoice)
+      const paymentQr = paymentUrl
+        ? { url: paymentUrl, dataUrl: await paymentQrDataUrl(paymentUrl) }
+        : undefined
 
       // Generate PDF using @react-pdf/renderer
       const pdfBlob = await pdf(
@@ -58,6 +64,7 @@ export class PDFGeneratorServiceImpl implements PDFGeneratorService {
           company,
           customer,
           quotation,
+          paymentQr,
         }) as any
       ).toBlob()
 

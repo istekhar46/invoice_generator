@@ -182,6 +182,23 @@ export const invoicePdfFixtures: { name: string; invoice: Invoice }[] = [
     },
   },
 ]
+invoicePdfFixtures.push({
+  name: 'gateway-live-multipage',
+  invoice: {
+    ...invoicePdfFixtures.find(fixture => fixture.name === 'voided-multipage')!
+      .invoice,
+    invoiceNumber: 'GATEWAY-LONG-001',
+    status: 'sent',
+    notes:
+      'Issued invoice retained with its saved line amounts and financial totals.',
+    terms:
+      'Pay the outstanding balance by the due date and quote the invoice number. '.repeat(
+        30
+      ),
+    paymentUrl: 'https://rzp.io/i/fictional-live-long',
+  },
+})
+
 export const guestPdfFixture: GuestInvoiceData = {
   draftId: 'guest-pdf-fixture',
   company: pdfCompany,

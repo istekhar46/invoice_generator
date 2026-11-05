@@ -79,14 +79,14 @@ export function useInvoices(params: InvoiceQueryParams = {}) {
  * Integrates offline support and retry mechanisms
  * Requirements: 8.4 - offline status indication, 8.6 - retry mechanisms
  */
-export function useInvoice(id: string) {
+export function useInvoice(id: string, options?: { staleTime?: number }) {
   const { isOnline } = useOnlineStatus()
   
   const query = useQuery({
     queryKey: queryKeys.invoice(id),
     queryFn: () => invoiceApi.getInvoice(id),
     enabled: !!id, // Only run query if ID is provided
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: options?.staleTime ?? 5 * 60 * 1000,
     // Enhanced retry logic for offline support
     retry: (failureCount, error: any) => {
       // Don't retry if offline

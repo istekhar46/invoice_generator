@@ -27,6 +27,17 @@ export type GatewayLinkState =
   | 'CANCELLED'
   | 'EXPIRED'
   | 'FAILED'
+export const gatewayStateLabel = (state: GatewayLinkState) =>
+  ({
+    PENDING: 'Creating',
+    ACTIVE: 'Active',
+    UNKNOWN: 'Needs refresh',
+    CANCELLING: 'Cancelling',
+    PAID: 'Paid at Razorpay',
+    CANCELLED: 'Cancelled',
+    EXPIRED: 'Expired',
+    FAILED: 'Creation failed',
+  })[state]
 export interface GatewayRefund {
   id: string
   providerId: string

@@ -11,6 +11,8 @@ import { ResponsiveContainer } from '../components/layout/ResponsiveLayout'
 import { useCompanyProfile } from '../hooks/useCompany'
 import { useCustomer } from '../hooks/useCustomers'
 import { useInvoice } from '../hooks/useInvoices'
+import { invoiceApi } from '../services/api/invoiceApi'
+import { InvoicePaymentPanel } from '../components/features/payments/InvoicePaymentPanel'
 import { usePDFGeneration } from '../hooks/usePDFGeneration'
 import { transformInvoiceResponse } from '../utils/apiTransformers'
 import type { Invoice } from '../types/entities'
@@ -33,13 +35,20 @@ export const InvoicesPage: React.FC = () => {
   const showInvoiceBuilder = shouldCreate || !!editingInvoice
 
   const { data: companyProfile } = useCompanyProfile()
-  const { data: directInvoiceDto } = useInvoice(invoiceIdParam || '')
-  const selectedInvoice = invoiceIdParam
-    ? directInvoiceDto
-      ? transformInvoiceResponse(directInvoiceDto)
+  const selectedId = invoiceIdParam || localSelection?.id || ''
+  const detail = useInvoice(selectedId, { staleTime: 0 })
+  const selectedInvoice = detail.data
+    ? transformInvoiceResponse(detail.data)
+    : localSelection?.id === selectedId
+      ? localSelection
       : null
-    : localSelection
-  const showInvoicePreview = !!selectedInvoice
+  const showInvoicePreview = !!selectedId
+  const refreshingInvoice = detail.isPending || detail.isFetching
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState<{
+    id: string
+    message: string
+  } | null>(null)
   const {
     downloadInvoicePDFDirect,
     isGenerating,
@@ -92,15 +101,28 @@ export const InvoicesPage: React.FC = () => {
   }
 
   const handleDownloadPdf = async () => {
-    if (!selectedInvoice) return
+    if (!selectedInvoice || isDownloading) return
+    setIsDownloading(true)
+    setDownloadError(null)
     try {
+      const current = transformInvoiceResponse(
+        await invoiceApi.getInvoice(selectedInvoice.id)
+      )
       await downloadInvoicePDFDirect(
-        selectedInvoice,
-        activeCustomer,
+        current,
+        current.customer || activeCustomer,
         companyProfile
       )
-    } catch {
-      // The PDF hook exposes the error below; keep the invoice open for retry.
+    } catch (error) {
+      setDownloadError({
+        id: selectedInvoice.id,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Could not load the current invoice.',
+      })
+    } finally {
+      setIsDownloading(false)
     }
   }
 
@@ -154,18 +176,45 @@ export const InvoicesPage: React.FC = () => {
           title={`Invoice ${selectedInvoice?.invoiceNumber || ''}`}
           size="large"
         >
-          {selectedInvoice && (
+          {refreshingInvoice && (
+            <p role="status" className="mb-4 text-sm text-slate-500">
+              Updating invoice details…
+            </p>
+          )}
+          {detail.error && (
+            <p role="alert" className="mb-4 text-sm text-red-700">
+              {detail.error.message}{' '}
+              <button
+                type="button"
+                className="underline"
+                onClick={() => void detail.refetch()}
+              >
+                Retry invoice
+              </button>
+            </p>
+          )}
+          {selectedInvoice && !detail.error && (
             <>
+              <InvoicePaymentPanel
+                invoice={selectedInvoice}
+                refreshing={!!refreshingInvoice}
+              />
               <div id="printable-invoice">
                 <InvoicePreview
-                  invoice={selectedInvoice}
+                  invoice={
+                    refreshingInvoice
+                      ? { ...selectedInvoice, paymentUrl: null }
+                      : selectedInvoice
+                  }
                   company={companyProfile}
                   customer={activeCustomer}
                 />
               </div>
-              {pdfError && (
+              {(pdfError || downloadError?.id === selectedId) && (
                 <p role="alert" className="mt-4 text-sm text-red-600">
-                  {pdfError}
+                  {downloadError?.id === selectedId
+                    ? downloadError.message
+                    : pdfError}
                 </p>
               )}
               <ModalFooter className="no-print mt-6 flex-wrap gap-3 justify-between sm:justify-end">
@@ -182,14 +231,18 @@ export const InvoicesPage: React.FC = () => {
                   type="button"
                   onClick={handleDownloadPdf}
                   disabled={
+                    isDownloading ||
                     isGenerating ||
+                    refreshingInvoice ||
                     (!selectedInvoice.isQuickInvoice &&
                       (!activeCustomer || !companyProfile))
                   }
                   className="flex items-center gap-2"
                 >
                   <Download className="h-4 w-4" />
-                  {isGenerating ? 'Generating PDF...' : 'Download PDF'}
+                  {isGenerating || isDownloading
+                    ? 'Generating PDF...'
+                    : 'Download PDF'}
                 </Button>
               </ModalFooter>
             </>

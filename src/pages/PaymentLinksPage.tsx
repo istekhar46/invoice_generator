@@ -4,6 +4,7 @@ import { Link2, Plus } from 'lucide-react'
 import { useGatewayCommand, useGatewayLinks } from '../hooks/useGateway'
 import { useRazorpaySetup } from '../hooks/useRazorpay'
 import type { GatewayLink, GatewayLinkState } from '../types/razorpay'
+import { gatewayStateLabel as stateLabel } from '../types/razorpay'
 import { formatPayment } from '../types/payments'
 import { Button } from '../components/ui/Button'
 import { SimplePagination } from '../components/ui/Pagination'
@@ -25,23 +26,16 @@ const control =
 const exceptionText: Record<string, string> = {
   TEST_MODE: 'Simulated funds stay separate from the real invoice balance.',
   INVOICE_VOIDED: 'This invoice was voided. These funds were not applied.',
-  CURRENCY_MISMATCH: 'The payment currency differs from the payable INR invoice.',
-  UNEXPECTED_METHOD: 'This payment used a method other than UPI and needs review.',
+  CURRENCY_MISMATCH:
+    'The payment currency differs from the payable INR invoice.',
+  UNEXPECTED_METHOD:
+    'This payment used a method other than UPI and needs review.',
   ORDER_MISMATCH: 'The payment order differs from this link and needs review.',
-  NO_PAYABLE_BALANCE: 'The invoice had no payable balance when this payment was recorded.',
-  PRECISION_REVIEW: 'This amount could not be represented safely on the invoice and needs review.',
+  NO_PAYABLE_BALANCE:
+    'The invoice had no payable balance when this payment was recorded.',
+  PRECISION_REVIEW:
+    'This amount could not be represented safely on the invoice and needs review.',
 }
-const stateLabel = (state: GatewayLinkState) =>
-  ({
-    PENDING: 'Creating',
-    ACTIVE: 'Active',
-    UNKNOWN: 'Needs refresh',
-    CANCELLING: 'Cancelling',
-    PAID: 'Paid at Razorpay',
-    CANCELLED: 'Cancelled',
-    EXPIRED: 'Expired',
-    FAILED: 'Creation failed',
-  })[state]
 
 function LinkCard({ link }: { link: GatewayLink }) {
   const mutation = useGatewayCommand()
@@ -213,7 +207,8 @@ function LinkCard({ link }: { link: GatewayLink }) {
                 <p
                   className={`mt-3 text-sm ${link.mode === 'TEST' ? 'text-slate-600' : 'text-amber-800'}`}
                 >
-                  {exceptionText[payment.exception] ?? 'This payment needs review in Razorpay.'}
+                  {exceptionText[payment.exception] ??
+                    'This payment needs review in Razorpay.'}
                 </p>
               )}
               {link.mode === 'LIVE' && /[1-9]/.test(payment.unapplied) && (
