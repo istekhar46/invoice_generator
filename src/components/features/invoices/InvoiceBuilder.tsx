@@ -289,7 +289,7 @@ const InvoiceBuilderForm: React.FC<
       case 'details':
         return validateDetailsStep()
       case 'items':
-        return validateItemsStep()
+        return validateItemsStep() && !calculationError && !errors.discountValue
       case 'review':
         return validateReviewStep()
       default:
@@ -835,12 +835,49 @@ const InvoiceBuilderForm: React.FC<
           </CardTitle>
         </CardHeader>
         <CardContent>
+          <FormGrid columns={2} gap="md" className="mb-5">
+            <label className="block text-sm font-medium text-gray-700">
+              <span>Discount type</span>
+              <select
+                {...register('discountType')}
+                disabled={loading}
+                className="mt-2 w-full rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-3 text-base text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+              >
+                <option value="percentage">Percentage (%)</option>
+                <option value="fixed">Fixed ({currency})</option>
+              </select>
+            </label>
+            <Input
+              label={
+                pricing.discountType === 'fixed'
+                  ? `Discount (${currency})`
+                  : 'Discount (%)'
+              }
+              type="number"
+              inputMode="decimal"
+              min="0"
+              max={pricing.discountType === 'percentage' ? 100 : undefined}
+              step="any"
+              {...register('discountValue', {
+                setValueAs: value => (value === '' ? 0 : Number(value)),
+              })}
+              disabled={loading}
+              error={errors.discountValue?.message}
+              helpText="Discount is applied before tax."
+            />
+          </FormGrid>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Subtotal:</span>
               <span className="font-medium">
                 {displayTotal(totals?.subtotal)}
               </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Discount:</span>
+              <output aria-label="Discount amount" className="font-medium">
+                −{displayTotal(totals?.discountAmount)}
+              </output>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">

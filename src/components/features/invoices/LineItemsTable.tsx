@@ -5,6 +5,8 @@
 
 import React, { useState } from 'react'
 import type { LineItem, LineItemType } from '../../../types/entities'
+import type { CatalogSelection } from '../../../types/catalog'
+import { lineItemSchema } from '../../../types/forms'
 import { CatalogPicker } from '../catalog/CatalogPicker'
 import { InvoiceStockAvailability } from '../inventory/InvoiceStockAvailability'
 import { Button } from '../../ui/Button'
@@ -64,14 +66,17 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
       newErrors.unit = 'Unit is required'
     }
 
-    const quantity = parseFloat(data.quantity)
-    if (!data.quantity || isNaN(quantity) || quantity <= 0) {
-      newErrors.quantity = 'Quantity must be a positive number'
+    const quantity = lineItemSchema.shape.quantity.safeParse(
+      Number(data.quantity)
+    )
+    if (!data.quantity.trim() || !quantity.success) {
+      newErrors.quantity =
+        quantity.error?.issues[0].message || 'Quantity is required'
     }
 
-    const rate = parseFloat(data.rate)
-    if (!data.rate || isNaN(rate) || rate < 0) {
-      newErrors.rate = 'Rate must be a non-negative number'
+    const rate = lineItemSchema.shape.rate.safeParse(Number(data.rate))
+    if (!data.rate.trim() || !rate.success) {
+      newErrors.rate = rate.error?.issues[0].message || 'Rate is required'
     }
 
     setErrors(newErrors)
@@ -186,8 +191,19 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
     return lineItems.reduce((sum, item) => sum + item.amount, 0)
   }
 
-  const openAddForm = () => {
-    setFormData(emptyLineItem)
+  const openAddForm = (selection?: CatalogSelection) => {
+    setFormData(
+      selection
+        ? {
+            type: selection.type,
+            catalogItemId: selection.catalogItemId,
+            description: selection.description,
+            unit: selection.unit,
+            quantity: String(selection.quantity),
+            rate: String(selection.rate),
+          }
+        : emptyLineItem
+    )
     setEditingId(null)
     setErrors({})
     // On mobile, use modal; on desktop, use inline form
@@ -276,8 +292,9 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
           onChange={e => handleFormChange('quantity', e.target.value)}
           placeholder="0"
           aria-label="Item quantity"
-          min="0"
-          step="0.01"
+          min="0.01"
+          max="10000"
+          step="any"
           error={errors.quantity}
           disabled={disabled}
         />
@@ -382,8 +399,9 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
           onChange={e => handleFormChange('quantity', e.target.value)}
           placeholder="0"
           aria-label="Item quantity"
-          min="0"
-          step="0.01"
+          min="0.01"
+          max="10000"
+          step="any"
           error={errors.quantity}
           disabled={disabled}
           variant="filled"
@@ -437,6 +455,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
             className="text-success-600 hover:text-success-700 hover:bg-success-50"
           >
             <Check className="h-4 w-4" />
+            {!isEditing && <span className="ml-1">Add Item</span>}
           </Button>
           <Button
             variant="ghost"
@@ -467,12 +486,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
               context={documentKind}
               currency={currency}
               disabled={disabled || showAddForm || editingId !== null}
-              onSelect={selection =>
-                onChange([
-                  ...lineItems,
-                  { id: crypto.randomUUID(), invoiceId: '', ...selection },
-                ])
-              }
+              onSelect={openAddForm}
             />
             {!showAddForm && !editingId && (
               <Button
@@ -493,6 +507,12 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
           </div>
         </CardHeader>
         <CardContent>
+          {showAddForm && (
+            <p className="mb-4 text-sm text-slate-600">
+              Set the quantity and rate, then select Add Item to include this
+              line.
+            </p>
+          )}
           {lineItems.length === 0 && !showAddForm ? (
             <div className="text-center py-12">
               <div className="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
