@@ -87,7 +87,7 @@ class BaseApiClient implements ApiClient {
           }
         }
 
-        if (ENV.DEV) {
+        if (ENV.DEV && !config.sensitive) {
           console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`)
         }
         return config
@@ -103,7 +103,7 @@ class BaseApiClient implements ApiClient {
     // Response interceptor for token refresh and error handling
     this.axiosInstance.interceptors.response.use(
       (response: AxiosResponse) => {
-        if (ENV.DEV) {
+        if (ENV.DEV && !(response.config as ExtendedInternalConfig).sensitive) {
           if (response.status === 204) {
             console.log(`[API] Response ${response.status}: No Content`)
           } else {

@@ -5,6 +5,36 @@ import { TokenManager } from '../auth/tokenManager'
 
 const instance = apiClient.getAxiosInstance()
 const originalAdapter = instance.defaults.adapter
+it('does not log successful sensitive responses containing share credentials', async () => {
+  const logs = vi.spyOn(console, 'log').mockImplementation(() => undefined)
+  instance.defaults.adapter = async config => ({
+    config,
+    status: 201,
+    statusText: 'Created',
+    headers: {},
+    data: { success: true, data: { token: 'fictional-share-capability' } },
+  })
+  await expect(
+    apiClient.post('/invoices/fixture/share', undefined, { sensitive: true })
+  ).resolves.toEqual({ token: 'fictional-share-capability' })
+  expect(logs).not.toHaveBeenCalled()
+})
+it('retains development logging for ordinary non-sensitive requests', async () => {
+  const logs = vi.spyOn(console, 'log').mockImplementation(() => undefined)
+  instance.defaults.adapter = async config => ({
+    config,
+    status: 200,
+    statusText: 'OK',
+    headers: {},
+    data: { success: true, data: { id: 'fixture' } },
+  })
+  await expect(apiClient.get('/invoices/fixture')).resolves.toEqual({ id: 'fixture' })
+  expect(logs).toHaveBeenCalledWith('[API] GET /invoices/fixture')
+  expect(logs).toHaveBeenCalledWith('[API] Response 200:', {
+    success: true,
+    data: { id: 'fixture' },
+  })
+})
 it('retains normal error handling when Axios has no request configuration', async () => {
   vi.spyOn(console, 'log').mockImplementation(() => undefined)
   vi.spyOn(console, 'error').mockImplementation(() => undefined)
