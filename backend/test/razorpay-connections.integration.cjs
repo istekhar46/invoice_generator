@@ -70,6 +70,28 @@ async function pauseStarted(){for(let i=0;i<100;i++){if(blocked.length)return;aw
   await http('POST','/razorpay/connections/TEST/verify',{},404,otherToken);
   await http('PUT','/razorpay/connections/LIVE',keys('live'));
   assert.equal((await http('GET','/razorpay/connections')).connections.length,2);
+  // Setup receipt evidence is scoped by owner and mode; reads never call the provider.
+  const noReceipt = await http('GET', '/razorpay/connections');
+  assert.ok(noReceipt.connections.every(item => item.lastWebhook === null));
+  const live = await row('LIVE');
+  const foreign = await http('PUT', '/razorpay/connections/TEST', keys(), 200, otherToken);
+  const receipts = [
+    { connectionId: original.id, event: 'payment.captured', outcome: 'SYNCED', createdAt: new Date('2026-11-01T10:00:00Z') },
+    { connectionId: original.id, event: 'unsupported.example', outcome: 'IGNORED', createdAt: new Date('2026-11-02T10:00:00Z') },
+    { connectionId: live.id, event: 'payment_link.cancelled', outcome: 'SYNCED', createdAt: new Date('2026-11-03T10:00:00Z') },
+    { connectionId: foreign.id, event: 'foreign.not.shared', outcome: 'IGNORED', createdAt: new Date('2026-11-04T10:00:00Z') },
+  ];
+  await prisma.gatewayWebhookEvent.createMany({ data: receipts.map((item, index) => ({ ...item, providerEventId: `fixture_receipt_${index}`, digest: 'a'.repeat(64) })) });
+  const checksBeforeRead = checks;
+  const setupWithReceipts = await http('GET', '/razorpay/connections');
+  assert.equal(checks, checksBeforeRead);
+  assert.deepEqual(setupWithReceipts.connections.find(item => item.mode === 'TEST').lastWebhook, { receivedAt: '2026-11-02T10:00:00.000Z', event: 'unsupported.example', outcome: 'IGNORED' });
+  assert.deepEqual(setupWithReceipts.connections.find(item => item.mode === 'LIVE').lastWebhook, { receivedAt: '2026-11-03T10:00:00.000Z', event: 'payment_link.cancelled', outcome: 'SYNCED' });
+  assert.ok(!JSON.stringify(setupWithReceipts).match(/foreign.not.shared|providerEventId|digest|encryptedCredentials|webhookCiphertext/));
+  const foreignSetup = await http('GET', '/razorpay/connections', undefined, 200, otherToken);
+  assert.equal(foreignSetup.connections.length, 1);
+  assert.equal(foreignSetup.connections[0].lastWebhook.event, 'foreign.not.shared');
+  assert.equal(await prisma.gatewayWebhookEvent.count({ where: { connectionId: { in: [original.id, live.id, foreign.id] } } }), 4);
   for(const secret of ['rejected','unavailable']){
     await http('PUT','/razorpay/connections/TEST',keys('test',secret),secret==='rejected'?400:503);
     assert.deepEqual(await row('TEST'),original);
@@ -96,5 +118,5 @@ async function pauseStarted(){for(let i=0;i<100;i++){if(blocked.length)return;aw
   assert.equal(await prisma.stockAction.count({where:{userId:owner}}),0);
   await prisma.user.delete({where:{id:owner}});
   assert.equal(await prisma.razorpayConnection.count({where:{userId:owner}}),0);
-  console.log(JSON.stringify({passed:true,httpRequests:requests,provider:'fictional read-only verifier',checks:['JWT/owner/mode isolation','strict raw validation','encrypted persistence and masked reads','failed replacement preservation','disable/re-enable','concurrent disable/check/replacement','unchanged invoices/payment/stock','account cascade']}));
+  console.log(JSON.stringify({passed:true,httpRequests:requests,provider:'fictional read-only verifier',checks:['JWT/owner/mode isolation','strict raw validation','encrypted persistence and masked reads','latest signed receipt owner/mode isolation and privacy','no provider calls from status reads','failed replacement preservation','disable/re-enable','concurrent disable/check/replacement','unchanged invoices/payment/stock','account cascade']}));
 })().catch(error=>{console.error(error);process.exitCode=1}).finally(async()=>{block=false;for(const done of blocked)done();if(prisma){await prisma.user.deleteMany({where:{id:{in:[owner,other]}}});}if(app)await app.close();});

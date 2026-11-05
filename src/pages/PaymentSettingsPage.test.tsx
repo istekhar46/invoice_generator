@@ -31,6 +31,7 @@ const saved = {
   updatedAt: '2026-11-04T00:00:00Z',
   hasWebhookSecret: false,
   webhookPath: '/api/v1/razorpay/webhooks/connection-a',
+  lastWebhook: null,
 }
 const setup = { setupAvailable: true, connections: [] as object[] }
 function mount() {
@@ -69,6 +70,36 @@ beforeEach(() => {
   mocks.webhook.mockResolvedValue({ ...saved, hasWebhookSecret: true })
 })
 describe('Payment account setup', () => {
+  it('refreshes signed receipt metadata using only the setup read', async () => {
+    mocks.list.mockResolvedValue({ ...setup, connections: [saved] })
+    mount()
+    const target = await form()
+    expect(
+      target.getByText(/No signed webhook received yet/)
+    ).toBeInTheDocument()
+    mocks.list.mockResolvedValue({
+      ...setup,
+      connections: [
+        {
+          ...saved,
+          hasWebhookSecret: true,
+          lastWebhook: {
+            receivedAt: '2026-11-05T08:00:00Z',
+            event: 'payment.captured',
+            outcome: 'SYNCED',
+          },
+        },
+      ],
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Refresh setup status' })
+    )
+    await target.findByText('Last signed webhook received')
+    expect(mocks.save).not.toHaveBeenCalled()
+    expect(mocks.verify).not.toHaveBeenCalled()
+    expect(mocks.disable).not.toHaveBeenCalled()
+    expect(mocks.webhook).not.toHaveBeenCalled()
+  })
   it('saves the webhook secret outside query/mutation caches and clears the form', async () => {
     mocks.list.mockResolvedValue({ ...setup, connections: [saved] })
     const client = mount()
