@@ -11,6 +11,7 @@ import type {
   InvoiceCustomer,
 } from '../../../utils/invoiceDocument'
 import { formatCurrency, formatDate } from '../../../utils/formatters'
+import { PaymentQr } from '../payments/PaymentQr'
 
 interface InvoicePreviewProps {
   invoice: Partial<Invoice>
@@ -185,6 +186,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
               <h3 className="mb-2 text-xs font-semibold uppercase text-slate-400">
                 Pay by UPI
               </h3>
+              <PaymentQr url={paymentUrl} />
               <a
                 href={paymentUrl}
                 target="_blank"

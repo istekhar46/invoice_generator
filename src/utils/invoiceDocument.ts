@@ -46,10 +46,10 @@ export function documentTotals(invoice: Partial<Invoice>) {
   }
 }
 
-/** Only persisted account invoices receive a server-selected active Live URL. */
+/** The authenticated invoice DTO supplies the ID/Live URL, but intentionally omits owner ID. */
 export function documentPaymentUrl(invoice: Partial<Invoice>) {
   if (
-    !invoice.userId ||
+    !invoice.id ||
     invoice.status !== 'sent' ||
     invoice.currency !== 'INR' ||
     documentTotals(invoice).balanceDue <= 0 ||
@@ -60,6 +60,7 @@ export function documentPaymentUrl(invoice: Partial<Invoice>) {
     const url = new URL(invoice.paymentUrl)
     return url.protocol === 'https:' &&
       url.hostname === 'rzp.io' &&
+      !url.port &&
       !url.username &&
       !url.password
       ? url.href

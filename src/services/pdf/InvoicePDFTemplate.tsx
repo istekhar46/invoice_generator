@@ -129,6 +129,7 @@ export interface InvoicePDFTemplateProps {
   company?: InvoiceCompany | null
   customer?: InvoiceCustomer | null
   quotation?: { status: string }
+  paymentQr?: { url: string; dataUrl: string }
 }
 
 export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
@@ -136,6 +137,7 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
   company,
   customer,
   quotation,
+  paymentQr,
 }) => {
   const parties = invoiceParties(invoice, company, customer)
   const currency = invoice.currency || 'USD'
@@ -265,6 +267,17 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
             {paymentUrl && (
               <View style={styles.block} wrap={false}>
                 <Text style={styles.label}>PAY BY UPI</Text>
+                {paymentQr?.url === paymentUrl && (
+                  <View style={{ marginBottom: 6 }}>
+                    <Image
+                      src={paymentQr.dataUrl}
+                      style={{ width: 96, height: 96 }}
+                    />
+                    <Text style={{ fontSize: 8, marginTop: 4 }}>
+                      Scan to open secure payment page
+                    </Text>
+                  </View>
+                )}
                 <Link
                   src={paymentUrl}
                   style={{ color: '#2563eb', fontSize: 9 }}

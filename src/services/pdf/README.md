@@ -6,7 +6,7 @@ Standard, account quick and guest invoices share `InvoicePDFTemplate.tsx` throug
 
 - Print saved line amounts, subtotal, tax and total; do not reprice a saved invoice. This preserves historical rounding snapshots until an actual pricing edit.
 - Show discount, shipping, amount paid and remaining balance using the invoice currency's precision. Currency codes avoid unsupported currency-symbol glyphs in the built-in Helvetica font.
-- Only a saved payable INR invoice with a server-selected active Live URL includes a clickable Pay by UPI link. Test links never enter the invoice contract. Saved list/preview PDF actions fetch current charges, paid balance and URL before export; unsaved editor/guest exports have no gateway URL.
+- Only a saved payable INR invoice with a server-selected active Live URL includes a clickable Pay by UPI link and a locally generated QR that opens the same secure payment page. The QR is not a direct UPI-app payment payload. Test links never enter the invoice contract. Saved list/preview PDF actions fetch current charges, paid balance and URL before export; unsaved editor/guest exports have no gateway URL.
 - Voided invoices retain saved charges/terms but display `VOIDED - No payment due` and zero balance. Metadata and every page identify the invoice and its cancellation state.
 - Quick invoices use saved sender/customer snapshots. Standard invoices use the provided company/customer. Guest drafts use `guestDocument` and the same template.
 - Rows stay together across page breaks, table headings repeat while the table continues, and fixed footers contain invoice identity and page numbers.
@@ -39,7 +39,7 @@ Run focused tests, including actual account and guest PDF generation:
 npm test -- src/services/pdf/InvoicePDFTemplate.test.tsx src/utils/guestPDFGeneration.test.ts
 ```
 
-Export eight deterministic fictional fixtures using the real services. Exporting must not mutate account invoices or the guest draft:
+Export nine deterministic fictional fixtures using the real services. Exporting must not mutate account invoices or the guest draft:
 
 ```sh
 node scripts/export-invoice-pdf-fixtures.mjs release-artifacts.local/pdf-check
@@ -49,13 +49,13 @@ For independent PDF content/geometry checks and page PNGs, install inspection to
 
 ```sh
 python3 -m venv /tmp/invoice-pdf-verification-venv
-/tmp/invoice-pdf-verification-venv/bin/python -m pip install pdfplumber pypdf
+/tmp/invoice-pdf-verification-venv/bin/python -m pip install pdfplumber pypdf zxing-cpp
 /tmp/invoice-pdf-verification-venv/bin/python scripts/verify-invoice-pdf-fixtures.py release-artifacts.local/pdf-check
 ```
 
 The inspector checks actual saved totals/rows, discount/tax/shipping, partial/full/voided balances, INR/USD/JPY precision, metadata, invoice/cancellation context on every page, page numbering, text bounds and multi-page row preservation. It writes `verification.json` and renders all pages through PDFium for **manual visual review**. Passing content checks alone does not establish correct layout.
 
-Fixtures cover partial-payment Sent, unpaid Voided, historical 0.335-row/0.67-total Sent/Voided, fully paid JPY, a long multi-page voided invoice a guest draft and a payable invoice with a fictional Live UPI URL. Generated artifacts are private/gitignored under `release-artifacts.local/`.
+Fixtures cover partial-payment Sent, unpaid Voided, historical 0.335-row/0.67-total Sent/Voided, fully paid JPY, a long multi-page voided invoice a guest draft and single/multi-page payable invoices with fictional Live UPI URLs. The independent ZXing decoder checks that QR pixels rendered from each payable PDF encode exactly the intended URL; other fixtures must contain no payment QR. Generated artifacts are private/gitignored under `release-artifacts.local/`.
 
 ## Quotation exports
 

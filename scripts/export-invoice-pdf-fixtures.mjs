@@ -49,6 +49,7 @@ try {
       tax: invoice.taxAmount,
       total: invoice.total,
       amountPaid: invoice.amountPaid ?? 0,
+      paymentUrl: invoice.paymentUrl ?? null,
       discountType: invoice.discountType,
       discountValue: invoice.discountValue ?? 0,
       shipping: invoice.shippingAmount ?? 0,
