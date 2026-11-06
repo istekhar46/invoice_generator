@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import type { FieldPath } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Check,
   Download,
   ImagePlus,
-  Plus,
   Save,
   ShieldCheck,
   Trash2,
@@ -48,8 +47,7 @@ import {
   transformLineItemToDto,
 } from '../../../utils/apiTransformers'
 import { formatCurrency, formatDateForInput } from '../../../utils/formatters'
-import { CatalogPicker } from '../catalog/CatalogPicker'
-import { InvoiceStockAvailability } from '../inventory/InvoiceStockAvailability'
+import { LineItemsTable } from './LineItemsTable'
 
 export interface QuickInvoiceBuilderProps {
   invoice?: Invoice | null
@@ -64,15 +62,6 @@ export interface QuickInvoiceBuilderProps {
   onStartNew?: () => void
 }
 
-const newItem = () => ({
-  id: crypto.randomUUID(),
-  type: 'product' as const,
-  description: '',
-  unit: 'each',
-  quantity: 1,
-  rate: 0,
-  amount: 0,
-})
 const currencyNames = new Intl.DisplayNames(['en'], { type: 'currency' })
 
 function initialValues(
@@ -180,7 +169,7 @@ function initialValues(
       draft?.notes ??
       (!invoice && !draft ? defaults?.settings.notes : '') ??
       '',
-    lineItems: invoice?.lineItems || draft?.lineItems || [newItem()],
+    lineItems: invoice?.lineItems || draft?.lineItems || [],
   }
 }
 
@@ -233,10 +222,6 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
     defaultValues,
     mode: 'onBlur',
   })
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: 'lineItems',
-  })
   const values = useWatch({ control }) as QuickInvoiceFormData
   const busy =
     downloading ||
@@ -258,6 +243,23 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
     calculationError =
       err instanceof Error ? err.message : 'Check invoice amounts.'
   }
+  const preserveAmounts =
+    savedInvoice &&
+    !invoicePricingChanged(
+      values.lineItems,
+      values.taxRate,
+      values,
+      savedInvoice
+    )
+  const displayedLineItems = (values.lineItems ?? []).map((item, index) => ({
+    ...item,
+    invoiceId: savedId ?? '',
+    amount: totals
+      ? preserveAmounts
+        ? savedInvoice.lineItems[index].amount
+        : money(item.quantity * item.rate, currency)
+      : item.amount,
+  }))
   const display = (value?: number) =>
     value === undefined ? '—' : formatCurrency(value, currency)
 
@@ -647,158 +649,20 @@ export const QuickInvoiceBuilder: React.FC<QuickInvoiceBuilderProps> = ({
               )}
             </div>
           </div>
-          {mode === 'authenticated' && (
-            <div className="mb-4 flex justify-end">
-              <CatalogPicker
+          <Controller
+            name="lineItems"
+            control={control}
+            render={({ field: input }) => (
+              <LineItemsTable
+                key={draftId}
                 currency={currency}
-                onSelect={selection => {
-                  const row = { ...newItem(), ...selection }
-                  const only = values.lineItems?.[0]
-                  if (
-                    fields.length === 1 &&
-                    only &&
-                    !only.description.trim() &&
-                    only.quantity === 1 &&
-                    only.rate === 0 &&
-                    !only.catalogItemId
-                  ) {
-                    setValue('lineItems.0', row, {
-                      shouldDirty: true,
-                      shouldValidate: true,
-                    })
-                  } else append(row)
-                }}
+                mode={mode}
+                lineItems={displayedLineItems}
+                onChange={input.onChange}
+                disabled={busy}
               />
-            </div>
-          )}
-          <div
-            className="hidden grid-cols-[minmax(0,1fr)_64px_72px_100px_100px_28px] gap-3 rounded-lg bg-slate-900 px-3 py-3 text-xs font-medium text-white xl:grid"
-            aria-hidden="true"
-          >
-            <span>Item / service</span>
-            <span>Unit</span>
-            <span>Qty</span>
-            <span>Rate</span>
-            <span className="text-right">Amount</span>
-            <span />
-          </div>
-          <div className="divide-y divide-slate-100">
-            {fields.map((item, index) => {
-              const value = values.lineItems?.[index]
-              let amount: number | undefined
-              try {
-                if (value)
-                  amount =
-                    savedInvoice &&
-                    !invoicePricingChanged(
-                      values.lineItems,
-                      values.taxRate,
-                      values,
-                      savedInvoice
-                    )
-                      ? savedInvoice.lineItems[index].amount
-                      : money(value.quantity * value.rate, currency)
-              } catch {
-                /* Invalid amounts are explained in the totals panel. */
-              }
-              return (
-                <div
-                  key={item.id}
-                  className="grid min-w-0 grid-cols-2 items-end gap-3 py-4 xl:grid-cols-[minmax(0,1fr)_64px_72px_100px_100px_28px]"
-                >
-                  <div className="col-span-2 min-w-0 xl:col-span-1">
-                    <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                      <label>
-                        Item {index + 1} type
-                        <select
-                          {...register(`lineItems.${index}.type`)}
-                          disabled={!!value?.catalogItemId}
-                          className="ml-2 rounded border border-slate-200 bg-white px-2 py-1"
-                        >
-                          <option value="product">Product</option>
-                          <option value="service">Service</option>
-                        </select>
-                      </label>
-                      {value?.catalogItemId && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setValue(`lineItems.${index}.catalogItemId`, null, {
-                              shouldDirty: true,
-                            })
-                          }
-                          className="text-primary-600 underline"
-                        >
-                          Use as one-off
-                        </button>
-                      )}
-                    </div>
-                    <label className="qi-field">
-                      <span className="xl:sr-only">
-                        Item {index + 1} description *
-                      </span>
-                      <textarea
-                        rows={2}
-                        {...register(`lineItems.${index}.description`)}
-                        placeholder="Describe your product or service"
-                      />
-                    </label>
-                  </div>
-                  <label className="qi-field">
-                    <span className="xl:sr-only">Item {index + 1} unit *</span>
-                    <input
-                      {...register(`lineItems.${index}.unit`)}
-                      readOnly={!!value?.catalogItemId}
-                    />
-                  </label>
-                  <label className="qi-field">
-                    <span className="xl:sr-only">
-                      Item {index + 1} quantity *
-                    </span>
-                    <input
-                      type="number"
-                      min="0.01"
-                      step="any"
-                      {...register(`lineItems.${index}.quantity`, numeric)}
-                    />
-                  </label>
-                  <label className="qi-field">
-                    <span className="xl:sr-only">Item {index + 1} rate *</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step={step}
-                      {...register(`lineItems.${index}.rate`, numeric)}
-                    />
-                  </label>
-                  <output
-                    aria-label={`Item ${index + 1} amount`}
-                    className="pb-3 text-right text-sm font-semibold text-slate-800"
-                  >
-                    {display(amount)}
-                  </output>
-                  <button
-                    type="button"
-                    aria-label={`Remove item ${index + 1}`}
-                    className="col-start-2 justify-self-end rounded-lg p-2 text-slate-400 xl:col-start-auto hover:bg-red-50 hover:text-red-600"
-                    onClick={() => remove(index)}
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-          <button
-            type="button"
-            onClick={() => append(newItem())}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-primary-200 bg-primary-50/40 py-3 text-sm font-medium text-primary-700 hover:bg-primary-50"
-          >
-            <Plus size={17} /> Add line item
-          </button>
-          {mode === 'authenticated' && (
-            <InvoiceStockAvailability items={values.lineItems ?? []} />
-          )}
+            )}
+          />
           <div className="mt-9 grid gap-8 xl:grid-cols-2">
             <div className="space-y-5">
               {field(

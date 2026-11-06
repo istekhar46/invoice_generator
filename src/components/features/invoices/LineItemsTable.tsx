@@ -23,6 +23,7 @@ interface LineItemsTableProps {
   disabled?: boolean
   currency?: string
   documentKind?: 'invoice' | 'quotation'
+  mode?: 'authenticated' | 'guest'
 }
 
 interface LineItemFormData {
@@ -49,6 +50,7 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
   disabled = false,
   currency = 'USD',
   documentKind = 'invoice',
+  mode = 'authenticated',
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -482,12 +484,14 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>Line Items</CardTitle>
-            <CatalogPicker
-              context={documentKind}
-              currency={currency}
-              disabled={disabled || showAddForm || editingId !== null}
-              onSelect={openAddForm}
-            />
+            {mode === 'authenticated' && (
+              <CatalogPicker
+                context={documentKind}
+                currency={currency}
+                disabled={disabled || showAddForm || editingId !== null}
+                onSelect={openAddForm}
+              />
+            )}
             {!showAddForm && !editingId && (
               <Button
                 variant="outline"
@@ -648,9 +652,14 @@ export const LineItemsTable: React.FC<LineItemsTableProps> = ({
             </div>
           )}
         </CardContent>
-        <div className="px-6 pb-6">
-          <InvoiceStockAvailability items={lineItems} context={documentKind} />
-        </div>
+        {mode === 'authenticated' && (
+          <div className="px-6 pb-6">
+            <InvoiceStockAvailability
+              items={lineItems}
+              context={documentKind}
+            />
+          </div>
+        )}
       </Card>
 
       {/* Mobile Modal for Add/Edit */}

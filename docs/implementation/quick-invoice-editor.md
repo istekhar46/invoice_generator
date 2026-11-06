@@ -1,5 +1,7 @@
 # Quick invoice editor implementation
 
+Updated: 7 November 2026. The item-entry follow-up below is implemented/verified on `fix/quick-invoice-item-flow`: quick invoices reuse the standard Add Item confirmation flow. Published in [PR #27](https://github.com/istekhar46/invoice_generator/pull/27) into `dev`; GitGuardian passed and the PR is open/non-draft/mergeable. No deployment has been performed for this follow-up.
+
 ## A. Original requirements
 
 Replace Invoiceo's quick invoice generator with an improved version of the invoice-sheet editor in the user's screenshot of https://invoice-generator.com/. Create this implementation document before code changes. Continuously review this document against the code, resolve directly related stale/redundant behavior as it is encountered, and ask about consequential uncertainty before implementing it.
@@ -13,6 +15,10 @@ Confirmed on 1 November 2026:
 - Editing a Paid invoice to have a positive balance returns it to Sent / pending payment (confirmed during implementation).
 - Preserve existing saved subtotal, tax, total, and line amounts for detail-only edits. Recalculate when quantities, rates, tax, currency, discount, or shipping change; changing only amount paid updates the balance and enforces the saved total as its cap (confirmed during final verification).
 - Email delivery and online payment processing are deferred. Use accurate save/download action labels.
+
+Confirmed follow-up, 7 November: replace the quick editor's automatically inserted editable rows with the normal invoice Add Item flow. Enter or select an item, review quantity/rate, and confirm before adding the row. Apply this to the shared guest/signed-in quick editor while keeping guest drafts local and catalog/stock access restricted to signed-in users.
+
+The owner subsequently requested **“create pr of changes”**, authorizing commit/push and a PR into `dev`, including the retained public-read release notes. Merge/deployment remain separate.
 
 Acceptance criteria:
 
@@ -61,6 +67,8 @@ Design direction: a light invoice sheet, clear blue Invoiceo accents, restrained
 | QI-06 | DONE   | Currency-grouped dashboard and currency-aware list/recent invoices; tests and database aggregation checks below              | QI-03        |
 | QI-07 | DONE   | Builds, focused tests, baseline regression comparison, database, desktop/mobile, and rendered PDF checks below               | QI-03–QI-06  |
 | QI-08 | DONE   | Reviewed the affected diff; removed temporary captures; synchronized research, implementation, and rollout documentation     | QI-07        |
+| QI-U01 | DONE | Standard Add Item flow reused in quick invoices; catalog quantity confirmation, guest drafts, mobile edit/cancel, reset, totals and saved financial snapshots verified. Full 518 frontend tests, build and changed-source lint/format pass. | Existing shared line-item component |
+| QI-P01 | DONE | Implementation `dc0300e` pushed; PR #27 verified open/non-draft/mergeable into `dev` from the expected branch, with GitGuardian success. No merge or deployment. | QI-U01 |
 
 ## D. Work evidence
 
@@ -106,8 +114,16 @@ These are the original 1 November checks. The [saved invoice defaults follow-up]
 - Applied `20261101_quick_invoice_editor.sql` in one transaction with bounded lock/statement timeouts. Invoice writes were locked during the upgrade. Pre-commit assertions verified that every original invoice field and line-item record was preserved, along with the expected defaults and paid-invoice backfill.
 - Post-commit SQL verification passed. Prisma's read-only schema comparison returned an empty migration with exit 0: the database matches the feature schema. Application deployment was not performed. Do not rerun the one-time SQL on this upgraded database.
 
+### Standard item-entry follow-up — 7 November 2026
+
+- `QuickInvoiceBuilder` now starts new invoices without a blank row and uses the existing `LineItemsTable` through React Hook Form. One-off/catalog selections are committed through Add Item; editing, cancellation and deletion reuse the standard flow. Removed the duplicate inline row editor and its field-array handling. Draft identity resets the pending item editor on Clear Draft/New Invoice.
+- `LineItemsTable` accepts the existing guest/authenticated mode distinction so guest invoices mount neither catalog nor stock lookups. Existing standard-invoice and quotation callers retain their signed-in behavior. Saved totals/line amounts remain preserved on detail-only edits; quantity/rate/tax/adjustment changes keep existing recalculation behavior.
+- Full frontend regression: **518 tests /65 files pass**. Production build, changed-source ESLint, Prettier and `git diff --check` pass; existing Vite bundle-size and test-environment warnings remain. Integrated coverage verifies confirmation before adding, catalog quantity in the account save payload, guest autosave/PDF data, empty-invoice validation, cancellation, fractional mobile edits, reset and historical rounding preservation. The mobile test initially asserted the dialog synchronously; awaited user interactions now verify its asynchronous lifecycle.
+- Actual isolated local browser: desktop 1440px add/confirm displayed 2 hours ×100 =200; mobile edit to 1.25 hours displayed125; a new mobile product of 2 ×50 produced225. Reload restored the saved draft. At390px the item dialog and page had no horizontal overflow; guest catalog/stock requests were absent. Clear Draft removed rows/pending inputs and browser storage. Screenshots were visually reviewed inline; no new PDF artifact/render was checked because document rendering is unchanged. The isolated QA tab was closed and preview5193 stopped. No hosted data, service configuration or database was changed.
+- Test logs and sanitized verification evidence are in ignored `release-artifacts.local/quick-invoice-item-flow-20261107/`. Existing public-read release-note edits in the working tree were preserved.
+
+- Publication: current `dev` (`41eaa9e`) was merged into the fix branch without changing verified application source. Implementation/test/release-note commit `dc0300e73ed72a7e639874c7586b3f3808a8dbd9` was pushed and [PR #27](https://github.com/istekhar46/invoice_generator/pull/27) opened into `dev` from `fix/quick-invoice-item-flow`. GitHub confirmed the expected head/base, OPEN/non-draft, MERGEABLE and GitGuardian success. Private environment/CLI/QA artifacts remain ignored. This publication follow-up is documentation only; no source changed after the recorded verification.
+
 ## E. Recovery state
 
-All QI-01–QI-08 tasks are complete, including the final confirmed saved-total rule, diff review, and documentation/temporary-artifact cleanup. No unresolved product decision or implementation blocker.
-
-No quick-editor implementation or requested database-migration action remains. The user-supplied database has both the 1 November quick-editor upgrade and the separately authorized 2 November saved-defaults upgrade. Frontend/API deployment was not performed here. For another environment, inspect its schema and follow the rollout document. Local quick-editor QA uses API :3101, preview :5174, and disposable PostgreSQL :55432. QA captures are in `/tmp/invoiceo-quick-editor-qa-20261101-final`; reports are under `/tmp`. Subsequent defaults implementation, live migration and test/lint cleanup are tracked in [saved invoice defaults](saved-invoice-defaults.md).
+QI-01–QI-08, QI-U01 and QI-P01 are complete for implementation/publication scope. [PR #27](https://github.com/istekhar46/invoice_generator/pull/27) is open into `dev` from `fix/quick-invoice-item-flow`, with implementation `dc0300e` plus docs-only publication notes; expected head/base, mergeability and GitGuardian success were verified. Next release action after review/merge: verify matching Render auto-deploy and hosted guest/signed-in item entry. No merge/deployment was performed by this request. No backend change, migration, new dependency or environment variable is required. Tests/build/lint/browser checks are complete and task preview/tab are removed. Prior public-read release notes are retained in this PR; successful hosted public invoice/PDF verification after PR #26 remains separate/pending. Current platform/schema history is in [the dashboard roadmap](signed-in-dashboard-features.md); do not rerun applied upgrades.
