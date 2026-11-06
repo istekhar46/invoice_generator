@@ -1,6 +1,6 @@
 # Quick invoice editor implementation
 
-Updated: 7 November 2026. The item-entry follow-up below is implemented/verified on `fix/quick-invoice-item-flow`: quick invoices reuse the standard Add Item confirmation flow. PR publication into `dev` is authorized and in progress. No deployment has been performed for this follow-up.
+Updated: 7 November 2026. The item-entry follow-up below is implemented/verified on `fix/quick-invoice-item-flow`: quick invoices reuse the standard Add Item confirmation flow. Published in [PR #27](https://github.com/istekhar46/invoice_generator/pull/27) into `dev`; GitGuardian passed and the PR is open/non-draft/mergeable. No deployment has been performed for this follow-up.
 
 ## A. Original requirements
 
@@ -68,7 +68,7 @@ Design direction: a light invoice sheet, clear blue Invoiceo accents, restrained
 | QI-07 | DONE   | Builds, focused tests, baseline regression comparison, database, desktop/mobile, and rendered PDF checks below               | QI-03–QI-06  |
 | QI-08 | DONE   | Reviewed the affected diff; removed temporary captures; synchronized research, implementation, and rollout documentation     | QI-07        |
 | QI-U01 | DONE | Standard Add Item flow reused in quick invoices; catalog quantity confirmation, guest drafts, mobile edit/cancel, reset, totals and saved financial snapshots verified. Full 518 frontend tests, build and changed-source lint/format pass. | Existing shared line-item component |
-| QI-P01 | IN PROGRESS | Commit/push the verified UI change and documentation, open the PR into `dev`, and verify its head/base/checks. No merge or deployment. | QI-U01 |
+| QI-P01 | DONE | Implementation `dc0300e` pushed; PR #27 verified open/non-draft/mergeable into `dev` from the expected branch, with GitGuardian success. No merge or deployment. | QI-U01 |
 
 ## D. Work evidence
 
@@ -122,6 +122,8 @@ These are the original 1 November checks. The [saved invoice defaults follow-up]
 - Actual isolated local browser: desktop 1440px add/confirm displayed 2 hours ×100 =200; mobile edit to 1.25 hours displayed125; a new mobile product of 2 ×50 produced225. Reload restored the saved draft. At390px the item dialog and page had no horizontal overflow; guest catalog/stock requests were absent. Clear Draft removed rows/pending inputs and browser storage. Screenshots were visually reviewed inline; no new PDF artifact/render was checked because document rendering is unchanged. The isolated QA tab was closed and preview5193 stopped. No hosted data, service configuration or database was changed.
 - Test logs and sanitized verification evidence are in ignored `release-artifacts.local/quick-invoice-item-flow-20261107/`. Existing public-read release-note edits in the working tree were preserved.
 
+- Publication: current `dev` (`41eaa9e`) was merged into the fix branch without changing verified application source. Implementation/test/release-note commit `dc0300e73ed72a7e639874c7586b3f3808a8dbd9` was pushed and [PR #27](https://github.com/istekhar46/invoice_generator/pull/27) opened into `dev` from `fix/quick-invoice-item-flow`. GitHub confirmed the expected head/base, OPEN/non-draft, MERGEABLE and GitGuardian success. Private environment/CLI/QA artifacts remain ignored. This publication follow-up is documentation only; no source changed after the recorded verification.
+
 ## E. Recovery state
 
-QI-01–QI-08 and QI-U01 are complete for their implementation scopes; QI-P01 is in progress under the owner's publication request. Publish `fix/quick-invoice-item-flow` into `dev`, including the two changed components, updated guest/account integration tests, these notes and retained public-read release documentation. Fresh `origin/dev` is `41eaa9e`; incorporating its merge changed no verified application source. Tests/build/lint/browser checks are complete and task preview/tab are removed. No backend change, migration, new dependency or environment variable is required. Merge/deployment remain separate. Current deployed-platform state and historical schema upgrades are tracked in [the dashboard roadmap](signed-in-dashboard-features.md); do not rerun applied upgrades. Original quick-editor evidence above and subsequent [saved defaults](saved-invoice-defaults.md) remain historical records.
+QI-01–QI-08, QI-U01 and QI-P01 are complete for implementation/publication scope. [PR #27](https://github.com/istekhar46/invoice_generator/pull/27) is open into `dev` from `fix/quick-invoice-item-flow`, with implementation `dc0300e` plus docs-only publication notes; expected head/base, mergeability and GitGuardian success were verified. Next release action after review/merge: verify matching Render auto-deploy and hosted guest/signed-in item entry. No merge/deployment was performed by this request. No backend change, migration, new dependency or environment variable is required. Tests/build/lint/browser checks are complete and task preview/tab are removed. Prior public-read release notes are retained in this PR; successful hosted public invoice/PDF verification after PR #26 remains separate/pending. Current platform/schema history is in [the dashboard roadmap](signed-in-dashboard-features.md); do not rerun applied upgrades.
