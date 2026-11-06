@@ -1,6 +1,6 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GuestInvoiceData } from '../../../types/guest'
 import { guestDocument } from '../../../utils/invoiceDocument'
 import { QuickInvoiceBuilder } from './QuickInvoiceBuilder'
@@ -11,12 +11,16 @@ const {
   generateAndDownloadPDF,
   saveToLocalStorage,
   downloadInvoicePDF,
+  catalogQuery,
+  stockQuery,
 } = vi.hoisted(() => ({
   clearLocalStorage: vi.fn(),
   mutateAsync: vi.fn(),
   generateAndDownloadPDF: vi.fn(),
   saveToLocalStorage: vi.fn(),
   downloadInvoicePDF: vi.fn(),
+  catalogQuery: vi.fn(),
+  stockQuery: vi.fn(),
 }))
 
 vi.mock('../../../hooks/useInvoices', () => ({
@@ -41,7 +45,13 @@ vi.mock('../../../utils/guestInvoiceStorage', () => ({
   saveToLocalStorage,
 }))
 
+vi.mock('../../../hooks/useCatalog', () => ({ useCatalog: catalogQuery }))
+vi.mock('../../../hooks/useInventory', () => ({
+  useStockAvailability: stockQuery,
+}))
+
 describe('QuickInvoiceBuilder guest mode', () => {
+  const originalWidth = window.innerWidth
   const guestDraft: GuestInvoiceData = {
     draftId: 'guest-draft-1',
     company: { businessName: 'Guest Company' },
@@ -69,6 +79,23 @@ describe('QuickInvoiceBuilder guest mode', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    window.innerWidth = 1024
+    stockQuery.mockReturnValue({ data: [], isPending: false })
+    catalogQuery.mockReturnValue({
+      data: {
+        data: [
+          {
+            id: 'logo',
+            type: 'product',
+            name: 'Logo',
+            description: '',
+            unit: 'PCS',
+            rate: 3000,
+            currency: 'INR',
+          },
+        ],
+      },
+    })
     generateAndDownloadPDF.mockResolvedValue(undefined)
     mutateAsync.mockResolvedValue({
       id: 'invoice-1',
@@ -95,6 +122,141 @@ describe('QuickInvoiceBuilder guest mode', () => {
       createdAt: new Date('2026-10-01'),
       updatedAt: new Date('2026-10-01'),
     })
+  })
+
+  afterEach(() => {
+    window.innerWidth = originalWidth
+  })
+
+  it('adds only confirmed guest items to the invoice, local draft and PDF', async () => {
+    render(<QuickInvoiceBuilder mode="guest" />)
+    expect(screen.getByText('No line items yet')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Item description')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Add from catalog' })
+    ).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Bill to *'), {
+      target: { value: 'Customer' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add Item' }))
+    fireEvent.change(screen.getByLabelText('Item description'), {
+      target: { value: 'Design work' },
+    })
+    fireEvent.change(screen.getByLabelText('Item unit'), {
+      target: { value: 'hour' },
+    })
+    fireEvent.change(screen.getByLabelText('Item quantity'), {
+      target: { value: '0' },
+    })
+    fireEvent.change(screen.getByLabelText('Item rate'), {
+      target: { value: '100' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add Item' }))
+    expect(
+      screen.getByText('Quantity must be greater than 0')
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Subtotal')).toHaveTextContent('$0.00')
+    fireEvent.change(screen.getByLabelText('Item quantity'), {
+      target: { value: '2' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add Item' }))
+    expect(screen.queryByLabelText('Item description')).not.toBeInTheDocument()
+    expect(screen.getByRole('cell', { name: '2 hour' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Subtotal')).toHaveTextContent('$200.00')
+    await waitFor(() =>
+      expect(saveToLocalStorage).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          lineItems: [
+            expect.objectContaining({
+              description: 'Design work',
+              quantity: 2,
+            }),
+          ],
+        })
+      )
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }))
+    await waitFor(() => expect(generateAndDownloadPDF).toHaveBeenCalledOnce())
+    expect(generateAndDownloadPDF.mock.calls[0][0].lineItems).toEqual([
+      expect.objectContaining({
+        description: 'Design work',
+        quantity: 2,
+        rate: 100,
+      }),
+    ])
+    fireEvent.click(screen.getByTitle('Delete Line Item'))
+    expect(screen.getByText('No line items yet')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }))
+    await screen.findByText('At least one line item is required')
+    expect(generateAndDownloadPDF).toHaveBeenCalledOnce()
+    expect(mutateAsync).not.toHaveBeenCalled()
+    expect(catalogQuery).not.toHaveBeenCalled()
+    expect(stockQuery).not.toHaveBeenCalled()
+  })
+
+  it('confirms the catalog quantity before adding and saving an account invoice', async () => {
+    mutateAsync.mockImplementationOnce(() => new Promise(() => {}))
+    render(<QuickInvoiceBuilder initialDefaults={initialDefaults} />)
+    fireEvent.change(screen.getByLabelText('Bill to *'), {
+      target: { value: 'Customer' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add from catalog' }))
+    fireEvent.click(screen.getByRole('button', { name: /Logo/ }))
+    expect(screen.getByLabelText('Item quantity')).toHaveValue(1)
+    expect(screen.getByLabelText('Subtotal')).toHaveTextContent('0.00')
+    fireEvent.change(screen.getByLabelText('Item quantity'), {
+      target: { value: '2' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add Item' }))
+    expect(screen.getByRole('cell', { name: '2 PCS' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Subtotal')).toHaveTextContent('6,000.00')
+    fireEvent.click(screen.getByRole('button', { name: 'Save Invoice' }))
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          lineItems: [
+            expect.objectContaining({
+              catalogItemId: 'logo',
+              type: 'PRODUCT',
+              quantity: 2,
+              unit: 'PCS',
+              rate: 3000,
+            }),
+          ],
+        })
+      )
+    )
+  })
+
+  it('cancels mobile additions and commits fractional quantities and edits through the item dialog', async () => {
+    const user = userEvent.setup()
+    window.innerWidth = 390
+    render(<QuickInvoiceBuilder mode="guest" initialGuestData={guestDraft} />)
+    await user.click(screen.getByRole('button', { name: 'Add Item' }))
+    expect(
+      screen.getByRole('dialog', { name: 'Add Line Item' })
+    ).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Item description'), {
+      target: { value: 'Unconfirmed' },
+    })
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByText('Unconfirmed')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Subtotal')).toHaveTextContent('$200.00')
+    await user.click(screen.getByTitle('Edit Line Item'))
+    expect(
+      await screen.findByRole('dialog', { name: 'Edit Line Item' })
+    ).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Item quantity'), {
+      target: { value: '1.250' },
+    })
+    await user.click(screen.getByRole('button', { name: 'Update Item' }))
+    expect(screen.getByRole('cell', { name: '1.25 hour' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Subtotal')).toHaveTextContent('$125.00')
+    fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }))
+    await waitFor(() => expect(generateAndDownloadPDF).toHaveBeenCalledOnce())
+    expect(generateAndDownloadPDF.mock.calls[0][0].lineItems).toEqual([
+      expect.objectContaining({ description: 'Consulting', quantity: 1.25 }),
+    ])
   })
 
   it('downloads locally and never calls the authenticated invoice API', async () => {
@@ -190,6 +352,12 @@ describe('QuickInvoiceBuilder guest mode', () => {
       })),
     }
     render(<QuickInvoiceBuilder invoice={original} />)
+    expect(screen.getByLabelText('Invoice total')).toHaveTextContent('$0.67')
+    fireEvent.click(screen.getAllByTitle('Edit Line Item')[0])
+    fireEvent.change(screen.getByLabelText('Item description'), {
+      target: { value: 'Revised description' },
+    })
+    fireEvent.click(screen.getByTitle('Save Changes'))
     expect(screen.getByLabelText('Invoice total')).toHaveTextContent('$0.67')
     await userEvent.type(screen.getByLabelText('Notes'), 'Changed details')
     await userEvent.click(screen.getByRole('button', { name: 'Download PDF' }))
@@ -315,11 +483,17 @@ describe('QuickInvoiceBuilder guest mode', () => {
     expect(
       await screen.findByRole('textbox', { name: 'Bill to *' })
     ).toHaveValue('Guest Customer')
+    fireEvent.click(screen.getByRole('button', { name: 'Add Item' }))
+    fireEvent.change(screen.getByLabelText('Item description'), {
+      target: { value: 'Unconfirmed item' },
+    })
     await user.click(screen.getByRole('button', { name: 'Clear Draft' }))
 
     expect(clearLocalStorage).toHaveBeenCalledOnce()
     expect(screen.getByRole('textbox', { name: 'Bill to *' })).toHaveValue('')
     expect(screen.getByRole('textbox', { name: 'From' })).toHaveValue('')
+    expect(screen.queryByLabelText('Item description')).not.toBeInTheDocument()
+    expect(screen.getByText('No line items yet')).toBeInTheDocument()
 
     saveToLocalStorage.mockClear()
     await new Promise(resolve => setTimeout(resolve, 600))
