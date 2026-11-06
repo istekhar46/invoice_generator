@@ -34,11 +34,11 @@ npm run start:dev
 
 `npm run build` generates the Prisma client before compiling. `PORT` determines the listen port (default 3001); every API route uses `/api/v1`.
 
-### Direct UPI QR (local implementation)
+### Direct UPI QR (deployed and verified)
 
 Payment settings supports owner-provided receiving UPI details independently of Razorpay. `GET`/`PUT`/`DELETE /api/v1/payments/upi/preferences` reads, replaces or removes account defaults. `PUT /api/v1/payments/upi/invoices/:id` explicitly enables a saved receiving snapshot using the reviewed `{ upiId, payeeName }`; `DELETE` removes it from current views. Preferences never redirect existing invoice snapshots. Active/unresolved Live Razorpay links and direct UPI are mutually exclusive under the invoice lock; Test mode remains isolated.
 
-Invoice previews, shared pages and PDFs show the current INR balance QR for eligible issued invoices. Receipts are verified by the owner and recorded through the existing UPI ledger. Removing a QR cannot revoke printed/downloaded copies. No new environment variable, credential or QR dependency is needed. Before deploying this API to an existing database, apply `prisma/updates/20261105_direct_upi.sql` once; it is **not applied to the hosted development DB yet**. See the [implementation and verification record](../docs/implementation/direct-upi-qr.md).
+Invoice previews, shared pages and PDFs show the current INR balance QR for eligible issued invoices. Receipts are verified by the owner and recorded through the existing UPI ledger. Removing a QR cannot revoke printed/downloaded copies. No new environment variable, credential or QR dependency is needed. The hosted development DB has `prisma/updates/20261105_direct_upi.sql` applied, and API/frontend serve merge `ebb53a1`; **do not rerun that migration on this target**. Other existing databases need the one-time upgrade before deploying this API. Hosted owner/public/mobile/PDF/cancellation/revocation checks passed with disposable records removed. Physical UPI app/bank acceptance is unverified. See the [implementation and verification record](../docs/implementation/direct-upi-qr.md).
 
 Nest CLI and Prisma CLI are development/build dependencies. Install development dependencies before generating/building or running schema checks; production starts the compiled application directly. Keep Prisma CLI/client/adapter versions aligned. Parent-scoped security overrides currently select Multer 2.5.0 for the Nest Express adapter and js-yaml 5.4.1 for Swagger; their rationale, actual resolved versions and regression evidence are in the implementation document. Review/remove each override when its upstream parent declares a patched dependency.
 
@@ -46,7 +46,19 @@ Nest CLI and Prisma CLI are development/build dependencies. Install development 
 
 Read [schema rollout instructions](prisma/updates/README.md) and the [current release recovery state](../docs/implementation/signed-in-dashboard-features.md#e-recovery-state) before deployment.
 
-**Last verified hosted development state (5 November 2026):** schema upgrades through public sharing are applied. Guided Razorpay setup PR #24 is Live as `9be8572`; hosted1440px/390px read/copy/receipt/refresh and simulated failure/retry checks passed with merchant metadata unchanged. Earlier public-sharing/PDF/revocation and quantity/discount verification are complete. Both services retain commit auto-deploy and existing credentials. Test is connected; Live is not connected. No migration/key/provider operation was needed. See the guided setup recovery document.
+**Last verified hosted development state (5 November 2026):** schema upgrades through direct UPI are applied; PR #25 is Live as `ebb53a1`. Hosted owner/public/mobile/QR/PDF/cancellation/revocation checks passed and disposable records were removed. Both services retain commit auto-deploy and existing credentials. See [direct-UPI recovery](../docs/implementation/direct-upi-qr.md). The read-reliability change below is local and not deployed.
+
+### Database acquisition and public invoice reads
+
+The application shares one `PrismaService`/pg pool through `DatabaseModule`, including dashboard queries. The driver bounds new connections and queued checkouts at 3s; Prisma allows 4s for transaction startup, with the existing 5s execution limit and per-operation isolation levels retained. Public invoice reads still use RepeatableRead so invoice charges, lines, parties and payment instructions come from a consistent snapshot. Persistent overload/unavailability returns an explicit sanitized 503, without cached financial data or automatic retry. These configured budgets do not guarantee an end-to-end response time.
+
+Local regression (compiled API, disposable localhost `stock_schema_*` database with current schema/native guards):
+
+```sh
+SHARING_TEST_DATABASE_URL=postgresql://... npm run test:invoice-sharing-reliability
+```
+
+It constrains only the test pool to one slot and verifies a delayed read past the former 2s limit, 16 concurrent reads, bounded unavailable errors/recovery, empty queues, idle connection return, revocation and coherent snapshots during a concurrent invoice edit. Existing ownership/payment/QR contracts remain covered by `npm run test:invoice-sharing`. No new secret or migration is needed. See [reliability evidence/recovery](../docs/implementation/public-invoice-sharing.md).
 
 This repository has no baseline Prisma migration history. Existing databases use the reviewed, one-time SQL upgrades in `prisma/updates/`; `npm run db:migrate` does not apply these files. Do not run schema push against an existing pre-catalog database to rename its enum. Do not rerun upgrades after a fresh schema push.
 

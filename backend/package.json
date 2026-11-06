@@ -33,7 +33,8 @@
     "test:razorpay-connections": "node test/razorpay-connections.integration.cjs",
     "test:quotes": "node test/quotes.integration.cjs",
     "test:gateway": "node test/gateway.integration.cjs",
-    "test:invoice-sharing": "node test/invoice-sharing.integration.cjs"
+    "test:invoice-sharing": "node test/invoice-sharing.integration.cjs",
+    "test:invoice-sharing-reliability": "node test/invoice-sharing-reliability.integration.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.2.8",

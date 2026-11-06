@@ -1,6 +1,6 @@
 # Invoice schema rollout
 
-**Hosted development target, 5 November 2026:** all one-time upgrades through `20261105_invoice_sharing.sql` are applied. Do not rerun them or schema-push this target. API/frontend now serve guided-setup merge `9be8572`; the deployed guided-setup increment added no migration. The direct-UPI upgrade below remains local and unapplied. Existing public sharing/PDF/revocation checks are complete. See [guided setup recovery](../../../docs/implementation/razorpay-guided-setup.md) for completed hosted read/copy/refresh/retry verification and [dashboard release history](../../../docs/implementation/signed-in-dashboard-features.md). Fresh-target instructions below still apply to genuinely new databases.
+**Hosted development target, 5 November 2026:** all one-time upgrades through `20261105_direct_upi.sql` are applied. Do not rerun them or schema-push this target. API/frontend serve direct-UPI merge `ebb53a1`; all23 previous tables were preserved, four new constraints validated, and hosted QR/PDF/mobile/cancellation/revocation checks plus QA cleanup passed. See [direct-UPI recovery](../../../docs/implementation/direct-upi-qr.md) and [dashboard release history](../../../docs/implementation/signed-in-dashboard-features.md). Existing sharing/guided-setup verification remains complete. Fresh-target instructions below apply only to genuinely new databases.
 
 The project currently uses `prisma db push` and has no baseline Prisma migration history. The editor requires the updated `schema.prisma` before the new API starts.
 
@@ -147,9 +147,9 @@ The first transaction commits RAZORPAY/REFUND enum labels before guards use them
 
 For a new empty target, push the complete schema then install `inventory.sql`, `payments.sql`, `razorpay.sql` once, each transactionally. Do not apply any one-time upgrade after schema push. Prisma alone cannot install native invariants. Fresh/upgraded local diffs are empty; 112 native objects (including 15 functions and 26 triggers) match. Existing invoice/receipt/credential/stock preservation was checked on the exact additive upgrade. `GATEWAY_TEST_DATABASE_URL=postgresql://... npm run test:gateway` requires a disposable `stock_schema_*` localhost database and compiled API; it never contacts the merchant. Real Test probes are separate and never authorize Live operations or hosted migrations.
 
-## Direct UPI QR (5 November 2026 — local, not applied to hosted DB)
+## Direct UPI QR (5 November 2026 — applied to hosted development DB)
 
-For an existing database already upgraded through invoice sharing, apply once before deploying the matching API/frontend:
+The hosted development target already has this upgrade; do not rerun it. For another existing database already upgraded through invoice sharing, apply once before deploying the matching API/frontend:
 
 ```sh
 psql -X -v ON_ERROR_STOP=1 -f prisma/updates/20261105_direct_upi.sql
@@ -157,4 +157,6 @@ psql -X -v ON_ERROR_STOP=1 -f prisma/updates/20261105_direct_upi.sql
 
 This additive transaction creates account-owned `upi_payment_preferences` and three nullable invoice receiving-snapshot fields. It installs format/completeness checks from `constraints/direct-upi.sql`; keep the two directories together. It performs no invoice/payment/stock backfill and needs no secret. Existing clients continue using their existing fields. Do not rerun it or apply it after fresh schema push. For a fresh target, install `constraints/direct-upi.sql` once after the existing inventory, payment, Razorpay and quotation guard files.
 
-Local rehearsal preserved all 23 previous tables and their original-row fingerprints; incomplete snapshots were rejected, and Prisma's model comparison reports no difference. `SHARING_TEST_DATABASE_URL=postgresql://... npm run test:invoice-sharing` now also verifies direct-UPI preferences/snapshots, owner isolation, concurrent route selection and active/UNKNOWN gateway conflicts on an explicitly disposable `stock_schema_*` localhost database. The provider is fictional; no transfer is made. See [direct UPI implementation](../../../docs/implementation/direct-upi-qr.md) for UI/PDF evidence and the remaining release step.
+Local rehearsal preserved all 23 previous tables and their original-row fingerprints; incomplete snapshots were rejected, and Prisma's model comparison reports no difference. `SHARING_TEST_DATABASE_URL=postgresql://... npm run test:invoice-sharing` now also verifies direct-UPI preferences/snapshots, owner isolation, concurrent route selection and active/UNKNOWN gateway conflicts on an explicitly disposable `stock_schema_*` localhost database. The provider is fictional; no transfer is made. See [direct UPI implementation](../../../docs/implementation/direct-upi-qr.md) for UI/PDF evidence and completed release recovery.
+
+Hosted completion: applied the exact upgrade once on 5 November, preserving all23 original tables and validating four constraints. API/frontend are Live on merged `ebb53a1`, hosted QR/PDF/mobile/void/revoke checks passed and disposable records were removed. No new secret or further migration is needed. The implementation record includes the transient transaction-start timeout and successful explicit retry; physical bank/app scanning remains unverified.
