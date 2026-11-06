@@ -8,7 +8,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   private readonly logger: Logger = new Logger(PrismaService.name);
 
   constructor() {
-    const connectionString: string = process.env.DATABASE_URL!;
+    const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
       throw new Error('DATABASE_URL is not defined');
     }
@@ -18,8 +18,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
     // If PG_CA_CERT is defined, parse it correctly (handle both escaped and unescaped newlines)
     const caCert: string | undefined = process.env.PG_CA_CERT?.replace(/\\n/g, '\n')
-      ?.replace(/\\"/g, '"')
-      ?.trim();
+      .replace(/\\"/g, '"')
+      .trim();
 
     let poolConfig: PoolConfig;
 
@@ -55,12 +55,16 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       };
     }
 
-    const pool: Pool = new Pool(poolConfig);
+    // Bound both connection creation and waiting for a free pool lease.
+    const pool: Pool = new Pool({ ...poolConfig, connectionTimeoutMillis: 3000 });
     const adapter: PrismaPg = new PrismaPg(pool, { disposeExternalPool: true });
 
     super({
       adapter,
       errorFormat: 'pretty',
+      // Let pg settle its 3s acquisition deadline before Prisma abandons startup.
+      // Keep the default 5s execution limit and each caller's isolation level.
+      transactionOptions: { maxWait: 4000 },
     });
 
     if (sslEnabled) {

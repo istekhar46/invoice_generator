@@ -1,6 +1,6 @@
 # Public invoice sharing
 
-Updated: 5 November 2026. [PR #22](https://github.com/istekhar46/invoice_generator/pull/22) is merged into `dev` as `a0d7aa6`, after invoice quantity/discount fix PR #23. Matching Render API/frontend deployments are Live, API readiness200 and combined-source 483 frontend tests/build pass. PIS-REL03 is DONE: actual hosted owner share, signed-out view/PDF and revocation checks passed. The owner document remained unchanged and test shares were removed. Guided payment setup continues separately. Prior payment-QR evidence remains preserved; the existing date/timezone issue below is still separate.
+Updated: 6 November 2026. Original sharing and subsequent guided/direct-UPI releases are complete; last verified hosting is merge `ebb53a1`. The read-reliability fix is implemented/verified locally on `fix/public-invoice-read-timeout`: shared database provider, bounded/aligned acquisition waits and a real contention/snapshot regression. PRR tasks are complete for local scope; no new migration, deployment or hosted verification was performed. The original hosted contention source remains uncertain. Date consistency stays deferred.
 
 ## A. Original requirements
 
@@ -12,6 +12,12 @@ After payment panel/QR PR #21 was merged/deployed, the owner asked for the next 
 - Document the implementation before changing feature code. Keep this increment minimal and reuse the existing invoice/PDF/payment flows.
 
 Exclusions: public editing or payment recording, creating checkout links from public access, customer accounts, email/WhatsApp/SMS, reminders, direct UPI-ID QR, new payment providers/sources, attachments, quotations and guest-draft sharing. Subsequent requests authorized publication, pre-merge migration/key preparation and hosted sharing verification; the owner merged PR #22. No additional deployment or real payment is needed for this completion. Use Render CLI for Render work; its authenticated single-variable API was used only where CLI v2.35.0 lacks the operation.
+
+### Reliability follow-up — 6 November 2026
+
+The user accepted **“start it”** on the recommendation to investigate/fix the public invoice/PDF timeout observed during direct-UPI release verification. Render logged a Prisma transaction-start acquisition failure after2003ms, and the API returned503; explicit Refresh and a later PDF attempt succeeded. Trace connection/pool/query behavior, reproduce the failure locally and fix its verified cause. Preserve public access/revocation, financial/line snapshots, checkout eligibility and sanitized errors. Keep date consistency deferred. This implementation request does not authorize hosted writes/deployment, a new migration, real transfers or customer messaging; use disposable local fixtures.
+
+The owner subsequently requested **“create pr”**, authorizing commit/push and a PR into `dev`. Publication includes the preserved direct-UPI release notes. Merge, deployment and hosted verification remain separate.
 
 ### Confirmed business decisions
 
@@ -60,6 +66,16 @@ Risks/limits: anyone holding an active link can read the displayed invoice; forw
 
 ## C. Implementation checklist
 
+### Read reliability follow-up
+
+| ID | Status | Completion criterion |
+| --- | --- | --- |
+| PRR-A01 | DONE | Installed Prisma 7.10.1/pg 8.16.3 reproduced the same P2028 after 2003ms with a lease released at 2400ms; the original module graph created two clients. Exact original hosted contention source remains unproven. |
+| PRR-I01 | DONE | Dashboard reuses the shared client; pg acquisition is bounded at 3s and Prisma startup at 4s, with execution/isolation contracts retained. Real delayed/concurrent HTTP regression passes. |
+| PRR-V01 | DONE | Final 362 backend tests, 10 sharing UI/API tests, 140 existing HTTP requests, real contention/snapshot regression, lint/format/diff and backend build pass. |
+| PRR-D01 | DONE | Measured evidence, run instructions, limitations and recovery updated; task PostgreSQL removed and original Redis preserved. |
+| PRR-P01 | IN PROGRESS | Publish the verified fix and retained release notes in a PR into `dev`; confirm the expected head/base and review checks. No merge or deployment. |
+
 | ID | Status | Completion criterion / dependency |
 | --- | --- | --- |
 | PIS-A01 | DONE | Trace owner/public/auth/document/payment/logging contracts, select a supported token approach and preserve prior release work. |
@@ -73,6 +89,20 @@ Risks/limits: anyone holding an active link can read the displayed invoice; forw
 | PIS-REL03 | DONE | Hosted owner share → signed-out paid invoice/PDF → revoke404/unavailable UI verified; private evidence below. Original invoice document unchanged, test links removed, no financial/stock/provider mutation. |
 
 ## D. Work evidence
+
+### Read reliability investigation — 6 November 2026
+
+- The deployed direct-UPI release's private error log records `Unable to start a transaction in the given time` and503 after2003ms; the later read/PDF succeeded. No slow-query, pool-leak or resource-limit cause is assumed from that single observation.
+- At initial assessment, `InvoiceSharingService.read` used an interactive RepeatableRead transaction and restricted nested projection, inheriting Prisma's 2000ms acquisition/5000ms execution defaults. `PrismaService` constructed a pg Pool without explicit acquisition timeout; installed pg defaults were 10 slots, 10s idle expiry and no bounded connection wait.
+- The original `DashboardModule.providers` declared `PrismaService` separately even though `DatabaseModule` owned the shared global provider. A module-instantiation regression confirmed a second client/pool before removing the duplicate provider; the unused `PrismaModule` was not part of this graph.
+- At initial assessment, application source matched freshly fetched `origin/dev` (`ebb53a1`), with no application/database/credential/deployment change yet. Investigation was isolated on `fix/public-invoice-read-timeout`; prior direct-UPI release notes remain preserved and uncommitted.
+- Controlled PostgreSQL17 experiment: with one real pg lease held2400ms, current defaults fail with the same P2028 after2003ms; bounded3000ms driver acquisition and4000ms Prisma acquisition succeed after2415ms. Both return the connection idle with zero waiting clients. A Nest module regression fails because two Prisma provider instances are created. These are verified configuration/module defects, not proof of which requests occupied the hosted pool during the original event.
+- Chosen fix: reuse DatabaseModule in DashboardModule, bound pg checkout/connection waits to3000ms, and give transaction startup4000ms so the driver can finish/fail within its own budget. Retain the existing5000ms execution limit,10-connection pool size and RepeatableRead public projection. This bounds unavailable-backend waits and permits a brief queue past the old2000ms limit, without retries, caching, new dependencies, schema changes or relaxed consistency. Configured acquisition/execution budgets total9s; connection cleanup, application and network overhead are additional, so this is not an end-to-end latency guarantee. The owner HTTP client has a10s timeout.
+- Verified primary documentation: [Prisma7 pool defaults](https://www.prisma.io/docs/orm/v7/prisma-client/setup-and-configuration/databases-connections/connection-pool), [Prisma7 transaction timing](https://www.prisma.io/docs/orm/v7/prisma-client/queries/transactions) and [pg pool checkout](https://node-postgres.com/apis/pool). Investigated upstream late-start rollback issue [#29719](https://github.com/prisma/orm/issues/29719)/fix [#29727](https://github.com/prisma/orm/pull/29727); installed7.10.1 returned the late connection idle, so no dependency patch/upgrade is justified by this reproduction.
+- Implemented only the shared DashboardModule dependency and PrismaService acquisition policy. Directly related lint cleanup removes a redundant non-null assertion/optional chaining while retaining the existing missing-URL error and CA parsing, and uses the repository's decorated-module lint convention. `InvoiceSharingService`, its RepeatableRead projection, financial logic and frontend source are unchanged.
+- The final real HTTP fixture (`test/invoice-sharing-reliability.integration.cjs`) uses the compiled production service/module graph and a real one-slot pg pool. A2400ms held lease produced200 after2450ms;16 concurrent reads completed after2312ms; invalid capability rejection took1ms without acquiring a lease. Persistent contention returned sanitized503 after3003ms, with zero waiting work; the next read recovered and the connection returned idle. A committed invoice/line edit between relation queries produced coherent old then new documents, proving snapshot isolation was retained. Reads did not change invoice/payment/stock history and revoked capabilities returned404.
+- Final validation:362 backend tests /37 suites, backend build, changed-source lint/format/diff,10 scoped frontend sharing tests and140 existing sharing HTTP requests pass. The existing HTTP fixture's optional legacy seed was absent; no legacy-backfill claim is based on that skipped check. No dependency, schema, secret, provider or browser change was needed. No new PDF render was required because the PDF/frontend implementation did not change; its refetch/error handling is covered by the scoped frontend tests and real public API regression.
+- Raw timing probe, test/build logs and sanitized `verification.json` are under ignored `release-artifacts.local/public-read-reliability-20261106/`. Test fixtures removed their own users and closed API/Prisma/observer connections; removed `invoice-read-reliability-qa` afterward. Pre-existing Redis is untouched. No hosted write or deployment was performed, and no live recurrence guarantee is claimed before release verification.
 
 - Created `feat/public-invoice-sharing` from `origin/dev` at `32fad0e`, preserving prior payment-QR release notes. No hosted record, merchant key, deployment or configuration changed. The existing Redis container was left running and untouched.
 - `apiClient.ts` respects `sensitive` for successful development logs;9 API/auth refresh tests pass, including two new tests. Scoped client lint has0 errors and17 existing `any` warnings.
@@ -95,4 +125,4 @@ Risks/limits: anyone holding an active link can read the displayed invoice; forw
 
 ## E. Recovery state
 
-All PIS tasks through REL03 are DONE for the agreed scope. PR #22 merged as `a0d7aa6`; matching frontend `dep-dbm3ug97lnhs738kv3cg` and API `dep-dbm3ugh7lnhs738kv3f0` are Live, readiness200, combined regressions/build and hosted share/PDF/revoke checks passed. The subsequent [guided setup implementation/release](razorpay-guided-setup.md) is also complete and verified; its final release notes are now included in [direct-UPI PR #25](https://github.com/istekhar46/invoice_generator/pull/25). **Do not rerun the migration, regenerate the key or repeat the sharing probe.** The known date-only correction, actual Live checkout/settlement and physical scanning remain separate. Use the configured local Render CLI for Render work.
+PRR-A01/I01/V01/D01 are DONE for local scope on `fix/public-invoice-read-timeout`; PRR-P01 is in progress under the owner's publication request. Fresh `origin/dev` is `ebb53a1`, and the branch was fast-forwarded to that identical application tree without changing verified source. Publish the fix and preserved direct-UPI release notes into `dev`, then verify the PR head/base and checks. Merge/deployment/hosted verification remain separate; no migration, new environment variable or frontend code change is required. Keep RepeatableRead, sanitized503 and explicit frontend retry contracts. The exact original hosted contention source remains uncertain and persistent overload still fails explicitly; do not claim all production timeouts are eliminated. No task container/server/fixture user remains, and Redis is untouched. Evidence: `release-artifacts.local/public-read-reliability-20261106/verification.json`. Do not rerun hosted migrations/financial probes or alter merchant credentials. Invoice date consistency stays deferred.
